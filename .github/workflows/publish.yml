@@ -43,24 +43,24 @@ jobs:
           echo "Publishing version: $VERSION"
 
       - name: Restore
-        run: dotnet restore HoneyDrunk.Kernel.sln
+        run: dotnet restore HoneyDrunk.Kernel/HoneyDrunk.Kernel.sln
 
       - name: Build
-        run: dotnet build HoneyDrunk.Kernel.sln -c Release --no-restore /p:ContinuousIntegrationBuild=true
+        run: dotnet build HoneyDrunk.Kernel/HoneyDrunk.Kernel.sln -c Release --no-restore /p:ContinuousIntegrationBuild=true
 
       - name: Test
-        run: dotnet test HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj -c Release --no-build
+        run: dotnet test HoneyDrunk.Kernel/HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj -c Release --no-build
 
       - name: Pack HoneyDrunk.Kernel.Abstractions
         run: >
-          dotnet pack HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj
+          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj
           -c Release --no-build -o ./artifacts
           /p:Version=${{ steps.get_version.outputs.version }}
           /p:ContinuousIntegrationBuild=true
 
       - name: Pack HoneyDrunk.Kernel
         run: >
-          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj
+          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj
           -c Release --no-build -o ./artifacts
           /p:Version=${{ steps.get_version.outputs.version }}
           /p:ContinuousIntegrationBuild=true

@@ -22,25 +22,25 @@ jobs:
           dotnet-version: 10.0.x
       
       - name: Restore dependencies
-        run: dotnet restore HoneyDrunk.Kernel.sln
+        run: dotnet restore HoneyDrunk.Kernel/HoneyDrunk.Kernel.sln
       
       - name: Build solution
         run: >-
-          dotnet build HoneyDrunk.Kernel.sln -c Release
+          dotnet build HoneyDrunk.Kernel/HoneyDrunk.Kernel.sln -c Release
           --no-restore 
           /p:ContinuousIntegrationBuild=true 
           /p:TreatWarningsAsErrors=true
       
       - name: Run tests
         run: >-
-          dotnet test HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj 
+          dotnet test HoneyDrunk.Kernel/HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj 
           -c Release 
           --no-build 
           --logger "trx;LogFileName=test-results.trx"
       
       - name: Pack HoneyDrunk.Kernel.Abstractions
         run: >-
-          dotnet pack HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj 
+          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj 
           -c Release 
           --no-build 
           -o ./artifacts 
@@ -48,7 +48,7 @@ jobs:
       
       - name: Pack HoneyDrunk.Kernel
         run: >-
-          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj 
+          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj 
           -c Release 
           --no-build 
           -o ./artifacts 
