@@ -31,8 +31,8 @@ public static class KernelServiceCollectionExtensions
             return new KernelContext(
                 correlationId: idGenerator.NewString(),
                 causationId: null,
-                cancellation: default,
-                baggage: new Dictionary<string, string>());
+                baggage: new Dictionary<string, string>(),
+                cancellation: default);
         });
 
         return services;

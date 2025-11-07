@@ -64,7 +64,7 @@ The following belong in **downstream Nodes**, not Kernel:
 | Resilience (retry, circuit breaker, timeout) | `HoneyDrunk.Transport` |
 | Validation (`IValidator<T>`, FluentValidation) | Service-level or `HoneyDrunk.Data` |
 | Result<T> monads / Railway-oriented programming | Service-level or future `HoneyDrunk.Common` |
-| HTTP clients (HttpClientFactory) | `HoneyCore.Web.Rest` |
+| HTTP clients (HttpClientFactory) | `HoneyDrunk.Web.Rest` |
 | Database abstractions (repositories, EF Core) | `HoneyDrunk.Data` |
 | Authentication/Authorization | `HoneyDrunk.Auth` |
 
@@ -105,7 +105,7 @@ HoneyDrunk.Kernel/
 **Downstream:**
 - HoneyDrunk.Data
 - HoneyDrunk.Transport
-- HoneyCore.Web.Rest
+- HoneyDrunk.Web.Rest
 - HoneyDrunk.Auth
 - HoneyDrunk.Vault
 
