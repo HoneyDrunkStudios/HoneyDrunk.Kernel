@@ -108,7 +108,7 @@ jobs:
             - [NuGet: HoneyDrunk.Kernel](https://www.nuget.org/packages/HoneyDrunk.Kernel/${{ steps.get_version.outputs.version }})
             - [Documentation](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel#readme)
 
-            ### ?? Quick Start
+            ### 🚀 Quick Start
             ```csharp
             using HoneyDrunk.Kernel.DI;
 
