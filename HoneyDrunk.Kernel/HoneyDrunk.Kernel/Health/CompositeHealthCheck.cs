@@ -1,0 +1,53 @@
+using HoneyDrunk.Kernel.Abstractions.Health;
+
+namespace HoneyDrunk.Kernel.Health;
+
+/// <summary>
+/// Composite health check that aggregates multiple health checks and returns the worst status.
+/// Any health check that throws an exception is treated as Unhealthy.
+/// </summary>
+/// <param name="checks">The collection of health checks to aggregate.</param>
+public sealed class CompositeHealthCheck(IEnumerable<IHealthCheck> checks) : IHealthCheck
+{
+    private readonly IHealthCheck[] _checks = [.. checks];
+
+    /// <inheritdoc />
+    public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
+    {
+        if (_checks.Length == 0)
+        {
+            return HealthStatus.Healthy;
+        }
+
+        var checkTasks = _checks.Select(check => ExecuteCheckSafelyAsync(check, cancellationToken));
+        var results = await Task.WhenAll(checkTasks);
+
+        if (results.Any(status => status == HealthStatus.Unhealthy))
+        {
+            return HealthStatus.Unhealthy;
+        }
+
+        if (results.Any(status => status == HealthStatus.Degraded))
+        {
+            return HealthStatus.Degraded;
+        }
+
+        return HealthStatus.Healthy;
+    }
+
+    private static async Task<HealthStatus> ExecuteCheckSafelyAsync(IHealthCheck check, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await check.CheckAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return HealthStatus.Unhealthy;
+        }
+    }
+}

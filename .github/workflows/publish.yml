@@ -1,0 +1,117 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (without v prefix, e.g., 0.1.0)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Build, Pack & Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Determine version
+        id: get_version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >>"$GITHUB_OUTPUT"
+          echo "Publishing version: $VERSION"
+
+      - name: Restore
+        run: dotnet restore HoneyDrunk.Kernel/HoneyDrunk.Kernel.sln
+
+      - name: Build
+        run: dotnet build HoneyDrunk.Kernel/HoneyDrunk.Kernel.sln -c Release --no-restore /p:ContinuousIntegrationBuild=true
+
+      - name: Test
+        run: dotnet test HoneyDrunk.Kernel/HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj -c Release --no-build
+
+      - name: Pack HoneyDrunk.Kernel.Abstractions
+        run: >
+          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj
+          -c Release --no-build -o ./artifacts
+          /p:Version=${{ steps.get_version.outputs.version }}
+          /p:ContinuousIntegrationBuild=true
+
+      - name: Pack HoneyDrunk.Kernel
+        run: >
+          dotnet pack HoneyDrunk.Kernel/HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj
+          -c Release --no-build -o ./artifacts
+          /p:Version=${{ steps.get_version.outputs.version }}
+          /p:ContinuousIntegrationBuild=true
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ steps.get_version.outputs.version }}
+          path: ./artifacts/*.nupkg
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: HoneyDrunk.Kernel v${{ steps.get_version.outputs.version }}
+          body: |
+            ## HoneyDrunk.Kernel v${{ steps.get_version.outputs.version }}
+
+            Foundational primitives for HoneyDrunk.OS
+
+            ### ?? Packages
+
+            **HoneyDrunk.Kernel.Abstractions** - Contracts and interfaces
+            ```xml
+            <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="${{ steps.get_version.outputs.version }}" />
+            ```
+
+            **HoneyDrunk.Kernel** - Runtime implementations
+            ```xml
+            <PackageReference Include="HoneyDrunk.Kernel" Version="${{ steps.get_version.outputs.version }}" />
+            ```
+
+            ### ?? Links
+            - [NuGet: HoneyDrunk.Kernel.Abstractions](https://www.nuget.org/packages/HoneyDrunk.Kernel.Abstractions/${{ steps.get_version.outputs.version }})
+            - [NuGet: HoneyDrunk.Kernel](https://www.nuget.org/packages/HoneyDrunk.Kernel/${{ steps.get_version.outputs.version }})
+            - [Documentation](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel#readme)
+
+            ### 🚀 Quick Start
+            ```csharp
+            using HoneyDrunk.Kernel.DI;
+
+            var builder = WebApplication.CreateBuilder(args);
+            builder.Services.AddKernelDefaults();
+            ```
