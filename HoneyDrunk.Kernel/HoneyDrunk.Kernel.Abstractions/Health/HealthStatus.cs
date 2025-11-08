@@ -23,5 +23,5 @@ public enum HealthStatus
     /// <summary>
     /// The component is unhealthy and not functioning.
     /// </summary>
-    Unhealthy,
+    Unhealthy
 }
