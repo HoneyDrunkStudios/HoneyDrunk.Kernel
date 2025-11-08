@@ -1,19 +1,18 @@
+// Copyright (c) HoneyDrunk Studios. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using HoneyDrunk.Kernel.Abstractions.Ids;
 
 namespace HoneyDrunk.Kernel.Ids;
 
 /// <summary>
-/// ID generator using GUIDs (placeholder for future ULID implementation).
+/// Generates ULID-based identifiers (Universally Unique Lexicographically Sortable Identifier).
 /// </summary>
 public sealed class UlidGenerator : IIdGenerator
 {
     /// <inheritdoc />
-    public string NewString()
-    {
-        var guid = Guid.NewGuid();
-        return Convert.ToHexString(guid.ToByteArray()).ToLowerInvariant();
-    }
+    public string NewString() => Ulid.NewUlid().ToString();
 
     /// <inheritdoc />
-    public Guid NewGuid() => Guid.NewGuid();
+    public Guid NewGuid() => Ulid.NewUlid().ToGuid();
 }

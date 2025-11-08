@@ -1,10 +1,13 @@
+// Copyright (c) HoneyDrunk Studios. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System.Diagnostics;
 using HoneyDrunk.Kernel.Abstractions.Time;
 
 namespace HoneyDrunk.Kernel.Time;
 
 /// <summary>
-/// System clock implementation using system time.
+/// System implementation of clock using the system's current time.
 /// </summary>
 public sealed class SystemClock : IClock
 {

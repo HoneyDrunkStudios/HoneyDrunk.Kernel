@@ -1,3 +1,6 @@
+// Copyright (c) HoneyDrunk Studios. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using HoneyDrunk.Kernel.Abstractions.Config;
 
 namespace HoneyDrunk.Kernel.Config.Secrets;
@@ -9,12 +12,12 @@ namespace HoneyDrunk.Kernel.Config.Secrets;
 /// <param name="sources">The collection of secret sources to query.</param>
 public sealed class CompositeSecretsSource(IEnumerable<ISecretsSource> sources) : ISecretsSource
 {
-    private readonly ISecretsSource[] _sources = [.. sources];
+    private readonly ISecretsSource[] sources = [.. sources];
 
     /// <inheritdoc />
     public bool TryGetSecret(string key, out string? value)
     {
-        foreach (var source in _sources)
+        foreach (var source in this.sources)
         {
             try
             {

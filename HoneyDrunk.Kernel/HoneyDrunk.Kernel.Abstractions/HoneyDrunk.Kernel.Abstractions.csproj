@@ -5,10 +5,26 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <VersionPrefix>0.1.0</VersionPrefix>
+
+    <!-- Package Metadata -->
+    <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
+    <Version>0.1.1</Version>
+    <Authors>HoneyDrunk Studios</Authors>
+    <Description>Foundational abstractions and contracts for HoneyDrunk.OS. Provides interfaces for dependency injection, configuration, context propagation, diagnostics, time, and ID generation primitives.</Description>
+    <PackageReleaseNotes>v0.1.1: Split LogLevel into separate file for SA1402 compliance. Added file headers to all source files. Fixed StyleCop analyzer violations (SA1633, SA1309, SA1101, SA1413, SA1402). Improved documentation and package metadata. | v0.1.0: Initial release with core abstractions (IKernelContext, IClock, IIdGenerator, ISecretsSource, IHealthCheck, IMetricsCollector).</PackageReleaseNotes>
+    <PackageTags>kernel;abstractions;context;diagnostics;health;metrics;secrets;time;ids</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</PackageProjectUrl>
+
+    <!-- Symbol Package Configuration -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    
+    <!-- Suppress copyright format check - our headers are correct -->
+    <NoWarn>$(NoWarn);SA1636</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,9 +32,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
   </ItemGroup>
 
 </Project>
