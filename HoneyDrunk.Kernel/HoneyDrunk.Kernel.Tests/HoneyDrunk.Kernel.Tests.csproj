@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="FluentAssertions" Version="8.8.0" />
-    <PackageReference Include="HoneyDrunk.Standards" Version="0.1.2">
+    <PackageReference Include="HoneyDrunk.Standards" Version="0.1.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -1,6 +1,3 @@
-// Copyright (c) HoneyDrunk Studios. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 using HoneyDrunk.Kernel.Abstractions.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Diagnostics;

@@ -1,6 +1,3 @@
-// Copyright (c) HoneyDrunk Studios. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 using System.Diagnostics;
 using HoneyDrunk.Kernel.Abstractions.Time;
 
