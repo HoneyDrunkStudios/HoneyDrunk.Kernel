@@ -33,12 +33,14 @@ jobs:
             VERSION="${{ github.event.inputs.version }}"
             VERSION_TAG="v${VERSION}"
           else
+            # Extract version from tag (removes 'v' prefix)
             VERSION="${GITHUB_REF#refs/tags/v}"
-            VERSION_TAG="v${VERSION}"
+            VERSION_TAG="${GITHUB_REF#refs/tags/}"
           fi
-          echo "version=$VERSION" >>"$GITHUB_OUTPUT"
-          echo "version-tag=$VERSION_TAG" >>"$GITHUB_OUTPUT"
-          echo "Publishing version: $VERSION"
+          echo "version=${VERSION}" >>"$GITHUB_OUTPUT"
+          echo "version-tag=${VERSION_TAG}" >>"$GITHUB_OUTPUT"
+          echo "Publishing version: ${VERSION}"
+          echo "Publishing tag: ${VERSION_TAG}"
 
   # Build, test, pack, and publish both packages
   release:
