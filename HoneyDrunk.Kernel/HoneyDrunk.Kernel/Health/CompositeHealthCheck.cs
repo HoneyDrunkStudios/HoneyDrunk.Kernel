@@ -9,17 +9,17 @@ namespace HoneyDrunk.Kernel.Health;
 /// <param name="checks">The collection of health checks to aggregate.</param>
 public sealed class CompositeHealthCheck(IEnumerable<IHealthCheck> checks) : IHealthCheck
 {
-    private readonly IHealthCheck[] _checks = [.. checks];
+    private readonly IHealthCheck[] checks = [.. checks];
 
     /// <inheritdoc />
     public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
     {
-        if (_checks.Length == 0)
+        if (this.checks.Length == 0)
         {
             return HealthStatus.Healthy;
         }
 
-        var checkTasks = _checks.Select(check => ExecuteCheckSafelyAsync(check, cancellationToken));
+        var checkTasks = this.checks.Select(check => ExecuteCheckSafelyAsync(check, cancellationToken));
         var results = await Task.WhenAll(checkTasks);
 
         if (results.Any(status => status == HealthStatus.Unhealthy))

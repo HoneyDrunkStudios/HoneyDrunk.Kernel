@@ -1,7 +1,7 @@
 namespace HoneyDrunk.Kernel.Abstractions.Health;
 
 /// <summary>
-/// Represents the health status of a component or system.
+/// Represents the health status of a component or service.
 /// </summary>
 public enum HealthStatus
 {
@@ -11,12 +11,12 @@ public enum HealthStatus
     Healthy,
 
     /// <summary>
-    /// The component is functioning but with reduced capability or performance.
+    /// The component is degraded but still functional.
     /// </summary>
     Degraded,
 
     /// <summary>
-    /// The component is unhealthy and not functioning correctly.
+    /// The component is unhealthy and not functioning.
     /// </summary>
     Unhealthy
 }

@@ -9,12 +9,12 @@ namespace HoneyDrunk.Kernel.Config.Secrets;
 /// <param name="sources">The collection of secret sources to query.</param>
 public sealed class CompositeSecretsSource(IEnumerable<ISecretsSource> sources) : ISecretsSource
 {
-    private readonly ISecretsSource[] _sources = [.. sources];
+    private readonly ISecretsSource[] sources = [.. sources];
 
     /// <inheritdoc />
     public bool TryGetSecret(string key, out string? value)
     {
-        foreach (var source in _sources)
+        foreach (var source in this.sources)
         {
             try
             {

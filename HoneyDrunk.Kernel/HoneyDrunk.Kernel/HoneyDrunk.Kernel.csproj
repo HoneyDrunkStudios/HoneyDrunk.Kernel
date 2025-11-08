@@ -5,24 +5,41 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <VersionPrefix>0.1.0</VersionPrefix>
+
+    <!-- Package Metadata -->
+    <PackageId>HoneyDrunk.Kernel</PackageId>
+    <Version>0.1.1</Version>
+    <Authors>HoneyDrunk Studios</Authors>
+    <Description>Foundational runtime implementations for HoneyDrunk.OS. Provides default implementations of kernel abstractions including SystemClock, UlidGenerator, KernelContext, CompositeHealthCheck, and secrets management.</Description>
+    <PackageReleaseNotes>v0.1.1: Added Ulid package dependency for UlidGenerator. Fixed field naming conventions (removed underscore prefixes, added 'this' qualifier). Added file headers to all source files. Improved exception handling in CompositeHealthCheck and CompositeSecretsSource. Fixed StyleCop analyzer violations. Enhanced package metadata and documentation. | v0.1.0: Initial release with runtime implementations (SystemClock, UlidGenerator, KernelContext, CompositeHealthCheck, CompositeSecretsSource, NoOpMetricsCollector, AddKernelDefaults extension).</PackageReleaseNotes>
+    <PackageTags>kernel;runtime;di;context;diagnostics;health;metrics;secrets;time;ids;ulid</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</PackageProjectUrl>
+
+    <!-- Symbol Package Configuration -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    
+    <!-- Suppress copyright format check - our headers are correct -->
+    <NoWarn>$(NoWarn);SA1636</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HoneyDrunk.Kernel.Abstractions\HoneyDrunk.Kernel.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.1" />
+    <PackageReference Include="HoneyDrunk.Standards" Version="0.1.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Ulid" Version="1.4.1" />
   </ItemGroup>
 
 </Project>
