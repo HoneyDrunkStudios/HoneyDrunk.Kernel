@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel</PackageId>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Foundational runtime implementations for HoneyDrunk.OS. Provides default implementations of kernel abstractions including SystemClock, UlidGenerator, KernelContext, CompositeHealthCheck, and secrets management.</Description>
-    <PackageReleaseNotes>v0.1.1: Added Ulid package dependency for UlidGenerator. Fixed field naming conventions (removed underscore prefixes, added 'this' qualifier). Added file headers to all source files. Improved exception handling in CompositeHealthCheck and CompositeSecretsSource. Fixed StyleCop analyzer violations. Enhanced package metadata and documentation. | v0.1.0: Initial release with runtime implementations (SystemClock, UlidGenerator, KernelContext, CompositeHealthCheck, CompositeSecretsSource, NoOpMetricsCollector, AddKernelDefaults extension).</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.1.2: Updated Microsoft.Extensions.* packages to 10.0.0. Updated Microsoft.CodeAnalysis.NetAnalyzers to 10.0.100. Updated HoneyDrunk.Standards to 0.2.3. Updated Ulid package to 1.4.1.</PackageReleaseNotes>
     <PackageTags>kernel;runtime;di;context;diagnostics;health;metrics;secrets;time;ids;ulid</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
