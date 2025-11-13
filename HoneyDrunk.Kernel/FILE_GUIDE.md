@@ -618,11 +618,11 @@ app.Run();
 ### Dependency Injection Best Practices
 
 **Lifetimes:**
-- `IClock` ? **Singleton** (stateless, one instance)
-- `IIdGenerator` ? **Singleton** (stateless, thread-safe)
-- `IKernelContext` ? **Scoped** (per-request, auto-generated IDs)
-- `IMetricsCollector` ? **Singleton** (stateless, thread-safe)
-- `ISecretsSource` ? **Singleton** (cached, refresh on schedule)
+- `IClock` → **Singleton** (stateless, one instance)
+- `IIdGenerator` → **Singleton** (stateless, thread-safe)
+- `IKernelContext` → **Scoped** (per-request, auto-generated IDs)
+- `IMetricsCollector` → **Singleton** (stateless, thread-safe)
+- `ISecretsSource` → **Singleton** (cached, refresh on schedule)
 
 **Injection Pattern:**
 ```csharp
