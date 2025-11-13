@@ -828,5 +828,5 @@ When replacing `NoOpMetricsCollector` with real implementations:
 ---
 
 *Last Updated: 2025-01-11*  
-*Version: 0.1.0*  
+*Version: 0.1.1*  
 *Target Framework: .NET 10.0*
