@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Foundational abstractions and contracts for HoneyDrunk.OS. Provides interfaces for dependency injection, configuration, context propagation, diagnostics, time, and ID generation primitives.</Description>
-    <PackageReleaseNotes>v0.1.1: Split LogLevel into separate file for SA1402 compliance. Added file headers to all source files. Fixed StyleCop analyzer violations (SA1633, SA1309, SA1101, SA1413, SA1402). Improved documentation and package metadata. | v0.1.0: Initial release with core abstractions (IKernelContext, IClock, IIdGenerator, ISecretsSource, IHealthCheck, IMetricsCollector).</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.1.2: Updated Microsoft.Extensions.* packages to 10.0.0. Updated Microsoft.CodeAnalysis.NetAnalyzers to 10.0.100. Updated HoneyDrunk.Standards to 0.2.3.</PackageReleaseNotes>
     <PackageTags>kernel;abstractions;context;diagnostics;health;metrics;secrets;time;ids</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -28,17 +28,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HoneyDrunk.Standards" Version="0.1.6">
+    <PackageReference Include="HoneyDrunk.Standards" Version="0.2.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100" />
   </ItemGroup>
 
 </Project>
