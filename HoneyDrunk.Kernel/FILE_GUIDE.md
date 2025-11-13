@@ -558,20 +558,20 @@ Instead of every team implementing these primitives differently, Kernel provides
 
 
 ```
-User Request ? Web API
-               ?
+User Request → Web API
+               →
            Generate CorrelationId (IIdGenerator)
-               ?
+               →
            Create KernelContext (IKernelContext)
-               ?
+               →
            Service A (reads CorrelationId)
-               ?
+               →
            Publish Message (propagates CorrelationId)
-               ?
+               →
            Service B (reads same CorrelationId, sets CausationId)
-               ?
+               →
            All logs tagged with CorrelationId
-               ?
+               →
            Trace entire request across services
 ```
 
