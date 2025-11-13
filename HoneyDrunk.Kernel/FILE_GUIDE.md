@@ -438,10 +438,10 @@ Just like how a building's foundation provides stability and common infrastructu
 - **What it does:** Registers all default Kernel implementations in DI container
 - **What it provides:**
   - `AddKernelDefaults()` - Registers all default implementations:
-    - `IClock` ? `SystemClock`
-    - `IIdGenerator` ? `UlidGenerator`
-    - `IMetricsCollector` ? `NoOpMetricsCollector`
-    - `IKernelContext` ? `KernelContext` (scoped, auto-generated IDs)
+    - `IClock` → `SystemClock`
+    - `IIdGenerator` → `UlidGenerator`
+    - `IMetricsCollector` → `NoOpMetricsCollector`
+    - `IKernelContext` → `KernelContext` (scoped, auto-generated IDs)
 - **How it's used:** Call once in `Program.cs` or `Startup.cs`
 - **Why it matters:** One-line setup for all Kernel primitives
 - **When to use:** Every HoneyDrunk service startup
