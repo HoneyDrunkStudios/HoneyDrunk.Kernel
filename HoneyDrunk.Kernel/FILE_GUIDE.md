@@ -345,7 +345,7 @@ Just like how a building's foundation provides stability and common infrastructu
   - Attempts to fetch a secret from each source in order
   - Returns the first match found
   - Returns `false` if no source has the secret
-- **How it's used:** Wrap multiple sources in priority order (e.g., environment ? Vault ? Key Vault)
+- **How it's used:** Wrap multiple sources in priority order (e.g., environment → Vault → Key Vault)
 - **Why it matters:** Enables fallback strategies and gradual migration between secret stores
 - **When to use:** When you have multiple secret sources and need prioritization
 - **Example:**
