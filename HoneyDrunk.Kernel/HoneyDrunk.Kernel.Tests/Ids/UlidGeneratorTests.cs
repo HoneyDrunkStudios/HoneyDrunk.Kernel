@@ -48,9 +48,9 @@ public class UlidGeneratorTests
     {
         var gen = new UlidGenerator();
         var a = gen.NewString();
-        
+
         Thread.Sleep(10);
-        
+
         var b = gen.NewString();
 
         a.CompareTo(b).Should().BeLessThan(0, "ULIDs generated with sufficient time gap should be sortable");
