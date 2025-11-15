@@ -16,7 +16,7 @@ public class CompositeHealthCheckTests
     [Fact]
     public async Task CheckAsync_WithNoChecks_ReturnsHealthy()
     {
-        var composite = new CompositeHealthCheck(Array.Empty<IHealthCheck>());
+        var composite = new CompositeHealthCheck([]);
         var status = await composite.CheckAsync();
         status.Should().Be(HealthStatus.Healthy);
     }
@@ -100,10 +100,10 @@ public class CompositeHealthCheckTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var composite = new CompositeHealthCheck(new IHealthCheck[]
-        {
+        var composite = new CompositeHealthCheck(
+        [
             new CancellingHealthCheck(),
-        });
+        ]);
 
         var act = async () => await composite.CheckAsync(cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();

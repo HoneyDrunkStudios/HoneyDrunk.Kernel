@@ -15,7 +15,7 @@ public class CompositeSecretsSourceTests
     [Fact]
     public void TryGetSecret_WithNoSources_ReturnsFalseAndNull()
     {
-        var composite = new CompositeSecretsSource(Array.Empty<ISecretsSource>());
+        var composite = new CompositeSecretsSource([]);
         var result = composite.TryGetSecret("key", out var value);
 
         result.Should().BeFalse();
@@ -28,11 +28,11 @@ public class CompositeSecretsSourceTests
     [Fact]
     public void TryGetSecret_WithMultipleSources_ReturnsFirstSuccessfulValue()
     {
-        var composite = new CompositeSecretsSource(new ISecretsSource[]
-        {
+        var composite = new CompositeSecretsSource(
+        [
             new StaticSecretsSource(false, null),
             new StaticSecretsSource(true, "secret"),
-        });
+        ]);
 
         var result = composite.TryGetSecret("Database", out var value);
 
@@ -46,11 +46,11 @@ public class CompositeSecretsSourceTests
     [Fact]
     public void TryGetSecret_WithThrowingSource_SkipsExceptionAndContinues()
     {
-        var composite = new CompositeSecretsSource(new ISecretsSource[]
-        {
+        var composite = new CompositeSecretsSource(
+        [
             new ThrowingSecretsSource(new InvalidOperationException()),
             new StaticSecretsSource(true, "ok"),
-        });
+        ]);
 
         var result = composite.TryGetSecret("ApiKey", out var value);
 
@@ -64,11 +64,11 @@ public class CompositeSecretsSourceTests
     [Fact]
     public void TryGetSecret_WithNoMatchingSources_ReturnsFalseAndNull()
     {
-        var composite = new CompositeSecretsSource(new ISecretsSource[]
-        {
+        var composite = new CompositeSecretsSource(
+        [
             new StaticSecretsSource(false, "ignored"),
             new StaticSecretsSource(false, null),
-        });
+        ]);
 
         var result = composite.TryGetSecret("Anything", out var value);
 

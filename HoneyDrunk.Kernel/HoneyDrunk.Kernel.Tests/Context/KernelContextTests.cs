@@ -36,7 +36,7 @@ public class KernelContextTests
         var ctx = new KernelContext("c", null, new Dictionary<string, string>(), default);
 
         using var scope1 = ctx.BeginScope();
-        Action disposeAgain = () => scope1.Dispose();
+        Action disposeAgain = scope1.Dispose;
 
         disposeAgain.Should().NotThrow();
 
