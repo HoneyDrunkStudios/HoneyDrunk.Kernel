@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   pr-validation:
-    uses: HoneyDrunkStudios/HoneyDrunk.Actions/.github/workflows/pr-validation.yml@main
+    uses: HoneyDrunkStudios/HoneyDrunk.Actions/.github/workflows/pr-core.yml@main
     with:
       dotnet-version: '10.0.x'
       configuration: 'Release'
