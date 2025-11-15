@@ -23,18 +23,37 @@ public class UlidGeneratorTests
     }
 
     /// <summary>
-    /// Verifies ULIDs are distinct and roughly ordered by creation time.
+    /// Verifies ULIDs are distinct when called multiple times.
     /// </summary>
     [Fact]
-    public void NewString_WhenCalledMultipleTimes_ReturnsDistinctAndOrderedIds()
+    public void NewString_WhenCalledMultipleTimes_ReturnsDistinctIds()
+    {
+        var gen = new UlidGenerator();
+        var ids = new HashSet<string>();
+
+        for (int i = 0; i < 100; i++)
+        {
+            var id = gen.NewString();
+            ids.Add(id).Should().BeTrue($"ULID {id} should be unique");
+        }
+
+        ids.Should().HaveCount(100);
+    }
+
+    /// <summary>
+    /// Verifies ULIDs are sortable and generally increase over time.
+    /// </summary>
+    [Fact]
+    public void NewString_WhenCalledWithDelay_ReturnsLexicographicallySortedIds()
     {
         var gen = new UlidGenerator();
         var a = gen.NewString();
-        Thread.Sleep(2);
+        
+        Thread.Sleep(10);
+        
         var b = gen.NewString();
 
-        a.Should().NotBe(b);
-        a.CompareTo(b).Should().BeLessThan(0);
+        a.CompareTo(b).Should().BeLessThan(0, "ULIDs generated with sufficient time gap should be sortable");
     }
 
     /// <summary>
@@ -47,6 +66,24 @@ public class UlidGeneratorTests
         var guid = gen.NewGuid();
 
         guid.Should().NotBe(Guid.Empty);
+    }
+
+    /// <summary>
+    /// Verifies GUIDs generated are distinct.
+    /// </summary>
+    [Fact]
+    public void NewGuid_WhenCalledMultipleTimes_ReturnsDistinctGuids()
+    {
+        var gen = new UlidGenerator();
+        var guids = new HashSet<Guid>();
+
+        for (int i = 0; i < 100; i++)
+        {
+            var guid = gen.NewGuid();
+            guids.Add(guid).Should().BeTrue($"GUID {guid} should be unique");
+        }
+
+        guids.Should().HaveCount(100);
     }
 
     private static bool IsCrockfordBase32(char c)

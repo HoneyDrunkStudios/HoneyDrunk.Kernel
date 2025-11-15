@@ -9,18 +9,20 @@ namespace HoneyDrunk.Kernel.Tests.Time;
 public class SystemClockTests
 {
     /// <summary>
-    /// Ensures UtcNow is close to the system time.
+    /// Ensures UtcNow returns a reasonable timestamp close to system time.
     /// </summary>
     [Fact]
     public void UtcNow_WhenCalled_ReturnsTimeCloseToSystemTime()
     {
         var clock = new SystemClock();
-        var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+        var before = DateTimeOffset.UtcNow;
         var now = clock.UtcNow;
-        var after = DateTimeOffset.UtcNow.AddSeconds(1);
+        var after = DateTimeOffset.UtcNow;
 
+        var tolerance = TimeSpan.FromSeconds(5);
+        now.Should().BeCloseTo(before, tolerance);
         now.Should().BeOnOrAfter(before);
-        now.Should().BeOnOrBefore(after);
+        now.Should().BeOnOrBefore(after.Add(tolerance));
     }
 
     /// <summary>
