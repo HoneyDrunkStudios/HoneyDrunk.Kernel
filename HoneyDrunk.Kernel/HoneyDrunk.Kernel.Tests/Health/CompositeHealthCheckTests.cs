@@ -16,7 +16,7 @@ public class CompositeHealthCheckTests
     [Fact]
     public async Task CheckAsync_WithNoChecks_ReturnsHealthy()
     {
-        var composite = new CompositeHealthCheck([]);
+        var composite = new CompositeHealthCheck(Array.Empty<IHealthCheck>());
         var status = await composite.CheckAsync();
         status.Should().Be(HealthStatus.Healthy);
     }
@@ -26,7 +26,7 @@ public class CompositeHealthCheckTests
     /// </summary>
     /// <returns>A completed task.</returns>
     [Fact]
-    public async Task CheckAsync_ReturnsWorstStatus_UnhealthyBeatsDegradedAndHealthy()
+    public async Task CheckAsync_WithUnhealthyDegradedAndHealthyChecks_ReturnsUnhealthy()
     {
         var checks = new IHealthCheck[]
         {
@@ -44,7 +44,7 @@ public class CompositeHealthCheckTests
     /// </summary>
     /// <returns>A completed task.</returns>
     [Fact]
-    public async Task CheckAsync_ReturnsDegraded_WhenAnyIsDegraded_AndNoneUnhealthy()
+    public async Task CheckAsync_WithDegradedAndHealthyChecks_ReturnsDegraded()
     {
         var checks = new IHealthCheck[]
         {
@@ -62,7 +62,7 @@ public class CompositeHealthCheckTests
     /// </summary>
     /// <returns>A completed task.</returns>
     [Fact]
-    public async Task CheckAsync_AllHealthy_ReturnsHealthy()
+    public async Task CheckAsync_WithAllHealthyChecks_ReturnsHealthy()
     {
         var checks = new IHealthCheck[]
         {
@@ -79,7 +79,7 @@ public class CompositeHealthCheckTests
     /// </summary>
     /// <returns>A completed task.</returns>
     [Fact]
-    public async Task CheckAsync_TreatsExceptionsAsUnhealthy()
+    public async Task CheckAsync_WithThrowingCheck_ReturnsUnhealthy()
     {
         var checks = new IHealthCheck[]
         {
@@ -96,14 +96,14 @@ public class CompositeHealthCheckTests
     /// </summary>
     /// <returns>A completed task expected to throw.</returns>
     [Fact]
-    public async Task CheckAsync_PropagatesCancellation()
+    public async Task CheckAsync_WithCancelledToken_ThrowsOperationCanceledException()
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var composite = new CompositeHealthCheck(
-        [
+        var composite = new CompositeHealthCheck(new IHealthCheck[]
+        {
             new CancellingHealthCheck(),
-        ]);
+        });
 
         var act = async () => await composite.CheckAsync(cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();

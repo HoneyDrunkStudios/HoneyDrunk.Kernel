@@ -12,7 +12,7 @@ public class SystemClockTests
     /// Ensures UtcNow is close to the system time.
     /// </summary>
     [Fact]
-    public void UtcNow_ShouldBeCloseToSystemTime()
+    public void UtcNow_WhenCalled_ReturnsTimeCloseToSystemTime()
     {
         var clock = new SystemClock();
         var before = DateTimeOffset.UtcNow.AddSeconds(-1);
@@ -27,7 +27,7 @@ public class SystemClockTests
     /// Ensures monotonic increase of high-resolution timestamp.
     /// </summary>
     [Fact]
-    public void GetTimestamp_ShouldMonotonicallyIncrease()
+    public void GetTimestamp_WhenCalledMultipleTimes_ReturnsMonotonicallyIncreasingValues()
     {
         var clock = new SystemClock();
         var a = clock.GetTimestamp();

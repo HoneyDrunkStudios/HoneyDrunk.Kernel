@@ -12,7 +12,7 @@ public class NoOpLogSinkTests
     /// Ensures the sink ignores inputs and does not throw.
     /// </summary>
     [Fact]
-    public void Write_ShouldIgnoreInput_AndNotThrow()
+    public void Write_WhenCalledWithAnyInput_DoesNotThrow()
     {
         var sink = new NoOpLogSink();
         var props = new Dictionary<string, object?>

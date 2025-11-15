@@ -15,7 +15,7 @@ public class CompositeSecretsSourceTests
     [Fact]
     public void TryGetSecret_WithNoSources_ReturnsFalseAndNull()
     {
-        var composite = new CompositeSecretsSource([]);
+        var composite = new CompositeSecretsSource(Array.Empty<ISecretsSource>());
         var result = composite.TryGetSecret("key", out var value);
 
         result.Should().BeFalse();
@@ -26,13 +26,13 @@ public class CompositeSecretsSourceTests
     /// Returns the first successful value among sources.
     /// </summary>
     [Fact]
-    public void TryGetSecret_ReturnsFirstSuccessfulValue()
+    public void TryGetSecret_WithMultipleSources_ReturnsFirstSuccessfulValue()
     {
-        var composite = new CompositeSecretsSource(
-        [
+        var composite = new CompositeSecretsSource(new ISecretsSource[]
+        {
             new StaticSecretsSource(false, null),
             new StaticSecretsSource(true, "secret"),
-        ]);
+        });
 
         var result = composite.TryGetSecret("Database", out var value);
 
@@ -44,13 +44,13 @@ public class CompositeSecretsSourceTests
     /// Skips sources that throw exceptions and continues.
     /// </summary>
     [Fact]
-    public void TryGetSecret_SkipsThrowingSources()
+    public void TryGetSecret_WithThrowingSource_SkipsExceptionAndContinues()
     {
-        var composite = new CompositeSecretsSource(
-        [
+        var composite = new CompositeSecretsSource(new ISecretsSource[]
+        {
             new ThrowingSecretsSource(new InvalidOperationException()),
             new StaticSecretsSource(true, "ok"),
-        ]);
+        });
 
         var result = composite.TryGetSecret("ApiKey", out var value);
 
@@ -62,13 +62,13 @@ public class CompositeSecretsSourceTests
     /// Returns false when no source can provide the value.
     /// </summary>
     [Fact]
-    public void TryGetSecret_NoSourceHasKey_ReturnsFalseAndNull()
+    public void TryGetSecret_WithNoMatchingSources_ReturnsFalseAndNull()
     {
-        var composite = new CompositeSecretsSource(
-        [
+        var composite = new CompositeSecretsSource(new ISecretsSource[]
+        {
             new StaticSecretsSource(false, "ignored"),
             new StaticSecretsSource(false, null),
-        ]);
+        });
 
         var result = composite.TryGetSecret("Anything", out var value);
 
@@ -76,15 +76,12 @@ public class CompositeSecretsSourceTests
         value.Should().BeNull();
     }
 
-    private sealed class StaticSecretsSource(bool result, string? value) : ISecretsSource
+    private sealed class StaticSecretsSource(bool shouldSucceed, string? secretValue) : ISecretsSource
     {
-        private readonly bool result = result;
-        private readonly string? storedValue = value;
-
         public bool TryGetSecret(string key, out string? value)
         {
-            value = storedValue;
-            return result;
+            value = secretValue;
+            return shouldSucceed;
         }
     }
 

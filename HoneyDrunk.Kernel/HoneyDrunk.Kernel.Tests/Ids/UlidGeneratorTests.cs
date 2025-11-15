@@ -12,7 +12,7 @@ public class UlidGeneratorTests
     /// Verifies ULID string is non-empty and uses Crockford Base32 alphabet.
     /// </summary>
     [Fact]
-    public void NewString_ShouldReturn_NonEmpty_UlidLike_Id()
+    public void NewString_WhenCalled_ReturnsNonEmptyUlidWithCrockfordBase32Alphabet()
     {
         var gen = new UlidGenerator();
         var id = gen.NewString();
@@ -26,7 +26,7 @@ public class UlidGeneratorTests
     /// Verifies ULIDs are distinct and roughly ordered by creation time.
     /// </summary>
     [Fact]
-    public void NewString_ShouldProduce_DistinctAndRoughlyOrdered_Ids()
+    public void NewString_WhenCalledMultipleTimes_ReturnsDistinctAndOrderedIds()
     {
         var gen = new UlidGenerator();
         var a = gen.NewString();
@@ -41,7 +41,7 @@ public class UlidGeneratorTests
     /// Verifies GUID from ULID is not empty.
     /// </summary>
     [Fact]
-    public void NewGuid_ShouldReturn_NonEmpty_Guid()
+    public void NewGuid_WhenCalled_ReturnsNonEmptyGuid()
     {
         var gen = new UlidGenerator();
         var guid = gen.NewGuid();

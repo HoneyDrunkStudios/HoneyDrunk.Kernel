@@ -12,7 +12,7 @@ public class KernelContextTests
     /// Ensures constructor arguments are exposed via properties.
     /// </summary>
     [Fact]
-    public void Constructor_ShouldPopulateProperties()
+    public void Constructor_WithValidArguments_PopulatesAllProperties()
     {
         var corr = "corr";
         var cause = "cause";
@@ -31,12 +31,12 @@ public class KernelContextTests
     /// Ensures BeginScope returns a disposable that is safe to dispose multiple times.
     /// </summary>
     [Fact]
-    public void BeginScope_ShouldReturnDisposable_ThatDoesNothing()
+    public void BeginScope_WhenCalled_ReturnsDisposableThatCanBeDisposedMultipleTimes()
     {
         var ctx = new KernelContext("c", null, new Dictionary<string, string>(), default);
 
         using var scope1 = ctx.BeginScope();
-        Action disposeAgain = scope1.Dispose;
+        Action disposeAgain = () => scope1.Dispose();
 
         disposeAgain.Should().NotThrow();
 

@@ -20,7 +20,7 @@ public class KernelServiceCollectionExtensionsTests
     /// Validates default service registrations.
     /// </summary>
     [Fact]
-    public void AddKernelDefaults_RegistersExpectedServices()
+    public void AddKernelDefaults_WhenCalled_RegistersExpectedServices()
     {
         var services = new ServiceCollection();
 
@@ -40,7 +40,7 @@ public class KernelServiceCollectionExtensionsTests
     /// Validates lifetimes: singletons and scoped context.
     /// </summary>
     [Fact]
-    public void AddKernelDefaults_RegistersSingletons_AndScopedContext()
+    public void AddKernelDefaults_WhenCalled_RegistersSingletonsAndScopedContext()
     {
         var services = new ServiceCollection();
         services.AddKernelDefaults();
@@ -74,7 +74,7 @@ public class KernelServiceCollectionExtensionsTests
     /// Validates that correlation id is produced via id generator.
     /// </summary>
     [Fact]
-    public void AddKernelDefaults_ContextCorrelation_ComesFromIdGenerator()
+    public void AddKernelDefaults_WithCustomIdGenerator_UsesItForCorrelationId()
     {
         var services = new ServiceCollection();
         services.AddKernelDefaults();

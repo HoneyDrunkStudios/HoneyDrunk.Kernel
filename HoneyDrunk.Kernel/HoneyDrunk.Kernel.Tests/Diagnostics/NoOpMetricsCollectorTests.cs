@@ -12,7 +12,7 @@ public class NoOpMetricsCollectorTests
     /// Ensure counter recording is a no-op and does not throw.
     /// </summary>
     [Fact]
-    public void RecordCounter_ShouldNotThrow()
+    public void RecordCounter_WhenCalled_DoesNotThrow()
     {
         var metrics = new NoOpMetricsCollector();
         var action = () => metrics.RecordCounter("payments.processed", 1, new KeyValuePair<string, object?>("k", "v"));
@@ -23,7 +23,7 @@ public class NoOpMetricsCollectorTests
     /// Ensure histogram recording is a no-op and does not throw.
     /// </summary>
     [Fact]
-    public void RecordHistogram_ShouldNotThrow()
+    public void RecordHistogram_WhenCalled_DoesNotThrow()
     {
         var metrics = new NoOpMetricsCollector();
         var action = () => metrics.RecordHistogram("latency.ms", 42.5, new KeyValuePair<string, object?>("route", "/api"));
@@ -34,7 +34,7 @@ public class NoOpMetricsCollectorTests
     /// Ensure gauge recording is a no-op and does not throw.
     /// </summary>
     [Fact]
-    public void RecordGauge_ShouldNotThrow()
+    public void RecordGauge_WhenCalled_DoesNotThrow()
     {
         var metrics = new NoOpMetricsCollector();
         var action = () => metrics.RecordGauge("threads.active", 7, new KeyValuePair<string, object?>("pool", "default"));
