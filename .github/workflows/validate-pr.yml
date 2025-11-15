@@ -28,7 +28,7 @@ jobs:
       working-directory: 'HoneyDrunk.Kernel'
       enable-secret-scan: true
       enable-accessibility-check: false
-      post-pr-comment: true
+      post-pr-summary: true
       actions-ref: 'main'
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
