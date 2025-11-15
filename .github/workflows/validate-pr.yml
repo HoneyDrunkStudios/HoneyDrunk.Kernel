@@ -4,11 +4,12 @@ on:
   pull_request:
     branches: [ main, develop ]
     paths:
-      - '**.cs'
-      - '**.csproj'
-      - '**.sln'
-      - '**.props'
-      - '**.targets'
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - '**/*.slnx'
+      - '**/*.props'
+      - '**/*.targets'
       - '**/.editorconfig'
       - '**/stylecop.json'
 
@@ -25,7 +26,8 @@ jobs:
       configuration: 'Release'
       runs-on: 'ubuntu-latest'
       working-directory: 'HoneyDrunk.Kernel'
-      enable-code-quality: true
+      enable-secret-scan: true
+      enable-accessibility-check: false
       post-pr-comment: true
       actions-ref: 'main'
     secrets:
