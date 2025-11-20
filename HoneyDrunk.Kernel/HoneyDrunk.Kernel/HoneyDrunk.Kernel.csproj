@@ -8,11 +8,11 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel</PackageId>
-    <Version>0.1.2</Version>
+    <Version>0.2.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
-    <Description>Foundational runtime implementations for HoneyDrunk.OS. Provides default implementations of kernel abstractions including SystemClock, UlidGenerator, KernelContext, CompositeHealthCheck, and secrets management.</Description>
-    <PackageReleaseNotes>v0.1.2: Updated Microsoft.Extensions.* packages to 10.0.0. Updated Microsoft.CodeAnalysis.NetAnalyzers to 10.0.100. Updated HoneyDrunk.Standards to 0.2.3. Updated Ulid package to 1.4.1.</PackageReleaseNotes>
-    <PackageTags>kernel;runtime;di;context;diagnostics;health;metrics;secrets;time;ids;ulid</PackageTags>
+    <Description>Foundational runtime implementations for HoneyDrunk.OS. Provides default implementations of kernel abstractions including GridContext, NodeContext, OperationContext, lifecycle orchestration, and context mapping.</Description>
+    <PackageReleaseNotes>v0.2.0: Major refactor as semantic OS layer. Added GridContext implementations, context mappers for HTTP/Messaging/Jobs, lifecycle orchestration, and telemetry integration. See MIGRATION.md for upgrade guide.</PackageReleaseNotes>
+    <PackageTags>kernel;runtime;grid;context;lifecycle;hosting;telemetry;mappers</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</RepositoryUrl>
@@ -25,6 +25,9 @@
     
     <!-- Suppress copyright format check - our headers are correct -->
     <NoWarn>$(NoWarn);SA1636</NoWarn>
+    
+    <!-- Suppress CA1873 - False positive for structured logging with simple property access -->
+    <NoWarn>$(NoWarn);CA1873</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,6 +39,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
@@ -43,7 +47,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

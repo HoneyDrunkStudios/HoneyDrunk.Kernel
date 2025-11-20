@@ -2,6 +2,29 @@
   <Folder Name="/Docs/">
     <File Path="../README.md" />
   </Folder>
+  <Folder Name="/Docs/Copilot/">
+    <File Path="../.github/copilot-instructions.md" />
+    <File Path="../.github/instructions/architecture.instructions.md" />
+    <File Path="../.github/instructions/comment.instructions.md" />
+    <File Path="../.github/instructions/csharp.instructions.md" />
+    <File Path="../.github/instructions/markdown.instructions.md" />
+  </Folder>
+  <Folder Name="/Docs/FileGuide/">
+    <File Path="docs/Agents.md" />
+    <File Path="docs/Configuration.md" />
+    <File Path="docs/Context.md" />
+    <File Path="docs/DependencyInjection.md" />
+    <File Path="docs/Diagnostics.md" />
+    <File Path="docs/FILE_GUIDE.md" />
+    <File Path="docs/Health.md" />
+    <File Path="docs/Hosting.md" />
+    <File Path="docs/Identity.md" />
+    <File Path="docs/Implementations.md" />
+    <File Path="docs/Lifecycle.md" />
+    <File Path="docs/Secrets.md" />
+    <File Path="docs/Telemetry.md" />
+    <File Path="docs/Testing.md" />
+  </Folder>
   <Folder Name="/Pipelines/">
     <File Path="../.github/workflows/publish.yml" />
     <File Path="../.github/workflows/validate-pr.yml" />

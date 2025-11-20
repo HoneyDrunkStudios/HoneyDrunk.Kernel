@@ -3,7 +3,22 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    
+    <!-- Disable XML documentation for test project -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    
+    <!-- Suppress documentation requirements for tests -->
+    <NoWarn>$(NoWarn);SA1600</NoWarn>
+    
+    <!-- Suppress SA0001 - XML comment analysis not needed for tests -->
+    <NoWarn>$(NoWarn);SA0001</NoWarn>
+    
+    <!-- Suppress CA2000 (dispose warnings) for tests - test objects don't need disposal tracking -->
+    <NoWarn>$(NoWarn);CA2000</NoWarn>
+    
+    <!-- Suppress CA1016 (assembly attributes) for tests -->
     <NoWarn>$(NoWarn);CA1016</NoWarn>
   </PropertyGroup>
 
