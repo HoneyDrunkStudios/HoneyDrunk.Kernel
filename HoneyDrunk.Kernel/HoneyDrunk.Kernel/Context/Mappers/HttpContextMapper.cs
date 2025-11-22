@@ -105,23 +105,49 @@ public sealed class HttpContextMapper
     {
         var baggage = new Dictionary<string, string>();
 
-        // Extract from baggage header (W3C format)
+        // Extract from baggage header (W3C format: key1=value1;metadata,key2=value2)
         if (httpContext.Request.Headers.TryGetValue("baggage", out var baggageHeader))
         {
             var baggageString = baggageHeader.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(baggageString))
             {
-                foreach (var pair in baggageString.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                // W3C Baggage format: comma-separated list of key=value pairs
+                // Each pair may have properties after semicolon: key=value;property1;property2
+                var pairs = baggageString
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(ParseBaggageItem)
+                    .Where(item => item.HasValue)
+                    .Select(item => item!.Value);
+
+                foreach (var (key, value) in pairs)
                 {
-                    var keyValue = pair.Split('=', 2);
-                    if (keyValue.Length == 2)
-                    {
-                        baggage[keyValue[0].Trim()] = Uri.UnescapeDataString(keyValue[1].Trim());
-                    }
+                    baggage[key] = value;
                 }
             }
         }
 
         return baggage;
+    }
+
+    private static (string key, string value)? ParseBaggageItem(string item)
+    {
+        // Split on semicolon to separate key=value from properties/metadata
+        var parts = item.Split(';', StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+        {
+            return null;
+        }
+
+        // Parse the key=value part (ignore properties for now)
+        var keyValue = parts[0].Split('=', 2, StringSplitOptions.TrimEntries);
+        if (keyValue.Length != 2 || string.IsNullOrWhiteSpace(keyValue[0]) || string.IsNullOrWhiteSpace(keyValue[1]))
+        {
+            return null;
+        }
+
+        var key = keyValue[0].Trim();
+        var value = Uri.UnescapeDataString(keyValue[1].Trim());
+
+        return (key, value);
     }
 }

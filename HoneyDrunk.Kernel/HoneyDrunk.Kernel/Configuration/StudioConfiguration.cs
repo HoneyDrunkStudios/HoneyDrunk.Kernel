@@ -44,24 +44,23 @@ public sealed class StudioConfiguration : IStudioConfiguration
         // Load feature flags
         _featureFlags = [];
         var featureFlagsSection = _configuration.GetSection("Studio:FeatureFlags");
-        foreach (var child in featureFlagsSection.GetChildren())
-        {
-            if (bool.TryParse(child.Value, out var enabled))
-            {
-                _featureFlags[child.Key] = enabled;
-            }
-        }
+        _featureFlags = featureFlagsSection
+            .GetChildren()
+            .Select(child => (key: child.Key, value: child.Value))
+            .Where(item => bool.TryParse(item.value, out _))
+            .ToDictionary(
+                item => item.key,
+                item => bool.Parse(item.value!));
 
         // Load tags
         _tags = [];
         var tagsSection = _configuration.GetSection("Studio:Tags");
-        foreach (var child in tagsSection.GetChildren())
-        {
-            if (child.Value != null)
-            {
-                _tags[child.Key] = child.Value;
-            }
-        }
+        _tags = tagsSection
+            .GetChildren()
+            .Where(child => child.Value != null)
+            .ToDictionary(
+                child => child.Key,
+                child => child.Value!);
     }
 
     /// <inheritdoc />

@@ -144,7 +144,7 @@ public class CompositeHealthCheckTests
     [Fact]
     public async Task CheckAsync_CancellationRequested_ThrowsOperationCanceledException()
     {
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
         var checks = new[]
         {
@@ -160,7 +160,7 @@ public class CompositeHealthCheckTests
     [Fact]
     public async Task CheckAsync_PropagatesCancellationToken()
     {
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var checks = new[]
         {
             new CancellationAwareHealthCheck()

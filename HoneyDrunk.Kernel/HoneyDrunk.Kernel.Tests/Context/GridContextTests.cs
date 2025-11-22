@@ -31,7 +31,7 @@ public class GridContextTests
     {
         // Arrange
         var baggage = new Dictionary<string, string> { ["key1"] = "value1" };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var createdAt = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
         // Act
@@ -223,7 +223,7 @@ public class GridContextTests
     public void CreateChildContext_PropagatesCancellationToken()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var parent = new GridContext(
             correlationId: "corr",
             nodeId: "node",
@@ -334,7 +334,7 @@ public class GridContextTests
     public void WithBaggage_PreservesAllContextProperties()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var createdAt = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var context = new GridContext(
             correlationId: "corr-123",
