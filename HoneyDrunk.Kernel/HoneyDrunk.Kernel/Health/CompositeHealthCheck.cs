@@ -14,6 +14,8 @@ public sealed class CompositeHealthCheck(IEnumerable<IHealthCheck> checks) : IHe
     /// <inheritdoc />
     public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (this.checks.Length == 0)
         {
             return HealthStatus.Healthy;

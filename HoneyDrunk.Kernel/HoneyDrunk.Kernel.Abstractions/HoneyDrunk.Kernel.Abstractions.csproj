@@ -8,11 +8,11 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.1.2</Version>
+    <Version>0.2.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
-    <Description>Foundational abstractions and contracts for HoneyDrunk.OS. Provides interfaces for dependency injection, configuration, context propagation, diagnostics, time, and ID generation primitives.</Description>
-    <PackageReleaseNotes>v0.1.2: Updated Microsoft.Extensions.* packages to 10.0.0. Updated Microsoft.CodeAnalysis.NetAnalyzers to 10.0.100. Updated HoneyDrunk.Standards to 0.2.3.</PackageReleaseNotes>
-    <PackageTags>kernel;abstractions;context;diagnostics;health;metrics;secrets;time;ids</PackageTags>
+    <Description>Foundational abstractions and contracts for HoneyDrunk.OS. Provides interfaces for Grid context, Node lifecycle, identity, telemetry, and configuration primitives.</Description>
+    <PackageReleaseNotes>v0.2.0: Major refactor as semantic OS layer. Added GridContext, NodeContext, OperationContext, lifecycle contracts, Identity types, telemetry contracts, and agent contracts. Removed thin BCL wrappers (IClock, IIdGenerator, ILogSink). See MIGRATION.md for upgrade guide.</PackageReleaseNotes>
+    <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</RepositoryUrl>
@@ -22,9 +22,6 @@
     <!-- Symbol Package Configuration -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    
-    <!-- Suppress copyright format check - our headers are correct -->
-    <NoWarn>$(NoWarn);SA1636</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,10 +32,11 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Ulid" Version="1.4.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

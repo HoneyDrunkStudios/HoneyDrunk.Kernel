@@ -3,7 +3,22 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    
+    <!-- Disable XML documentation for test project -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    
+    <!-- Suppress documentation requirements for tests -->
+    <NoWarn>$(NoWarn);SA1600</NoWarn>
+    
+    <!-- Suppress SA0001 - XML comment analysis not needed for tests -->
+    <NoWarn>$(NoWarn);SA0001</NoWarn>
+    
+    <!-- Suppress CA2000 (dispose warnings) for tests - test objects don't need disposal tracking -->
+    <NoWarn>$(NoWarn);CA2000</NoWarn>
+    
+    <!-- Suppress CA1016 (assembly attributes) for tests -->
     <NoWarn>$(NoWarn);CA1016</NoWarn>
   </PropertyGroup>
 
@@ -14,6 +29,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
