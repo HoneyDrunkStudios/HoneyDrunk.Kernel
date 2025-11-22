@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish (without v prefix, e.g., 0.1.0)'
+        description: 'Version to publish (without v prefix, e.g., 0.2.0)'
         required: true
         type: string
 
@@ -48,7 +48,7 @@ jobs:
       dotnet-version: '10.0.x'
       configuration: 'Release'
       runs-on: 'ubuntu-latest'
-      project-path: 'HoneyDrunk.Transport/HoneyDrunk.Kernel.slnx'
+      project-path: 'HoneyDrunk.Kernel/HoneyDrunk.Kernel.slnx'
       enable-nuget-publish: true
       nuget-source: 'https://api.nuget.org/v3/index.json'
       actions-ref: 'main'
@@ -69,56 +69,55 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.version-tag }}
-          name: HoneyDrunk.Transport ${{ needs.prepare.outputs.version-tag }}
+          name: HoneyDrunk.Kernel ${{ needs.prepare.outputs.version-tag }}
           body: |
-            ## HoneyDrunk.Transport ${{ needs.prepare.outputs.version-tag }}
+            ## HoneyDrunk.Kernel ${{ needs.prepare.outputs.version-tag }}
 
-            Transport-agnostic messaging library for .NET with middleware pipeline pattern.
+            Semantic OS layer for HoneyDrunk.OS providing context propagation, lifecycle orchestration, and configuration management for .NET 10.
 
             ### 📦 Packages
 
-            **HoneyDrunk.Transport** - Core abstractions and middleware pipeline
+            **HoneyDrunk.Kernel.Abstractions** - Core contracts and interfaces
 
             ```xml
-            <PackageReference Include="HoneyDrunk.Transport" Version="${{ needs.prepare.outputs.version }}" />
+            <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="${{ needs.prepare.outputs.version }}" />
             ```
 
-            **HoneyDrunk.Transport.InMemory** - In-memory broker for testing
+            **HoneyDrunk.Kernel** - Runtime implementations
 
             ```xml
-            <PackageReference Include="HoneyDrunk.Transport.InMemory" Version="${{ needs.prepare.outputs.version }}" />
-            ```
-
-            **HoneyDrunk.Transport.AzureServiceBus** - Azure Service Bus implementation
-
-            ```xml
-            <PackageReference Include="HoneyDrunk.Transport.AzureServiceBus" Version="${{ needs.prepare.outputs.version }}" />
+            <PackageReference Include="HoneyDrunk.Kernel" Version="${{ needs.prepare.outputs.version }}" />
             ```
 
             ### 🔗 Links
-            - [NuGet: HoneyDrunk.Transport](https://www.nuget.org/packages/HoneyDrunk.Transport/${{ needs.prepare.outputs.version }})
-            - [NuGet: HoneyDrunk.Transport.InMemory](https://www.nuget.org/packages/HoneyDrunk.Transport.InMemory/${{ needs.prepare.outputs.version }})
-            - [NuGet: HoneyDrunk.Transport.AzureServiceBus](https://www.nuget.org/packages/HoneyDrunk.Transport.AzureServiceBus/${{ needs.prepare.outputs.version }})
-            - [Documentation](https://github.com/HoneyDrunkStudios/HoneyDrunk.Transport#readme)
+            - [NuGet: HoneyDrunk.Kernel.Abstractions](https://www.nuget.org/packages/HoneyDrunk.Kernel.Abstractions/${{ needs.prepare.outputs.version }})
+            - [NuGet: HoneyDrunk.Kernel](https://www.nuget.org/packages/HoneyDrunk.Kernel/${{ needs.prepare.outputs.version }})
+            - [Documentation](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel#readme)
 
             ### 🚀 Quick Start
 
             ```csharp
-            using HoneyDrunk.Transport.DependencyInjection;
+            using HoneyDrunk.Kernel.Context;
+            using HoneyDrunk.Kernel.DependencyInjection;
 
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add transport core with Azure Service Bus
-            builder.Services.AddHoneyDrunkTransportCore()
-                .AddHoneyDrunkServiceBusTransport(options => 
-                {
-                    options.ConnectionString = builder.Configuration["ServiceBus:ConnectionString"];
-                })
-                .WithTopicSubscription("my-subscription")
-                .WithRetry(retry => retry.MaxAttempts = 5);
+            // Add Kernel services with Grid context
+            builder.Services.AddHoneyDrunkKernel(options =>
+            {
+                options.StudioId = "my-studio";
+                options.Environment = "production";
+            });
 
-            // Register message handlers
-            builder.Services.AddMessageHandler<MyMessage, MyMessageHandler>();
+            var app = builder.Build();
+
+            // Access Grid context in your handlers
+            app.MapGet("/", (IGridContext gridContext) => 
+            {
+                return new { correlationId = gridContext.CorrelationId };
+            });
+
+            app.Run();
             ```
           draft: false
           prerelease: false
