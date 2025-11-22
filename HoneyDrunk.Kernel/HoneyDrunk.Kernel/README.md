@@ -1,63 +1,63 @@
-# HoneyDrunk.Kernel
+﻿# HoneyDrunk.Kernel
 
 [![NuGet](https://img.shields.io/nuget/v/HoneyDrunk.Kernel.svg)](https://www.nuget.org/packages/HoneyDrunk.Kernel/)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 > **Runtime Implementations for the HoneyDrunk Grid** - Production-ready implementations of all Kernel abstractions.
 
-## ?? What Is This?
+## 📋 What Is This?
 
 **HoneyDrunk.Kernel** provides the runtime implementations of all contracts defined in `HoneyDrunk.Kernel.Abstractions`. This is the package you use when building executable Nodes, services, or applications that participate in the Grid.
 
-## ?? What's Inside
+## 📦 What's Inside
 
-### ?? Context Implementations
+### 🌐 Context Implementations
 - **GridContext** - Default implementation with causation chain support
 - **NodeContext** - Process-scoped Node identity
 - **OperationContext** - Operation tracking with timing and outcome
 - **GridContextAccessor** - Async-local context accessor
 
-### ??? Context Mappers
+### 🔄 Context Mappers
 Automatic context propagation from various sources:
 - **HttpContextMapper** - Maps HTTP headers to GridContext
 - **JobContextMapper** - Maps background job metadata
 - **MessagingContextMapper** - Maps message properties for event-driven architectures
 
-### ?? Lifecycle Management
+### ⚙️ Lifecycle Management
 - **NodeLifecycleManager** - Coordinates startup/shutdown
 - **NodeLifecycleHost** - Hosts Node lifecycle with health/readiness
 
-### ?? Diagnostics
+### 📈 Diagnostics
 - **NoOpMetricsCollector** - Zero-overhead placeholder (replace with OpenTelemetry in production)
 - **NodeLifecycleHealthContributor** - Lifecycle-based health
 - **NodeContextReadinessContributor** - Context-based readiness
 
-### ?? Configuration
+### 🔧 Configuration
 - **StudioConfiguration** - Studio-wide configuration implementation
 
-### ?? Secrets
+### 🔐 Secrets
 - **CompositeSecretsSource** - Chains multiple secret sources with fallback logic
 
-### ?? Health
+### ❤️ Health
 - **CompositeHealthCheck** - Aggregates multiple health checks
 
-### ?? Dependency Injection
+### 💉 Dependency Injection
 - **HoneyDrunkCoreExtensions** - Core service registration (`AddHoneyDrunkCore`, `AddHoneyDrunkCoreNode`)
 - **ServiceProviderValidation** - Startup validation
 
-## ?? Installation
+## 📥 Installation
 
 ```bash
 dotnet add package HoneyDrunk.Kernel
 ```
 
 ```xml
-<PackageReference Include="HoneyDrunk.Kernel" Version="0.2.0" />
+<PackageReference Include="HoneyDrunk.Kernel" Version="0.2.1" />
 ```
 
 **Note:** This package automatically includes `HoneyDrunk.Kernel.Abstractions` as a dependency.
 
-## ?? Quick Start
+## 🚀 Quick Start
 
 ### Basic Node Setup
 
@@ -139,31 +139,31 @@ builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();
 builder.Services.AddSingleton<IReadinessContributor, CacheReadinessContributor>();
 ```
 
-## ?? When to Use This Package
+## 🎯 When to Use This Package
 
 **Use HoneyDrunk.Kernel when:**
-- ? Building an executable Node/service
-- ? You need context mappers (HTTP, messaging, jobs)
-- ? You need lifecycle orchestration
-- ? You want production-ready implementations
+- ✅ Building an executable Node/service
+- ✅ You need context mappers (HTTP, messaging, jobs)
+- ✅ You need lifecycle orchestration
+- ✅ You want production-ready implementations
 
 **Use HoneyDrunk.Kernel.Abstractions only when:**
-- ? Building a library (use abstractions to avoid implementation dependencies)
-- ? Creating custom implementations
+- ✅ Building a library (use abstractions to avoid implementation dependencies)
+- ✅ Creating custom implementations
 
-## ?? Architecture
+## 🏗️ Architecture
 
 ### Context Flow
 
 ```
 HTTP Request with X-Correlation-ID header
-    ?
-HttpContextMapper extracts header ? GridContext
-    ?
+    ↓
+HttpContextMapper extracts header → GridContext
+    ↓
 GridContext injected into OrderService
-    ?
+    ↓
 OrderService creates child context for PaymentService
-    ?
+    ↓
 ChildContext propagates to downstream Node
 ```
 
@@ -171,29 +171,29 @@ ChildContext propagates to downstream Node
 
 ```
 Application Start
-    ?
+    ↓
 NodeLifecycleStage = Initializing
-    ?
+    ↓
 Execute IStartupHook instances (by priority)
-    ?
+    ↓
 Check IReadinessContributor instances
-    ?
+    ↓
 NodeLifecycleStage = Running
-    ?
+    ↓
 (Application runs...)
-    ?
+    ↓
 Shutdown signal received
-    ?
+    ↓
 NodeLifecycleStage = Stopping
-    ?
+    ↓
 Stop accepting new requests
-    ?
+    ↓
 Execute IShutdownHook instances (by priority)
-    ?
+    ↓
 NodeLifecycleStage = Stopped
 ```
 
-## ?? Configuration
+## ⚙️ Configuration
 
 ### appsettings.json
 
@@ -221,19 +221,19 @@ NodeLifecycleStage = Stopped
 }
 ```
 
-## ?? Related Packages
+## 🔗 Related Packages
 
 - **[HoneyDrunk.Kernel.Abstractions](https://www.nuget.org/packages/HoneyDrunk.Kernel.Abstractions/)** - Contracts only
 - **[HoneyDrunk.Standards](https://www.nuget.org/packages/HoneyDrunk.Standards/)** - Analyzers and coding conventions
 
-## ?? Documentation
+## 📚 Documentation
 
 - **[Complete File Guide](../docs/FILE_GUIDE.md)** - Comprehensive architecture documentation
 - **[Context Guide](../docs/Context.md)** - Context propagation patterns
 - **[Lifecycle Guide](../docs/Lifecycle.md)** - Lifecycle orchestration
 - **[Implementations Guide](../docs/Implementations.md)** - Runtime implementation details
 
-## ?? Testing
+## 🧪 Testing
 
 See **[Testing Guide](../docs/Testing.md)** for patterns on:
 - Mocking GridContext, NodeContext, OperationContext
@@ -241,12 +241,12 @@ See **[Testing Guide](../docs/Testing.md)** for patterns on:
 - Integration testing with DI
 - Testing lifecycle hooks and health contributors
 
-## ?? License
+## 📄 License
 
 This project is licensed under the [MIT License](../LICENSE).
 
 ---
 
-**Built with ?? by HoneyDrunk Studios**
+**Built with 🍯 by HoneyDrunk Studios**
 
-[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) � [Documentation](../docs/FILE_GUIDE.md) � [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
+[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](../docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)

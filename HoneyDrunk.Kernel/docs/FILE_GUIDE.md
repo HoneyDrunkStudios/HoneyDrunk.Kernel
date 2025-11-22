@@ -246,7 +246,7 @@ All other HoneyDrunk libraries depend on Kernel:
 
 ---
 
-*Last Updated: 2025-01-11*  
-*Version: 0.1.1*  
+*Last Updated: 2025-11-20*  
+*Version: 0.2.1*  
 *Target Framework: .NET 10.0*
 

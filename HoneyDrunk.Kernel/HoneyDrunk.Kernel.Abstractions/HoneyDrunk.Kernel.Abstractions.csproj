@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Foundational abstractions and contracts for HoneyDrunk.OS. Provides interfaces for Grid context, Node lifecycle, identity, telemetry, and configuration primitives.</Description>
-    <PackageReleaseNotes>v0.2.0: Major refactor as semantic OS layer. Added GridContext, NodeContext, OperationContext, lifecycle contracts, Identity types, telemetry contracts, and agent contracts. Removed thin BCL wrappers (IClock, IIdGenerator, ILogSink). See MIGRATION.md for upgrade guide.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.2.1: Fixed README emoji encoding issues. v0.2.0: Major refactor as semantic OS layer. Added GridContext, NodeContext, OperationContext, lifecycle contracts, Identity types, telemetry contracts, and agent contracts. Removed thin BCL wrappers (IClock, IIdGenerator, ILogSink). See CHANGELOG.md for details.</PackageReleaseNotes>
     <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
