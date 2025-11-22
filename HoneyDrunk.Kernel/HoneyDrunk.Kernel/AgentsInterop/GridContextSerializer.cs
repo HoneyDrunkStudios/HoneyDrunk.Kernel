@@ -56,10 +56,19 @@ public sealed class GridContextSerializer
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
-            var correlationId = root.GetProperty("correlationId").GetString();
-            var nodeId = root.GetProperty("nodeId").GetString();
-            var studioId = root.GetProperty("studioId").GetString();
-            var environment = root.GetProperty("environment").GetString();
+            // Safely try to get required properties
+            if (!root.TryGetProperty("correlationId", out var correlationIdElement) ||
+                !root.TryGetProperty("nodeId", out var nodeIdElement) ||
+                !root.TryGetProperty("studioId", out var studioIdElement) ||
+                !root.TryGetProperty("environment", out var environmentElement))
+            {
+                return null;
+            }
+
+            var correlationId = correlationIdElement.GetString();
+            var nodeId = nodeIdElement.GetString();
+            var studioId = studioIdElement.GetString();
+            var environment = environmentElement.GetString();
 
             if (string.IsNullOrEmpty(correlationId) || string.IsNullOrEmpty(nodeId) ||
                 string.IsNullOrEmpty(studioId) || string.IsNullOrEmpty(environment))
