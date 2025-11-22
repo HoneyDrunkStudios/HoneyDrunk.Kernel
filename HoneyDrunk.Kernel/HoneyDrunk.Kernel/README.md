@@ -17,7 +17,7 @@
 - **OperationContext** - Operation tracking with timing and outcome
 - **GridContextAccessor** - Async-local context accessor
 
-### ??? Context Mappers
+### ?? Context Mappers
 Automatic context propagation from various sources:
 - **HttpContextMapper** - Maps HTTP headers to GridContext
 - **JobContextMapper** - Maps background job metadata
@@ -52,7 +52,7 @@ dotnet add package HoneyDrunk.Kernel
 ```
 
 ```xml
-<PackageReference Include="HoneyDrunk.Kernel" Version="0.2.0" />
+<PackageReference Include="HoneyDrunk.Kernel" Version="0.2.1" />
 ```
 
 **Note:** This package automatically includes `HoneyDrunk.Kernel.Abstractions` as a dependency.
@@ -151,7 +151,7 @@ builder.Services.AddSingleton<IReadinessContributor, CacheReadinessContributor>(
 - ? Building a library (use abstractions to avoid implementation dependencies)
 - ? Creating custom implementations
 
-## ?? Architecture
+## ??? Architecture
 
 ### Context Flow
 

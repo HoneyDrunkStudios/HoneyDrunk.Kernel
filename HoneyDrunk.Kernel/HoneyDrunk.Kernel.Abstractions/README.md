@@ -60,7 +60,7 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 ```
 
 ```xml
-<PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.2.0" />
+<PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.2.1" />
 ```
 
 ## ?? When to Use This Package
@@ -99,7 +99,7 @@ All abstractions assume distributed, multi-tenant, observable systems:
 - Observability is built-in
 - Multi-tenancy is first-class
 
-## ??? Example: Custom Implementation
+## ?? Example: Custom Implementation
 
 ```csharp
 // Custom secrets source
