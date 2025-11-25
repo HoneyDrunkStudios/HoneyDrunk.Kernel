@@ -75,7 +75,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 ### What it is
 Static registry of **infrastructure** Node identifiers required by Kernel and core Grid operations.
 
-### ⚠️ Architecture Note (v0.4.0)
+### ⚠️ Architecture Note (v0.3.0)
 
 **Kernel only provides infrastructure node identities.**
 
