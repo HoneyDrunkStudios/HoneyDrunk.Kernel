@@ -2,12 +2,16 @@ using HoneyDrunk.Kernel.Abstractions.Configuration;
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Errors;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
+using HoneyDrunk.Kernel.Abstractions.Lifecycle;
 using HoneyDrunk.Kernel.Abstractions.Transport;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.DependencyInjection;
 using HoneyDrunk.Kernel.Errors;
+using HoneyDrunk.Kernel.Lifecycle;
+using HoneyDrunk.Kernel.Telemetry;
 using HoneyDrunk.Kernel.Transport;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
 
@@ -19,7 +23,7 @@ namespace HoneyDrunk.Kernel.Hosting;
 public static class HoneyDrunkNodeServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds HoneyDrunk Node runtime services (identity, contexts, descriptor) and returns a fluent builder for further configuration.
+    /// Adds HoneyDrunk Node runtime services (identity, contexts, descriptor, lifecycle, telemetry) and returns a fluent builder for further configuration.
     /// </summary>
     /// <param name="services">The DI service collection.</param>
     /// <param name="configure">Delegate to configure <see cref="HoneyDrunkNodeOptions"/>.</param>
@@ -99,6 +103,20 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
                 studioId: nc.StudioId,
                 environment: nc.Environment);
         });
+
+        // Lifecycle coordination (startup/shutdown hooks, health/readiness aggregation).
+        services.AddSingleton<NodeLifecycleManager>(sp =>
+        {
+            var nodeContext = sp.GetRequiredService<INodeContext>();
+            var healthContributors = sp.GetServices<IHealthContributor>();
+            var readinessContributors = sp.GetServices<IReadinessContributor>();
+            var logger = sp.GetRequiredService<ILogger<NodeLifecycleManager>>();
+            return new NodeLifecycleManager(nodeContext, healthContributors, readinessContributors, logger);
+        });
+        services.AddHostedService<NodeLifecycleHost>();
+
+        // Telemetry primitives (OpenTelemetry ActivitySource for distributed tracing).
+        services.AddSingleton(GridActivitySource.Instance);
 
         return new HoneyDrunkBuilder(services);
     }

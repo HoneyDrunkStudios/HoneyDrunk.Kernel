@@ -50,8 +50,17 @@ public static IHoneyDrunkBuilder AddHoneyDrunkNode(
 | `ITransportEnvelopeBinder` (Message) | Singleton | Message properties context binder |
 | `ITransportEnvelopeBinder` (Job) | Singleton | Job metadata context binder |
 | `IGridContext` | Scoped | Default Grid context factory |
+| `NodeLifecycleManager` | Singleton | Lifecycle coordination and health/readiness aggregation |
+| `NodeLifecycleHost` | IHostedService | Startup/shutdown hook orchestration |
+| `GridActivitySource` | Singleton | OpenTelemetry ActivitySource for distributed tracing |
 
 **Returns:** `IHoneyDrunkBuilder` for fluent configuration chaining.
+
+**New in v0.3.0:**
+- ✅ Lifecycle coordination (`NodeLifecycleManager`, `NodeLifecycleHost`) - Orchestrates startup/shutdown hooks and health monitoring
+- ✅ Telemetry primitives (`GridActivitySource`) - OpenTelemetry-ready distributed tracing
+
+**Note:** Agent interop services (`AgentContextProjection`, `GridContextSerializer`, `AgentResultSerializer`) are static helper classes and don't require DI registration. Use them directly via static methods (see [Agents.md](Agents.md#agentsinterop---serialization-and-context-marshaling)).
 
 ---
 
@@ -211,10 +220,18 @@ public static void ValidateHoneyDrunkServices(this IServiceProvider serviceProvi
 - ✅ `IOperationContextFactory` - Operation context factory
 - ✅ `INodeDescriptor` - Node descriptor
 - ✅ `IErrorClassifier` - Error classification
+- ✅ `NodeLifecycleManager` - Lifecycle coordination (NEW v0.3.0)
+- ✅ `NodeLifecycleHost` - Startup/shutdown orchestration (NEW v0.3.0)
 
 **Warns if missing (recommended):**
 - ⚠️ `ITransportEnvelopeBinder` - Transport context binders
 - ⚠️ `IStudioConfiguration` - Studio-level configuration
+
+**Warns if missing (optional but recommended for v3):**
+- ⚠️ `IStartupHook` - Custom Node initialization logic
+- ⚠️ `IShutdownHook` - Custom graceful cleanup logic
+- ⚠️ `IHealthContributor` - Health monitoring for /health endpoint
+- ⚠️ `IReadinessContributor` - Readiness checks for /ready endpoint traffic gating
 
 **Example:**
 

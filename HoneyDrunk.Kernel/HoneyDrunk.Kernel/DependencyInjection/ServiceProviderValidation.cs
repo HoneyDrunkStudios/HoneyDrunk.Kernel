@@ -1,8 +1,11 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Errors;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
+using HoneyDrunk.Kernel.Abstractions.Lifecycle;
 using HoneyDrunk.Kernel.Abstractions.Transport;
+using HoneyDrunk.Kernel.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace HoneyDrunk.Kernel.DependencyInjection;
@@ -35,11 +38,21 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
         // Validate error handling (required)
         ValidateRequired<IErrorClassifier>(services, errors, "IErrorClassifier", "AddHoneyDrunkNode()");
 
+        // Validate lifecycle coordination (required in v3)
+        ValidateRequired<NodeLifecycleManager>(services, errors, "NodeLifecycleManager", "AddHoneyDrunkNode()");
+        ValidateLifecycleHost(services, errors);
+
         // Validate transport binders (recommended)
         ValidateRecommended<IEnumerable<ITransportEnvelopeBinder>>(services, warnings, "ITransportEnvelopeBinder", "AddHoneyDrunkNode() registers default binders");
 
         // Validate configuration (recommended)
         ValidateRecommended<IStudioConfiguration>(services, warnings, "IStudioConfiguration", "Configure studio settings for multi-environment support");
+
+        // Validate optional but recommended services
+        ValidateOptional<IStartupHook>(services, warnings, "IStartupHook", "Register startup hooks for Node initialization logic");
+        ValidateOptional<IShutdownHook>(services, warnings, "IShutdownHook", "Register shutdown hooks for graceful cleanup");
+        ValidateOptional<IHealthContributor>(services, warnings, "IHealthContributor", "Register health contributors for /health endpoint monitoring");
+        ValidateOptional<IReadinessContributor>(services, warnings, "IReadinessContributor", "Register readiness contributors for /ready endpoint traffic gating");
 
         // Log warnings
         if (warnings.Count > 0 && logger is not null)
@@ -82,6 +95,32 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
         if (services.GetService<T>() is null)
         {
             warnings.Add($"{serviceName} is not registered. {registrationHint}");
+        }
+    }
+
+    private static void ValidateOptional<T>(
+        IServiceProvider services,
+        List<string> warnings,
+        string serviceName,
+        string registrationHint)
+    {
+        var hasService = services.GetServices<T>().Any();
+        if (!hasService)
+        {
+            warnings.Add($"{serviceName} implementations not found. {registrationHint}");
+        }
+    }
+
+    private static void ValidateLifecycleHost(
+        IServiceProvider services,
+        List<string> errors)
+    {
+        var hostedServices = services.GetServices<IHostedService>();
+        var hasLifecycleHost = hostedServices.Any(h => h.GetType().Name == "NodeLifecycleHost");
+
+        if (!hasLifecycleHost)
+        {
+            errors.Add("  - NodeLifecycleHost (IHostedService) is missing. Register via: AddHoneyDrunkNode()");
         }
     }
 }
