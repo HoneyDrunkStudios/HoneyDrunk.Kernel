@@ -49,17 +49,19 @@ Strongly-typed identifier for Nodes in the Grid.
 Like a DNS hostname - human-readable, unique, and validated.
 
 ### Validation Rules
-- **Format:** `^[a-z0-9]+(-[a-z0-9]+)*$` (kebab-case)
+- **Format:** Kebab-case (lowercase with optional hyphens)
+- **Regex:** `^[a-z0-9]+(-[a-z0-9]+)*$`
 - **Length:** 3-64 characters
 - **Constraints:**
   - Lowercase letters and digits only
-  - Hyphens allowed as separators
+  - Hyphens act as separators (no underscores)
   - No consecutive hyphens
   - Cannot start or end with hyphens
 
 ### Examples
-✅ Valid: `"payment-node"`, `"auth-gateway"`, `"notification-service"`, `"api-v2"`  
-❌ Invalid: `"Payment-Node"` (uppercase), `"payment_node"` (underscore), `"p"` (too short), `"payment--node"` (consecutive hyphens)
+✅ Valid: `"kernel"`, `"transport"`, `"web-rest"`, `"pulse"`, `"arcadia"`, `"payment-service"`, `"api-v2"`
+
+❌ Invalid: `"HoneyDrunk.Kernel"` (uppercase/dots), `"payment_node"` (underscore), `"p"` (too short), `"payment--node"` (consecutive hyphens)
 
 ### Usage
 
@@ -204,17 +206,20 @@ Like "Reply-To" in email threads - it points to the immediate message that cause
 ### Usage
 
 ```csharp
-// Incoming request (root operation)
+// Incoming request (root operation - single CorrelationId for entire flow)
 var correlationId = CorrelationId.NewId();
 var causationId = (CausationId?)null; // No parent
 
-// First downstream operation
-var operation1CorrelationId = CorrelationId.NewId();
+// First downstream operation (same CorrelationId, new CausationId)
 var operation1CausationId = new CausationId(correlationId); // Parent = original request
+_logger.LogInformation("Operation 1: {CorrelationId} caused by {CausationId}", 
+    correlationId, operation1CausationId);
 
-// Second level operation
-var operation2CorrelationId = CorrelationId.NewId();
-var operation2CausationId = new CausationId(operation1CorrelationId); // Parent = operation1
+// Second level operation (same CorrelationId, different CausationId)
+var operation2RunId = RunId.NewId(); // Assume operation1 has a RunId
+var operation2CausationId = new CausationId(operation2RunId); // Parent = operation1's RunId
+_logger.LogInformation("Operation 2: {CorrelationId} caused by {CausationId}", 
+    correlationId, operation2CausationId);
 
 // Parse from message metadata
 if (CausationId.TryParse(message.Properties["causation-id"], out var parsedCausationId))
@@ -245,27 +250,34 @@ Ulid ulidValue = causationId;            // To Ulid
 
 ```
 User Request
-  ├─ Correlation: 01HQXZ8K... (root)
+  ├─ Correlation: 01HQXZ8K... (created once, propagated everywhere)
   └─ Causation: null
       │
       ├─ API Gateway
-      │   ├─ Correlation: 01HQXZ8L... (new)
+      │   ├─ Correlation: 01HQXZ8K... (same)
+      │   ├─ RunId: 01HQXZ8L... (new operation instance)
       │   └─ Causation: 01HQXZ8K... (points to User Request)
       │       │
       │       ├─ Auth Service
-      │       │   ├─ Correlation: 01HQXZ8M... (new)
-      │       │   └─ Causation: 01HQXZ8L... (points to API Gateway)
+      │       │   ├─ Correlation: 01HQXZ8K... (same)
+      │       │   ├─ RunId: 01HQXZ8M... (new)
+      │       │   └─ Causation: 01HQXZ8L... (points to API Gateway RunId)
       │       │
       │       └─ Payment Service
-      │           ├─ Correlation: 01HQXZ8N... (new)
-      │           └─ Causation: 01HQXZ8L... (points to API Gateway)
+      │           ├─ Correlation: 01HQXZ8K... (same)
+      │           ├─ RunId: 01HQXZ8N... (new)
+      │           └─ Causation: 01HQXZ8L... (points to API Gateway RunId)
       │               │
       │               └─ Notification Service
-      │                   ├─ Correlation: 01HQXZ8P... (new)
-      │                   └─ Causation: 01HQXZ8N... (points to Payment Service)
+      │                   ├─ Correlation: 01HQXZ8K... (same)
+      │                   ├─ RunId: 01HQXZ8P... (new)
+      │                   └─ Causation: 01HQXZ8N... (points to Payment Service RunId)
 ```
 
-**Result:** You can reconstruct the entire execution tree and see which operations spawned which children.
+**Result:** 
+- **CorrelationId** is the same everywhere (`01HQXZ8K...`) - links all operations to the original user request
+- **CausationId** changes at each level - points to the parent operation that triggered this one
+- **RunId** is unique per operation instance - identifies each individual execution
 
 [↑ Back to top](#table-of-contents)
 
@@ -710,14 +722,14 @@ Like HTTP status codes, but more detailed: HTTP gives you `404`, ErrorCode gives
 - **Format:** Dot-separated segments: `segment1.segment2.segment3`
 - **Segment Rules:**
   - Each segment: 1-32 characters
-  - Lowercase alphanumeric only (no hyphens within segments)
+  - Lowercase alphanumeric and hyphens (kebab-case within segments)
   - At least one segment required
 - **Overall Length:** Maximum 128 characters
 - **Purpose:** Hierarchical error taxonomy
 
 ### Examples
-✅ Valid: `"validation.input"`, `"authentication.failure"`, `"dependency.timeout"`, `"resource.notfound.customer"`  
-❌ Invalid: `"Validation.Input"` (uppercase), `"validation-input"` (hyphen instead of dot), `"validation."` (trailing dot), `""` (empty)
+✅ Valid: `"validation.input"`, `"authentication.token-expired"`, `"state.version-conflict"`, `"rate-limit.exceeded"`  
+❌ Invalid: `"Validation.Input"` (uppercase), `"validation_input"` (underscore), `"validation."` (trailing dot), `""` (empty)
 
 ### Usage
 
@@ -731,17 +743,52 @@ if (ErrorCode.TryParse("authentication.failure", out var parsed))
     Console.WriteLine($"Valid error code: {parsed}");
 }
 
-// Well-known error codes
+// Well-known error codes (Grid-native categories)
+
+// Validation
 var validationInput = ErrorCode.WellKnown.ValidationInput;           // "validation.input"
 var validationBusiness = ErrorCode.WellKnown.ValidationBusiness;     // "validation.business"
+
+// Authentication & Authorization
 var authFailure = ErrorCode.WellKnown.AuthenticationFailure;         // "authentication.failure"
+var authTokenExpired = ErrorCode.WellKnown.AuthenticationTokenExpired; // "authentication.token-expired"
 var authzFailure = ErrorCode.WellKnown.AuthorizationFailure;         // "authorization.failure"
-var depUnavailable = ErrorCode.WellKnown.DependencyUnavailable;      // "dependency.unavailable"
-var depTimeout = ErrorCode.WellKnown.DependencyTimeout;              // "dependency.timeout"
+
+// Context (Grid-specific)
+var contextMissing = ErrorCode.WellKnown.ContextMissing;             // "context.missing"
+var contextInvalid = ErrorCode.WellKnown.ContextInvalid;             // "context.invalid"
+var tenantInactive = ErrorCode.WellKnown.TenantInactive;             // "tenant.inactive"
+var projectInactive = ErrorCode.WellKnown.ProjectInactive;           // "project.inactive"
+
+// Resource
 var notFound = ErrorCode.WellKnown.ResourceNotFound;                 // "resource.notfound"
 var conflict = ErrorCode.WellKnown.ResourceConflict;                 // "resource.conflict"
+
+// Operation & State (Distributed system)
+var stateConflict = ErrorCode.WellKnown.StateVersionConflict;        // "state.version-conflict"
+var idempotentReplay = ErrorCode.WellKnown.OperationIdempotentReplay; // "operation.idempotent-replay"
+var opTimeout = ErrorCode.WellKnown.OperationTimeout;                // "operation.timeout"
+
+// Contract (Transport/Envelope)
+var contractInvalid = ErrorCode.WellKnown.ContractInvalid;           // "contract.invalid"
+var contractUnsupported = ErrorCode.WellKnown.ContractUnsupportedVersion; // "contract.unsupported-version"
+var contractMissing = ErrorCode.WellKnown.ContractMissingField;      // "contract.missing-field"
+
+// Feature & Quota (Runtime gating)
+var featureDisabled = ErrorCode.WellKnown.FeatureDisabled;           // "feature.disabled"
+var featureNotAllowed = ErrorCode.WellKnown.FeatureNotAllowed;       // "feature.not-allowed"
+var quotaExceeded = ErrorCode.WellKnown.QuotaExceeded;               // "quota.exceeded"
+
+// Dependency
+var depUnavailable = ErrorCode.WellKnown.DependencyUnavailable;      // "dependency.unavailable"
+var depTimeout = ErrorCode.WellKnown.DependencyTimeout;              // "dependency.timeout"
+
+// Configuration
 var configInvalid = ErrorCode.WellKnown.ConfigurationInvalid;        // "configuration.invalid"
+
+// System
 var internalError = ErrorCode.WellKnown.InternalError;               // "internal.error"
+var serviceUnavailable = ErrorCode.WellKnown.ServiceUnavailable;     // "service.unavailable"
 var rateLimitExceeded = ErrorCode.WellKnown.RateLimitExceeded;       // "ratelimit.exceeded"
 
 // Validation check
@@ -760,65 +807,27 @@ string errorString = errorCode; // "validation.input.missing"
 
 ### When to use
 - Structured error responses in APIs
-- Error classification for monitoring
+- Error classification for monitoring and alerting
 - Alert routing (different alerts for different error types)
 - Error documentation (generate docs from error codes)
 - Client error handling (programmatic error detection)
 - Internationalization (map codes to localized messages)
 - SLA tracking (track error types vs. targets)
+- **Grid-specific scenarios:**
+  - Context validation failures (`context.missing`, `context.invalid`)
+  - Multi-tenant isolation errors (`tenant.inactive`, `project.inactive`)
+  - Distributed state conflicts (`state.version-conflict`, `operation.idempotent-replay`)
+  - Envelope/contract validation (`contract.invalid`, `contract.missing-field`)
+  - Feature gating (`feature.disabled`, `quota.exceeded`)
 
 ### Why it matters
-Enables **machine-readable error classification** across the entire Grid. Clients can handle errors programmatically, monitoring systems can alert on specific error patterns, and documentation can be auto-generated.
+Enables **machine-readable error classification** across the entire Grid. Unlike HTTP status codes (which only provide `404`, `403`, `500`), ErrorCodes provide Grid-native context like `authentication.token-expired` or `state.version-conflict`. Clients can handle errors programmatically, monitoring systems can alert on specific error patterns, and documentation can be auto-generated.
 
-### Hierarchical Error Handling Example
-
-```csharp
-public class ErrorHandler
-{
-    public async Task<ErrorResponse> HandleExceptionAsync(Exception ex, OperationContext context)
-    {
-        ErrorCode errorCode = ex switch
-        {
-            ValidationException => ErrorCode.WellKnown.ValidationInput,
-            AuthenticationException => ErrorCode.WellKnown.AuthenticationFailure,
-            AuthorizationException => ErrorCode.WellKnown.AuthorizationFailure,
-            TimeoutException => ErrorCode.WellKnown.DependencyTimeout,
-            NotFoundException => ErrorCode.WellKnown.ResourceNotFound,
-            ConflictException => ErrorCode.WellKnown.ResourceConflict,
-            _ => ErrorCode.WellKnown.InternalError
-        };
-
-        _telemetry.TrackError(errorCode, ex, context);
-        
-        return new ErrorResponse
-        {
-            ErrorCode = errorCode,
-            Message = GetLocalizedMessage(errorCode),
-            CorrelationId = context.Grid.CorrelationId,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-    }
-}
-
-// Client-side handling
-if (response.ErrorCode == ErrorCode.WellKnown.ValidationInput)
-{
-    // Show validation errors to user
-    DisplayValidationErrors(response.Details);
-}
-else if (response.ErrorCode.ToString().StartsWith("dependency."))
-{
-    // Dependency issue - retry with backoff
-    await RetryWithBackoffAsync();
-}
-else if (response.ErrorCode == ErrorCode.WellKnown.AuthenticationFailure)
-{
-    // Redirect to login
-    RedirectToLogin();
-}
-```
-
-[↑ Back to top](#table-of-contents)
+**Grid-Native vs REST-Only:**
+- ❌ REST-only: `401 Unauthorized` (generic auth failure)
+- ✅ Grid-native: `authentication.token-expired` (specific reason, actionable)
+- ❌ REST-only: `409 Conflict` (generic conflict)
+- ✅ Grid-native: `state.version-conflict` (optimistic concurrency, retry logic clear)
 
 ---
 
@@ -923,7 +932,7 @@ public void NodeId_RejectsInvalidFormat()
 }
 
 [Fact]
-public void CorrelationId_MaintainsSortOrder()
+public async Task CorrelationId_MaintainsSortOrder()
 {
     // Arrange
     var ids = new List<CorrelationId>();
@@ -1037,22 +1046,33 @@ public void ErrorCode_SupportsHierarchicalStructure()
 | Type | Format | Length | Use Case |
 |------|--------|--------|----------|
 | **NodeId** | Kebab-case | 3-64 chars | Node identification |
-| **CorrelationId** | ULID | 26 chars | Request tracing |
-| **CausationId** | ULID | 26 chars | Parent operation tracking |
+| **CorrelationId** | ULID | 26 chars | Request tracing (single ID per request) |
+| **CausationId** | ULID | 26 chars | Parent operation tracking (changes per hop) |
 | **TenantId** | ULID | 26 chars | Multi-tenancy isolation |
 | **ProjectId** | ULID | 26 chars | Project/workspace organization |
-| **RunId** | ULID | 26 chars | Execution tracking |
+| **RunId** | ULID | 26 chars | Execution instance tracking |
 | **EnvironmentId** | Kebab-case | 3-32 chars | Environment identification |
 | **SectorId** | Kebab-case | 2-32 chars | Logical Node grouping |
-| **ErrorCode** | Dot-separated | 1-128 chars | Hierarchical error classification |
+| **ErrorCode** | Dot-separated kebab-case segments | 1-128 chars | Grid-native error classification |
+
+**Format Rules:**
+- **Kebab-case** = lowercase + hyphens (`kernel`, `payment-service`, `rate-limit.exceeded`)
+- **ULID** = chronologically sortable, 26-char Base32 (`01HQXZ8K...`)
 
 **Common Properties:**
 - ✅ Type-safe
 - ✅ Validated at construction
-- ✅ Value semantics (stack-allocated)
+- ✅ Value semantics (stack-allocated for kebab-case types)
 - ✅ Implicit string conversion
 - ✅ Parse/TryParse support
 - ✅ JSON serialization friendly
+
+**Grid-Native Design:**
+- **Context propagation** - CorrelationId stays constant, CausationId points to parent
+- **Multi-tenancy** - TenantId, ProjectId enforce isolation at type level
+- **Distributed state** - ErrorCode includes `state.version-conflict`, `operation.idempotent-replay`
+- **Runtime gating** - ErrorCode includes `feature.disabled`, `quota.exceeded`
+- **Contract validation** - ErrorCode includes `contract.invalid`, `contract.missing-field`
 
 ---
 

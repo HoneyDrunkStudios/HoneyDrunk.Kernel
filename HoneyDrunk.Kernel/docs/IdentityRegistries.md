@@ -40,7 +40,7 @@ Identity registries provide static, well-known values for Node IDs, Sectors, and
 builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = new NodeId("payment-service"); // Typos not caught at compile time
-    options.SectorId = new SectorId("financial");    // Inconsistent naming
+    options.SectorId = new SectorId("market");       // Inconsistent naming
     options.EnvironmentId = new EnvironmentId("prod"); // "prod" vs "production"?
 });
 ```
@@ -56,8 +56,8 @@ builder.Services.AddHoneyDrunkNode(options =>
 ```csharp
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Financial.PaymentService; // Compile-time safe
-    options.SectorId = Sectors.Financial;             // Consistent naming
+    options.NodeId = WellKnownNodes.Core.Kernel;      // Compile-time safe
+    options.SectorId = Sectors.Core;                   // Consistent naming
     options.EnvironmentId = GridEnvironments.Production; // Canonical value
 });
 ```
@@ -105,19 +105,19 @@ public static class WellKnownNodes
 #### Core Infrastructure (6 nodes)
 
 ```csharp
-WellKnownNodes.Core.Kernel     // "HoneyDrunk.Kernel"
-WellKnownNodes.Core.Transport  // "HoneyDrunk.Transport"
-WellKnownNodes.Core.Vault      // "HoneyDrunk.Vault"
-WellKnownNodes.Core.Data       // "HoneyDrunk.Data"
-WellKnownNodes.Core.WebRest    // "HoneyCore.Web.Rest"
-WellKnownNodes.Core.Auth       // "HoneyDrunk.Auth"
+WellKnownNodes.Core.Kernel     // "kernel"
+WellKnownNodes.Core.Transport  // "transport"
+WellKnownNodes.Core.Vault      // "vault"
+WellKnownNodes.Core.Data       // "data"
+WellKnownNodes.Core.WebRest    // "web-rest"
+WellKnownNodes.Core.Auth       // "auth"
 ```
 
 #### Observability and Orchestration (2 nodes)
 
 ```csharp
-WellKnownNodes.Ops.Pulse       // "Pulse"
-WellKnownNodes.Ops.Grid        // "HoneyDrunk.Grid"
+WellKnownNodes.Ops.Pulse       // "pulse"
+WellKnownNodes.Ops.Grid        // "grid"
 ```
 
 ### Usage Example
@@ -159,16 +159,24 @@ options.NodeId = GridNodes.Market.Arcadia; // From code-gen
 
 ### Naming Convention
 
-Node IDs follow these patterns:
-- **Core infrastructure**: `HoneyDrunk.{NodeName}` or `{NodeName}`
-- **Applications**: Define your own convention
+Node IDs follow kebab-case pattern for all nodes:
+- **Infrastructure**: Simple lowercase or kebab-case (e.g., `kernel`, `web-rest`, `pulse`)
+- **Applications**: Same pattern (e.g., `arcadia`, `payment-service`)
 
-Examples:
-- `HoneyDrunk.Kernel` (infrastructure)
-- `Pulse` (infrastructure, single-word)
-- `Arcadia` (application)
-- `HoneyMech.Courier` (application with namespace)
+**Rules:**
+- ✅ **Lowercase** with optional hyphens as separators
+- ✅ **Human-readable** and stable
+- ❌ **No uppercase** (`Kernel`, `PaymentService`)
+- ❌ **No dots** (`HoneyDrunk.Kernel`)
+- ❌ **No underscores** (`payment_service`)
+- ❌ **No single characters** (`p`)
+- ❌ **No consecutive hyphens** (`payment--service`)
 
+**Examples:**
+- `kernel` (infrastructure, single-word)
+- `web-rest` (infrastructure, kebab-case)
+- `arcadia` (application, simple)
+- `payment-service` (application, kebab-case)
 ---
 
 ## Sectors Registry
@@ -217,7 +225,7 @@ using HoneyDrunk.Kernel.Abstractions;
 
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Ops.Pulse;
+    options.NodeId = WellKnownNodes.Ops.Pulse;
     options.SectorId = Sectors.Ops; // Canonical pattern
 });
 ```
@@ -288,7 +296,7 @@ using GridEnvironments = HoneyDrunk.Kernel.Abstractions.Environments;
 
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Core.ApiGateway;
+    options.NodeId = WellKnownNodes.Core.WebRest;
     options.SectorId = Sectors.Core;
     options.EnvironmentId = GridEnvironments.Production; // Canonical pattern
 });
@@ -322,16 +330,103 @@ Static registry of well-known error codes for consistent error handling.
 
 ### Available Error Codes
 
+**Kernel provides foundational categories. Domain-specific Nodes extend these patterns.**
+
+#### Validation
 ```csharp
-ErrorCode.WellKnown.ValidationFailed      // "validation.failed"
-ErrorCode.WellKnown.NotFound              // "resource.not-found"
-ErrorCode.WellKnown.Unauthorized          // "auth.unauthorized"
-ErrorCode.WellKnown.Forbidden             // "auth.forbidden"
-ErrorCode.WellKnown.Conflict              // "resource.conflict"
-ErrorCode.WellKnown.InternalError         // "internal.error"
-ErrorCode.WellKnown.ServiceUnavailable    // "service.unavailable"
-ErrorCode.WellKnown.Timeout               // "operation.timeout"
-ErrorCode.WellKnown.RateLimitExceeded     // "rate-limit.exceeded"
+ErrorCode.WellKnown.ValidationInput           // "validation.input"
+ErrorCode.WellKnown.ValidationBusiness         // "validation.business"
+```
+
+#### Authentication & Authorization
+```csharp
+ErrorCode.WellKnown.AuthenticationFailure         // "authentication.failure"
+ErrorCode.WellKnown.AuthenticationTokenExpired    // "authentication.token-expired"
+ErrorCode.WellKnown.AuthorizationFailure          // "authorization.failure"
+```
+
+#### Context (Grid-Specific)
+```csharp
+ErrorCode.WellKnown.ContextMissing      // "context.missing" - TenantId, CorrelationId missing
+ErrorCode.WellKnown.ContextInvalid      // "context.invalid" - malformed or cross-tenant
+ErrorCode.WellKnown.TenantInactive      // "tenant.inactive" - tenant disabled/suspended
+ErrorCode.WellKnown.ProjectInactive     // "project.inactive" - project disabled/suspended
+```
+
+#### Resource
+```csharp
+ErrorCode.WellKnown.ResourceNotFound    // "resource.notfound"
+ErrorCode.WellKnown.ResourceConflict    // "resource.conflict"
+```
+
+#### Operation & State (Distributed System)
+```csharp
+ErrorCode.WellKnown.StateVersionConflict         // "state.version-conflict" - optimistic concurrency
+ErrorCode.WellKnown.OperationIdempotentReplay    // "operation.idempotent-replay" - already applied
+ErrorCode.WellKnown.OperationTimeout             // "operation.timeout"
+```
+
+#### Contract (Transport/Envelope)
+```csharp
+ErrorCode.WellKnown.ContractInvalid               // "contract.invalid"
+ErrorCode.WellKnown.ContractUnsupportedVersion    // "contract.unsupported-version"
+ErrorCode.WellKnown.ContractMissingField          // "contract.missing-field"
+```
+
+#### Feature & Quota (Runtime Gating)
+```csharp
+ErrorCode.WellKnown.FeatureDisabled      // "feature.disabled" - flag off
+ErrorCode.WellKnown.FeatureNotAllowed    // "feature.not-allowed" - requires higher tier
+ErrorCode.WellKnown.QuotaExceeded        // "quota.exceeded" - tenant limits hit
+```
+
+#### Dependency
+```csharp
+ErrorCode.WellKnown.DependencyUnavailable    // "dependency.unavailable"
+ErrorCode.WellKnown.DependencyTimeout        // "dependency.timeout"
+```
+
+#### Configuration
+```csharp
+ErrorCode.WellKnown.ConfigurationInvalid    // "configuration.invalid"
+```
+
+#### System
+```csharp
+ErrorCode.WellKnown.InternalError          // "internal.error"
+ErrorCode.WellKnown.ServiceUnavailable     // "service.unavailable"
+ErrorCode.WellKnown.RateLimitExceeded      // "rate-limit.exceeded"
+```
+
+### Domain-Specific Extensions
+
+**Other Nodes define their own error codes following the same pattern:**
+
+```csharp
+// Assets Node (HoneyDrunk.Assets)
+public static class AssetErrorCodes
+{
+    public static readonly ErrorCode TooLarge = new("asset.too-large");
+    public static readonly ErrorCode UnsupportedFormat = new("asset.unsupported-format");
+    public static readonly ErrorCode ScanFailed = new("asset.scan-failed");
+}
+
+// AgentKit (HoneyDrunk.AgentKit)
+public static class AgentErrorCodes
+{
+    public static readonly ErrorCode PlanFailed = new("agent.plan-failed");
+    public static readonly ErrorCode ExecutionFailed = new("agent.execution-failed");
+    public static readonly ErrorCode Rejected = new("agent.rejected");
+    public static readonly ErrorCode UnsupportedIntent = new("agent.unsupported-intent");
+}
+
+// Cyberware (HoneyMech)
+public static class DeviceErrorCodes
+{
+    public static readonly ErrorCode Offline = new("device.offline");
+    public static readonly ErrorCode CommandRejected = new("device.command-rejected");
+    public static readonly ErrorCode SimulationNotSupported = new("simulation.not-supported");
+}
 ```
 
 ### Usage Example
@@ -344,7 +439,7 @@ if (order is null)
 {
     throw new NotFoundException(
         "Order not found",
-        ErrorCode.WellKnown.NotFound);
+        ErrorCode.WellKnown.ResourceNotFound);
 }
 ```
 
@@ -370,7 +465,7 @@ builder.Services.AddHoneyDrunkNode(options =>
     options.EnvironmentId = GridEnvironments.Production;
     
     options.Version = builder.Configuration["Version"] ?? "1.0.0";
-    options.StudioId = builder.Configuration["Grid:StudioId"] ?? "production";
+    options.StudioId = builder.Configuration["Grid:StudioId"] ?? "honeydrunk-studios";
     
     options.Tags["region"] = builder.Configuration["Azure:Region"] ?? "us-east-1";
     options.Tags["deployment-slot"] = builder.Configuration["DeploymentSlot"] ?? "primary";
@@ -453,10 +548,10 @@ options.NodeId = new NodeId("p"); // ❌ Too short (min 3 chars)
 
 | Identity Type | Pattern | Example |
 |---------------|---------|---------|
-| **NodeId** | `{Namespace}.{Name}` or `{Name}` | `HoneyDrunk.Kernel`, `Pulse` |
+| **NodeId** | kebab-case | `kernel`, `web-rest`, `payment-service` |
 | **SectorId** | `{PascalCase}` | `Core`, `AI`, `HoneyPlay` |
 | **EnvironmentId** | `{lowercase}` | `production`, `staging`, `development` |
-| **ErrorCode** | `{category}.{detail}` | `validation.failed`, `auth.unauthorized` |
+| **ErrorCode** | `{category}.{detail}` | `validation.input`, `context.missing` |
 
 ---
 
@@ -467,12 +562,13 @@ options.NodeId = new NodeId("p"); // ❌ Too short (min 3 chars)
 | **WellKnownNodes** | Infrastructure node identifiers | `WellKnownNodes.Core.Kernel` | 8 nodes |
 | **Sectors** | Sector grouping | `Sectors.Core` | 9 sectors |
 | **Environments** | Deployment stages | `GridEnvironments.Production` | 7 environments |
-| **ErrorCode.WellKnown** | Standard error codes | `ErrorCode.WellKnown.NotFound` | 11 codes |
+| **ErrorCode.WellKnown** | Grid-native error codes | `ErrorCode.WellKnown.ContextMissing` | 27 codes |
 
 **Key Benefits:**
 - ✅ Compile-time type safety for infrastructure dependencies
 - ✅ IDE support (IntelliSense, go-to-def, refactoring)
 - ✅ Consistent naming for core primitives
+- ✅ Grid-native error taxonomy (context, state, contracts, features, quotas)
 - ✅ Applications define their own NodeIds (no Kernel coupling)
 - ✅ Grid catalog (nodes.json) remains the single source of truth
 
@@ -483,10 +579,17 @@ Kernel (WellKnownNodes) → 8 infrastructure nodes
 Grid.Contracts → Full catalog from nodes.json (future)
          ↓
 Applications → Define their own NodeIds
+
+Kernel (ErrorCode.WellKnown) → 27 foundational error categories
+         ↓
+Domain Nodes → Extend with their own codes (asset.*, agent.*, device.*)
 ```
 
 **Best Practice:**
-Use `WellKnownNodes` for infrastructure dependencies. Define your own constants for application nodes.
+- Use `WellKnownNodes` for infrastructure dependencies
+- Define your own constants for application nodes
+- Use `ErrorCode.WellKnown.*` for Grid-native errors
+- Domain Nodes extend error codes with their own namespaces
 
 ---
 

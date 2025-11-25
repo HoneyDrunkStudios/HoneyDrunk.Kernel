@@ -5,7 +5,7 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// </summary>
 /// <remarks>
 /// Format is segmented code parts separated by dots, enforcing a taxonomy like: "validation.input.missing".
-/// Each segment must be lowercase alphanumeric (kebab not allowed inside segment) and 1-32 chars. Max overall length 128.
+/// Each segment must be lowercase alphanumeric and hyphens (kebab-case within segments) and 1-32 chars. Max overall length 128.
 /// </remarks>
 public readonly record struct ErrorCode
 {
@@ -75,9 +75,9 @@ public readonly record struct ErrorCode
 
             foreach (var ch in segment)
             {
-                if (!(ch is >= 'a' and <= 'z') && !(ch is >= '0' and <= '9'))
+                if (!(ch is >= 'a' and <= 'z') && !(ch is >= '0' and <= '9') && ch != '-')
                 {
-                    errorMessage = "Segments must be lowercase alphanumeric only.";
+                    errorMessage = "Segments must be lowercase alphanumeric and hyphens only (kebab-case).";
                     return false;
                 }
             }
@@ -109,27 +109,49 @@ public readonly record struct ErrorCode
     public override string ToString() => Value;
 
     /// <summary>
-    /// Well-known error codes for common failure scenarios.
+    /// Well-known error codes for common failure scenarios across the Grid.
     /// </summary>
+    /// <remarks>
+    /// Kernel defines foundational categories that all Nodes extend.
+    /// Domain-specific Nodes (Assets, AgentKit, Cyberware, etc.) define their own error codes
+    /// following the same namespace pattern (e.g., "asset.too-large", "agent.plan-failed").
+    /// </remarks>
     public static class WellKnown
     {
+        // === Validation ===
+
         /// <summary>Validation failure - input validation failed.</summary>
         public static readonly ErrorCode ValidationInput = new("validation.input");
 
         /// <summary>Validation failure - business rule violation.</summary>
         public static readonly ErrorCode ValidationBusiness = new("validation.business");
 
+        // === Authentication & Authorization ===
+
         /// <summary>Authentication failure - user not authenticated.</summary>
         public static readonly ErrorCode AuthenticationFailure = new("authentication.failure");
+
+        /// <summary>Authentication failure - token expired.</summary>
+        public static readonly ErrorCode AuthenticationTokenExpired = new("authentication.token-expired");
 
         /// <summary>Authorization failure - insufficient permissions.</summary>
         public static readonly ErrorCode AuthorizationFailure = new("authorization.failure");
 
-        /// <summary>Dependency failure - external service unavailable.</summary>
-        public static readonly ErrorCode DependencyUnavailable = new("dependency.unavailable");
+        // === Context (Grid-specific) ===
 
-        /// <summary>Dependency failure - external service timeout.</summary>
-        public static readonly ErrorCode DependencyTimeout = new("dependency.timeout");
+        /// <summary>Context missing - required context (TenantId, CorrelationId, NodeId) not present.</summary>
+        public static readonly ErrorCode ContextMissing = new("context.missing");
+
+        /// <summary>Context invalid - context exists but is malformed or cross-tenant.</summary>
+        public static readonly ErrorCode ContextInvalid = new("context.invalid");
+
+        /// <summary>Tenant inactive - tenant exists but is disabled or suspended.</summary>
+        public static readonly ErrorCode TenantInactive = new("tenant.inactive");
+
+        /// <summary>Project inactive - project exists but is disabled or suspended.</summary>
+        public static readonly ErrorCode ProjectInactive = new("project.inactive");
+
+        // === Resource ===
 
         /// <summary>Resource not found.</summary>
         public static readonly ErrorCode ResourceNotFound = new("resource.notfound");
@@ -137,13 +159,61 @@ public readonly record struct ErrorCode
         /// <summary>Resource conflict - duplicate or constraint violation.</summary>
         public static readonly ErrorCode ResourceConflict = new("resource.conflict");
 
-        /// <summary>Configuration error - missing or invalid configuration.</summary>
+        // === Operation & State (Distributed system) ===
+
+        /// <summary>State conflict - optimistic concurrency token mismatch.</summary>
+        public static readonly ErrorCode StateVersionConflict = new("state.version-conflict");
+
+        /// <summary>Operation replay - idempotent operation already applied.</summary>
+        public static readonly ErrorCode OperationIdempotentReplay = new("operation.idempotent-replay");
+
+        /// <summary>Operation timeout - operation exceeded time limit.</summary>
+        public static readonly ErrorCode OperationTimeout = new("operation.timeout");
+
+        // === Contract (Transport/Envelope) ===
+
+        /// <summary>Contract invalid - payload doesn't match schema.</summary>
+        public static readonly ErrorCode ContractInvalid = new("contract.invalid");
+
+        /// <summary>Contract version unsupported - client using unsupported schema version.</summary>
+        public static readonly ErrorCode ContractUnsupportedVersion = new("contract.unsupported-version");
+
+        /// <summary>Contract missing field - required envelope field not present.</summary>
+        public static readonly ErrorCode ContractMissingField = new("contract.missing-field");
+
+        // === Feature & Quota (Runtime gating) ===
+
+        /// <summary>Feature disabled - feature flag is off globally or per-tenant.</summary>
+        public static readonly ErrorCode FeatureDisabled = new("feature.disabled");
+
+        /// <summary>Feature not allowed - feature requires higher tier or permission.</summary>
+        public static readonly ErrorCode FeatureNotAllowed = new("feature.not-allowed");
+
+        /// <summary>Quota exceeded - tenant hit limits (events, storage, API calls).</summary>
+        public static readonly ErrorCode QuotaExceeded = new("quota.exceeded");
+
+        // === Dependency ===
+
+        /// <summary>Dependency unavailable - external service unavailable.</summary>
+        public static readonly ErrorCode DependencyUnavailable = new("dependency.unavailable");
+
+        /// <summary>Dependency timeout - external service timeout.</summary>
+        public static readonly ErrorCode DependencyTimeout = new("dependency.timeout");
+
+        // === Configuration ===
+
+        /// <summary>Configuration invalid - missing or invalid configuration.</summary>
         public static readonly ErrorCode ConfigurationInvalid = new("configuration.invalid");
+
+        // === System ===
 
         /// <summary>Internal error - unhandled exception.</summary>
         public static readonly ErrorCode InternalError = new("internal.error");
 
+        /// <summary>Service unavailable - Node is not ready or shutting down.</summary>
+        public static readonly ErrorCode ServiceUnavailable = new("service.unavailable");
+
         /// <summary>Rate limit exceeded.</summary>
-        public static readonly ErrorCode RateLimitExceeded = new("ratelimit.exceeded");
+        public static readonly ErrorCode RateLimitExceeded = new("rate-limit.exceeded");
     }
 }

@@ -9,7 +9,7 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// NodeId is a validated identifier following kebab-case conventions.
 /// Format: lowercase letters, digits, and hyphens only. Length: 3-64 characters.
 /// No consecutive hyphens, and cannot start or end with a hyphen.
-/// Examples: "payment-node", "auth-gateway", "notification-service".
+/// Examples: "kernel", "transport", "payment-service", "api-v2".
 /// </remarks>
 public readonly partial record struct NodeId
 {
