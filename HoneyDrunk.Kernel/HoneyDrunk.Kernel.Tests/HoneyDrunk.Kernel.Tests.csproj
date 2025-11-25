@@ -54,4 +54,10 @@
     <PackageReference Update="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DependencyInjection\" />
+    <Folder Include="Errors\" />
+    <Folder Include="Hosting\" />
+  </ItemGroup>
+
 </Project>
