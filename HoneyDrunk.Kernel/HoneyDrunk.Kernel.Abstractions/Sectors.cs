@@ -34,35 +34,35 @@ public static class Sectors
     /// Creator tools and platforms - content intelligence and amplification.
     /// Tools that turn imagination into momentum.
     /// </summary>
-    public static readonly SectorId Creator = new("Creator");
+    public static readonly SectorId Creator = SectorId.WellKnown.Creator;
 
     /// <summary>
     /// Market-facing applications - public SaaS and consumer products.
     /// Applied innovation for the open world.
     /// </summary>
-    public static readonly SectorId Market = new("Market");
+    public static readonly SectorId Market = SectorId.WellKnown.Market;
 
     /// <summary>
     /// Gaming and media services - worlds, leagues, and narrative experiences.
     /// Gaming, narrative, and media where technology becomes emotion.
     /// </summary>
-    public static readonly SectorId HoneyPlay = new("HoneyPlay");
+    public static readonly SectorId HoneyPlay = SectorId.WellKnown.HoneyPlay;
 
     /// <summary>
     /// Robotics and hardware services - simulation, servos, and embodied agents.
     /// Where physical motion meets digital logic.
     /// </summary>
-    public static readonly SectorId Cyberware = new("Cyberware");
+    public static readonly SectorId Cyberware = SectorId.WellKnown.Cyberware;
 
     /// <summary>
     /// Security and defense services - breach simulations and secure-by-default SDKs.
     /// Proactive defense for the Hive.
     /// </summary>
-    public static readonly SectorId HoneyNet = new("HoneyNet");
+    public static readonly SectorId HoneyNet = SectorId.WellKnown.HoneyNet;
 
     /// <summary>
     /// Meta services - registries, documentation, and knowledge systems.
     /// The ecosystem's self-awareness.
     /// </summary>
-    public static readonly SectorId Meta = new("Meta");
+    public static readonly SectorId Meta = SectorId.WellKnown.Meta;
 }

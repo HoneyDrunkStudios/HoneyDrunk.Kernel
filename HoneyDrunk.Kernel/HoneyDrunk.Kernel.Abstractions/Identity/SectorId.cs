@@ -9,7 +9,7 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// A <see cref="SectorId"/> is a low-cardinality classification used for coarse grouping (e.g., <c>core</c>, <c>ai</c>, <c>ops</c>).
 /// It is intentionally simple to avoid taxonomy proliferation. The value must be kebab-case (lowercase letters and digits
 /// separated by single hyphens) with a length between 2 and 32 characters.
-/// Examples: <c>core</c>, <c>ai</c>, <c>ops</c>, <c>data-services</c>.
+/// Examples: <c>core</c>, <c>ai</c>, <c>ops</c>, <c>creator</c>, <c>market</c>.
 /// </remarks>
 public readonly partial record struct SectorId
 {
@@ -100,29 +100,44 @@ public readonly partial record struct SectorId
     private static partial Regex ValidationRegex();
 
     /// <summary>
-    /// Well-known sector identifiers for common Grid sectors.
+    /// Well-known sector identifiers for the HoneyDrunk Grid.
     /// </summary>
     public static class WellKnown
     {
-        /// <summary>Core infrastructure services (identity, config, secrets).</summary>
+        /// <summary>Core infrastructure services - foundational primitives for the Grid.</summary>
+        /// <remarks>Kernel abstractions, data conventions, and reliable transport.</remarks>
         public static readonly SectorId Core = new("core");
 
-        /// <summary>AI and machine learning services.</summary>
-        public static readonly SectorId AI = new("ai");
-
-        /// <summary>Operations and monitoring services.</summary>
+        /// <summary>Operations and monitoring services - CI/CD, deployments, and observability.</summary>
+        /// <remarks>From commit to production with confidence.</remarks>
         public static readonly SectorId Ops = new("ops");
 
-        /// <summary>Data processing and analytics services.</summary>
-        public static readonly SectorId Data = new("data");
+        /// <summary>AI and machine learning services - agents, orchestration, and cognition primitives.</summary>
+        /// <remarks>Lifecycles, memory, orchestration, and safety.</remarks>
+        public static readonly SectorId AI = new("ai");
 
-        /// <summary>Web and API services.</summary>
-        public static readonly SectorId Web = new("web");
+        /// <summary>Creator tools and platforms - content intelligence and amplification.</summary>
+        /// <remarks>Tools that turn imagination into momentum.</remarks>
+        public static readonly SectorId Creator = new("creator");
 
-        /// <summary>Messaging and event services.</summary>
-        public static readonly SectorId Messaging = new("messaging");
+        /// <summary>Market-facing applications - public SaaS and consumer products.</summary>
+        /// <remarks>Applied innovation for the open world.</remarks>
+        public static readonly SectorId Market = new("market");
 
-        /// <summary>Storage and persistence services.</summary>
-        public static readonly SectorId Storage = new("storage");
+        /// <summary>Gaming and media services - worlds, leagues, and narrative experiences.</summary>
+        /// <remarks>Gaming, narrative, and media where technology becomes emotion.</remarks>
+        public static readonly SectorId HoneyPlay = new("honeyplay");
+
+        /// <summary>Robotics and hardware services - simulation, servos, and embodied agents.</summary>
+        /// <remarks>Where physical motion meets digital logic.</remarks>
+        public static readonly SectorId Cyberware = new("cyberware");
+
+        /// <summary>Security and defense services - breach simulations and secure-by-default SDKs.</summary>
+        /// <remarks>Proactive defense for the Hive.</remarks>
+        public static readonly SectorId HoneyNet = new("honeynet");
+
+        /// <summary>Meta services - registries, documentation, and knowledge systems.</summary>
+        /// <remarks>The ecosystem's self-awareness.</remarks>
+        public static readonly SectorId Meta = new("meta");
     }
 }

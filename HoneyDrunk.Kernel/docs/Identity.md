@@ -542,7 +542,7 @@ var dbConfig = await _configService.GetConfigAsync<DatabaseConfig>(
 ## SectorId.cs
 
 ### What it is
-Strongly-typed identifier for logical groupings of Nodes within the Grid (e.g., core, ai, ops, data).
+Strongly-typed identifier for logical groupings of Nodes within the Grid (e.g., core, ai, ops, creator, market).
 
 ### Real-world analogy
 Like departments in a company - Marketing, Engineering, Sales, HR. Each sector groups related services together.
@@ -558,7 +558,7 @@ Like departments in a company - Marketing, Engineering, Sales, HR. Each sector g
   - Low-cardinality (intentionally coarse grouping)
 
 ### Examples
-✅ Valid: `"core"`, `"ai"`, `"ops"`, `"data-services"`, `"web-api"`  
+✅ Valid: `"core"`, `"ai"`, `"ops"`, `"creator"`, `"market"`, `"honeyplay"`, `"cyberware"`  
 ❌ Invalid: `"AI"` (uppercase), `"data_services"` (underscore), `"a"` (too short), `"data--services"` (consecutive hyphens)
 
 ### Usage
@@ -568,19 +568,24 @@ Like departments in a company - Marketing, Engineering, Sales, HR. Each sector g
 var sectorId = new SectorId("ai");
 
 // Try parse (returns bool)
-if (SectorId.TryParse("data-services", out var parsed))
+if (SectorId.TryParse("creator", out var parsed))
 {
     Console.WriteLine($"Valid sector: {parsed}");
 }
 
-// Well-known sectors
-var core = SectorId.WellKnown.Core;             // "core" - identity, config, secrets
-var ai = SectorId.WellKnown.AI;                 // "ai" - machine learning services
-var ops = SectorId.WellKnown.Ops;               // "ops" - monitoring, logging
-var data = SectorId.WellKnown.Data;             // "data" - analytics, processing
-var web = SectorId.WellKnown.Web;               // "web" - APIs, frontends
-var messaging = SectorId.WellKnown.Messaging;   // "messaging" - events, queues
-var storage = SectorId.WellKnown.Storage;       // "storage" - databases, files
+// Well-known sectors for the HoneyDrunk Grid
+var core = SectorId.WellKnown.Core;             // "core" - foundational primitives
+var ops = SectorId.WellKnown.Ops;               // "ops" - CI/CD, monitoring
+var ai = SectorId.WellKnown.AI;                 // "ai" - agents, orchestration
+var creator = SectorId.WellKnown.Creator;       // "creator" - content tools
+var market = SectorId.WellKnown.Market;         // "market" - public SaaS products
+var honeyplay = SectorId.WellKnown.HoneyPlay;   // "honeyplay" - gaming, media
+var cyberware = SectorId.WellKnown.Cyberware;   // "cyberware" - robotics, hardware
+var honeynet = SectorId.WellKnown.HoneyNet;     // "honeynet" - security, defense
+var meta = SectorId.WellKnown.Meta;             // "meta" - registries, documentation
+
+// Alternative: Use the Sectors static class
+var coreSector = Sectors.Core;                   // Same as SectorId.WellKnown.Core
 
 // Validation check
 if (SectorId.IsValid("custom-sector", out var errorMessage))
@@ -608,6 +613,20 @@ string sectorString = sectorId; // "ai"
 ### Why it matters
 Provides a **coarse-grained taxonomy** for organizing hundreds of Nodes without creating a complex hierarchy. Keeps the Grid manageable and discoverable.
 
+### HoneyDrunk Grid Sectors
+
+| Sector | Description | Examples |
+|--------|-------------|----------|
+| **Core** | Foundational primitives | Kernel, Data, Transport |
+| **Ops** | CI/CD and observability | Deployments, monitoring, logging |
+| **AI** | Agents and orchestration | LLM services, agent lifecycle, memory |
+| **Creator** | Content tools | Content intelligence, amplification |
+| **Market** | Public SaaS products | Customer-facing applications |
+| **HoneyPlay** | Gaming and media | Worlds, leagues, narrative experiences |
+| **Cyberware** | Robotics and hardware | Simulation, servos, embodied agents |
+| **HoneyNet** | Security and defense | Breach simulations, secure SDKs |
+| **Meta** | Knowledge systems | Registries, documentation, schemas |
+
 ### Sector-Based Service Discovery Example
 
 ```csharp
@@ -625,6 +644,13 @@ var aiNodes = await _discovery.GetNodesInSectorAsync(SectorId.WellKnown.AI);
 foreach (var node in aiNodes)
 {
     Console.WriteLine($"AI Node: {node.NodeId} at {node.Endpoint}");
+}
+
+// Usage - find all Creator tools
+var creatorNodes = await _discovery.GetNodesInSectorAsync(Sectors.Creator);
+foreach (var node in creatorNodes)
+{
+    Console.WriteLine($"Creator Node: {node.NodeId}");
 }
 ```
 
