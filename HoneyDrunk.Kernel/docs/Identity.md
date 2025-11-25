@@ -154,6 +154,91 @@ All logs across all services share the same CorrelationId → full trace reconst
 
 ---
 
+## CausationId.cs
+
+### What it is
+ULID-based identifier for tracking the direct parent operation that triggered the current operation.
+
+### Real-world analogy
+Like "Reply-To" in email threads - it points to the immediate message that caused this response, helping you trace back through the conversation tree.
+
+### Format
+**ULID** (same format as CorrelationId)
+
+### Properties
+- **Uniqueness:** Globally unique across all operations
+- **Sortability:** Lexicographically sortable by creation time
+- **Causal Chain:** Forms a parent-child execution tree
+- **Correlation vs Causation:** CorrelationId stays the same for a request; CausationId points to the parent operation
+
+### Usage
+
+```csharp
+// Incoming request (root operation)
+var correlationId = CorrelationId.NewId();
+var causationId = (CausationId?)null; // No parent
+
+// First downstream operation
+var operation1CorrelationId = CorrelationId.NewId();
+var operation1CausationId = new CausationId(correlationId); // Parent = original request
+
+// Second level operation
+var operation2CorrelationId = CorrelationId.NewId();
+var operation2CausationId = new CausationId(operation1CorrelationId); // Parent = operation1
+
+// Parse from message metadata
+if (CausationId.TryParse(message.Properties["causation-id"], out var parsedCausationId))
+{
+    _logger.LogInformation("Processing message caused by {CausationId}", parsedCausationId);
+}
+
+// Convert to/from Ulid
+Ulid ulid = causationId.ToUlid();
+var fromUlid = CausationId.FromUlid(ulid);
+
+// Implicit conversions
+string idString = causationId;           // To string
+Ulid ulidValue = causationId;            // To Ulid
+```
+
+### When to use
+- Every operation that is triggered by another operation
+- Building execution trees for complex workflows
+- Debugging cascading failures
+- Understanding request fan-out patterns
+- Audit trails showing who-called-whom
+
+### Why it matters
+**Enables causal tracing** - while CorrelationId shows you all operations related to a user request, CausationId shows you the parent-child relationships and execution order.
+
+### Execution Tree Example
+
+```
+User Request
+  ├─ Correlation: 01HQXZ8K... (root)
+  └─ Causation: null
+      │
+      ├─ API Gateway
+      │   ├─ Correlation: 01HQXZ8L... (new)
+      │   └─ Causation: 01HQXZ8K... (points to User Request)
+      │       │
+      │       ├─ Auth Service
+      │       │   ├─ Correlation: 01HQXZ8M... (new)
+      │       │   └─ Causation: 01HQXZ8L... (points to API Gateway)
+      │       │
+      │       └─ Payment Service
+      │           ├─ Correlation: 01HQXZ8N... (new)
+      │           └─ Causation: 01HQXZ8L... (points to API Gateway)
+      │               │
+      │               └─ Notification Service
+      │                   ├─ Correlation: 01HQXZ8P... (new)
+      │                   └─ Causation: 01HQXZ8N... (points to Payment Service)
+```
+
+**Result:** You can reconstruct the entire execution tree and see which operations spawned which children.
+
+---
+
 ## TenantId.cs
 
 ### What it is
@@ -364,6 +449,309 @@ public class WorkflowEngine
 
 ---
 
+## EnvironmentId.cs
+
+### What it is
+Strongly-typed identifier for deployment environments (production, staging, development, etc.).
+
+### Real-world analogy
+Like the building floors in an office - each floor has different rules, access controls, and purposes (executive floor vs. cafeteria vs. warehouse).
+
+### Validation Rules
+- **Format:** `^[a-z0-9]+(-[a-z0-9]+)*$` (kebab-case)
+- **Length:** 3-32 characters
+- **Constraints:**
+  - Lowercase letters and digits only
+  - Single hyphens allowed as separators
+  - No consecutive hyphens
+  - Cannot start or end with hyphens
+  - Low-cardinality (small set of well-known values)
+
+### Examples
+✅ Valid: `"production"`, `"staging"`, `"dev-alice"`, `"perf-test"`, `"integration"`  
+❌ Invalid: `"Production"` (uppercase), `"dev_alice"` (underscore), `"pr"` (too short), `"dev--alice"` (consecutive hyphens)
+
+### Usage
+
+```csharp
+// Construction (throws on invalid)
+var envId = new EnvironmentId("production");
+
+// Try parse (returns bool)
+if (EnvironmentId.TryParse("staging", out var parsed))
+{
+    Console.WriteLine($"Valid environment: {parsed}");
+}
+
+// Well-known environments
+var prod = EnvironmentId.WellKnown.Production;        // "production"
+var staging = EnvironmentId.WellKnown.Staging;        // "staging"
+var dev = EnvironmentId.WellKnown.Development;        // "development"
+var test = EnvironmentId.WellKnown.Testing;           // "testing"
+var perf = EnvironmentId.WellKnown.Performance;       // "performance"
+var integration = EnvironmentId.WellKnown.Integration; // "integration"
+var local = EnvironmentId.WellKnown.Local;            // "local"
+
+// Validation check
+if (EnvironmentId.IsValid("dev-sandbox", out var errorMessage))
+{
+    var customEnv = new EnvironmentId("dev-sandbox");
+}
+else
+{
+    Console.WriteLine(errorMessage);
+}
+
+// Implicit string conversion
+string envString = envId; // "production"
+```
+
+### When to use
+- Configuration scoping (different settings per environment)
+- Telemetry partitioning (separate dashboards per environment)
+- Access control (production vs. non-production permissions)
+- Resource naming (database names, storage accounts)
+- Deployment validation (prevent prod deployments from staging)
+- Feature flags (enable features only in certain environments)
+
+### Why it matters
+Type-safe environment identification prevents catastrophic mistakes like deploying to production instead of staging or querying production data from a development environment.
+
+### Environment-Scoped Configuration Example
+
+```csharp
+public class ConfigurationService
+{
+    public async Task<TConfig> GetConfigAsync<TConfig>(EnvironmentId environment, string key)
+    {
+        // Environment-specific config lookup
+        var configKey = $"{environment}/{key}";
+        return await _vaultClient.GetSecretAsync<TConfig>(configKey);
+    }
+}
+
+// Usage
+var dbConfig = await _configService.GetConfigAsync<DatabaseConfig>(
+    EnvironmentId.WellKnown.Production, 
+    "database/connection-string"
+);
+```
+
+---
+
+## SectorId.cs
+
+### What it is
+Strongly-typed identifier for logical groupings of Nodes within the Grid (e.g., core, ai, ops, data).
+
+### Real-world analogy
+Like departments in a company - Marketing, Engineering, Sales, HR. Each sector groups related services together.
+
+### Validation Rules
+- **Format:** `^[a-z0-9]+(-[a-z0-9]+)*$` (kebab-case)
+- **Length:** 2-32 characters
+- **Constraints:**
+  - Lowercase letters and digits only
+  - Single hyphens allowed as separators
+  - No consecutive hyphens
+  - Cannot start or end with hyphens
+  - Low-cardinality (intentionally coarse grouping)
+
+### Examples
+✅ Valid: `"core"`, `"ai"`, `"ops"`, `"data-services"`, `"web-api"`  
+❌ Invalid: `"AI"` (uppercase), `"data_services"` (underscore), `"a"` (too short), `"data--services"` (consecutive hyphens)
+
+### Usage
+
+```csharp
+// Construction (throws on invalid)
+var sectorId = new SectorId("ai");
+
+// Try parse (returns bool)
+if (SectorId.TryParse("data-services", out var parsed))
+{
+    Console.WriteLine($"Valid sector: {parsed}");
+}
+
+// Well-known sectors
+var core = SectorId.WellKnown.Core;             // "core" - identity, config, secrets
+var ai = SectorId.WellKnown.AI;                 // "ai" - machine learning services
+var ops = SectorId.WellKnown.Ops;               // "ops" - monitoring, logging
+var data = SectorId.WellKnown.Data;             // "data" - analytics, processing
+var web = SectorId.WellKnown.Web;               // "web" - APIs, frontends
+var messaging = SectorId.WellKnown.Messaging;   // "messaging" - events, queues
+var storage = SectorId.WellKnown.Storage;       // "storage" - databases, files
+
+// Validation check
+if (SectorId.IsValid("custom-sector", out var errorMessage))
+{
+    var customSector = new SectorId("custom-sector");
+}
+else
+{
+    Console.WriteLine(errorMessage);
+}
+
+// Implicit string conversion
+string sectorString = sectorId; // "ai"
+```
+
+### When to use
+- Service discovery (find all Nodes in a sector)
+- Resource organization (group related Nodes)
+- Deployment planning (deploy entire sectors)
+- Observability grouping (dashboards per sector)
+- Access control (sector-level permissions)
+- Network policies (isolate sectors)
+- Cost allocation (billing per sector)
+
+### Why it matters
+Provides a **coarse-grained taxonomy** for organizing hundreds of Nodes without creating a complex hierarchy. Keeps the Grid manageable and discoverable.
+
+### Sector-Based Service Discovery Example
+
+```csharp
+public class ServiceDiscoveryClient
+{
+    public async Task<IEnumerable<NodeDescriptor>> GetNodesInSectorAsync(SectorId sector)
+    {
+        // Find all nodes in the specified sector
+        return await _registry.QueryAsync(n => n.SectorId == sector);
+    }
+}
+
+// Usage - find all AI services
+var aiNodes = await _discovery.GetNodesInSectorAsync(SectorId.WellKnown.AI);
+foreach (var node in aiNodes)
+{
+    Console.WriteLine($"AI Node: {node.NodeId} at {node.Endpoint}");
+}
+```
+
+---
+
+## ErrorCode.cs
+
+### What it is
+Structured error code using dot-separated segments for hierarchical error classification.
+
+### Real-world analogy
+Like HTTP status codes, but more detailed: HTTP gives you `404`, ErrorCode gives you `resource.notfound.customer.order`.
+
+### Validation Rules
+- **Format:** Dot-separated segments: `segment1.segment2.segment3`
+- **Segment Rules:**
+  - Each segment: 1-32 characters
+  - Lowercase alphanumeric only (no hyphens within segments)
+  - At least one segment required
+- **Overall Length:** Maximum 128 characters
+- **Purpose:** Hierarchical error taxonomy
+
+### Examples
+✅ Valid: `"validation.input"`, `"authentication.failure"`, `"dependency.timeout"`, `"resource.notfound.customer"`  
+❌ Invalid: `"Validation.Input"` (uppercase), `"validation-input"` (hyphen instead of dot), `"validation."` (trailing dot), `""` (empty)
+
+### Usage
+
+```csharp
+// Construction (throws on invalid)
+var errorCode = new ErrorCode("validation.input.missing");
+
+// Try parse (returns bool)
+if (ErrorCode.TryParse("authentication.failure", out var parsed))
+{
+    Console.WriteLine($"Valid error code: {parsed}");
+}
+
+// Well-known error codes
+var validationInput = ErrorCode.WellKnown.ValidationInput;           // "validation.input"
+var validationBusiness = ErrorCode.WellKnown.ValidationBusiness;     // "validation.business"
+var authFailure = ErrorCode.WellKnown.AuthenticationFailure;         // "authentication.failure"
+var authzFailure = ErrorCode.WellKnown.AuthorizationFailure;         // "authorization.failure"
+var depUnavailable = ErrorCode.WellKnown.DependencyUnavailable;      // "dependency.unavailable"
+var depTimeout = ErrorCode.WellKnown.DependencyTimeout;              // "dependency.timeout"
+var notFound = ErrorCode.WellKnown.ResourceNotFound;                 // "resource.notfound"
+var conflict = ErrorCode.WellKnown.ResourceConflict;                 // "resource.conflict"
+var configInvalid = ErrorCode.WellKnown.ConfigurationInvalid;        // "configuration.invalid"
+var internalError = ErrorCode.WellKnown.InternalError;               // "internal.error"
+var rateLimitExceeded = ErrorCode.WellKnown.RateLimitExceeded;       // "ratelimit.exceeded"
+
+// Validation check
+if (ErrorCode.IsValid("custom.error.type", out var errorMessage))
+{
+    var customError = new ErrorCode("custom.error.type");
+}
+else
+{
+    Console.WriteLine(errorMessage);
+}
+
+// Implicit string conversion
+string errorString = errorCode; // "validation.input.missing"
+```
+
+### When to use
+- Structured error responses in APIs
+- Error classification for monitoring
+- Alert routing (different alerts for different error types)
+- Error documentation (generate docs from error codes)
+- Client error handling (programmatic error detection)
+- Internationalization (map codes to localized messages)
+- SLA tracking (track error types vs. targets)
+
+### Why it matters
+Enables **machine-readable error classification** across the entire Grid. Clients can handle errors programmatically, monitoring systems can alert on specific error patterns, and documentation can be auto-generated.
+
+### Hierarchical Error Handling Example
+
+```csharp
+public class ErrorHandler
+{
+    public async Task<ErrorResponse> HandleExceptionAsync(Exception ex, OperationContext context)
+    {
+        ErrorCode errorCode = ex switch
+        {
+            ValidationException => ErrorCode.WellKnown.ValidationInput,
+            AuthenticationException => ErrorCode.WellKnown.AuthenticationFailure,
+            AuthorizationException => ErrorCode.WellKnown.AuthorizationFailure,
+            TimeoutException => ErrorCode.WellKnown.DependencyTimeout,
+            NotFoundException => ErrorCode.WellKnown.ResourceNotFound,
+            ConflictException => ErrorCode.WellKnown.ResourceConflict,
+            _ => ErrorCode.WellKnown.InternalError
+        };
+
+        _telemetry.TrackError(errorCode, ex, context);
+        
+        return new ErrorResponse
+        {
+            ErrorCode = errorCode,
+            Message = GetLocalizedMessage(errorCode),
+            CorrelationId = context.Grid.CorrelationId,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+    }
+}
+
+// Client-side handling
+if (response.ErrorCode == ErrorCode.WellKnown.ValidationInput)
+{
+    // Show validation errors to user
+    DisplayValidationErrors(response.Details);
+}
+else if (response.ErrorCode.ToString().StartsWith("dependency."))
+{
+    // Dependency issue - retry with backoff
+    await RetryWithBackoffAsync();
+}
+else if (response.ErrorCode == ErrorCode.WellKnown.AuthenticationFailure)
+{
+    // Redirect to login
+    RedirectToLogin();
+}
+```
+
+---
+
 ## Common Patterns
 
 ### Identity Validation
@@ -480,27 +868,94 @@ public void CorrelationId_MaintainsSortOrder()
     var sorted = ids.OrderBy(id => id.ToString()).ToList();
     Assert.Equal(ids, sorted);
 }
+
+[Fact]
+public void CausationId_LinksOperations()
+{
+    // Arrange
+    var parentId = CorrelationId.NewId();
+    var causationId = new CausationId(parentId);
+    
+    // Act
+    var reconstructed = causationId.ToUlid();
+    
+    // Assert
+    Assert.Equal(parentId.ToUlid(), reconstructed);
+}
+
+[Fact]
+public void EnvironmentId_WellKnownValuesAreValid()
+{
+    // Arrange & Act
+    var wellKnown = new[]
+    {
+        EnvironmentId.WellKnown.Production,
+        EnvironmentId.WellKnown.Staging,
+        EnvironmentId.WellKnown.Development,
+        EnvironmentId.WellKnown.Testing
+    };
+    
+    // Assert
+    foreach (var env in wellKnown)
+    {
+        Assert.True(EnvironmentId.IsValid(env, out _));
+    }
+}
+
+[Fact]
+public void SectorId_RejectsTooShort()
+{
+    // Arrange
+    var tooShort = "a";
+    
+    // Act & Assert
+    Assert.False(SectorId.TryParse(tooShort, out _));
+    Assert.Throws<ArgumentException>(() => new SectorId(tooShort));
+}
+
+[Fact]
+public void ErrorCode_SupportsHierarchicalStructure()
+{
+    // Arrange
+    var errorCode = new ErrorCode("validation.input.missing.required");
+    
+    // Act
+    var segments = errorCode.ToString().Split('.');
+    
+    // Assert
+    Assert.Equal(4, segments.Length);
+    Assert.Equal("validation", segments[0]);
+    Assert.Equal("input", segments[1]);
+    Assert.Equal("missing", segments[2]);
+    Assert.Equal("required", segments[3]);
+}
 ```
 
 ---
 
 ## Performance Considerations
 
-### NodeId
+### NodeId, EnvironmentId, SectorId
 - **Validation:** Regex compiled with `[GeneratedRegex]` for optimal performance
 - **Storage:** Stack-allocated (value type), no heap allocations
 - **Comparison:** String comparison overhead
 
-### ULID-based IDs (CorrelationId, TenantId, ProjectId, RunId)
+### ULID-based IDs (CorrelationId, CausationId, TenantId, ProjectId, RunId)
 - **Generation:** O(1), faster than GUIDv4
 - **Storage:** 16 bytes (same as GUID)
 - **String representation:** 26 characters (vs 36 for GUID)
 - **Sortability:** Chronological without database overhead
 
+### ErrorCode
+- **Validation:** Character-by-character check (no regex)
+- **Storage:** String value (heap-allocated)
+- **Comparison:** String equality (consider interning for hot paths)
+
 ### Recommendations
 - Use ULID-based IDs for high-throughput scenarios (orders, events, runs)
-- Cache NodeId validation results if validating user input repeatedly
-- Prefer value types avoid boxing in hot paths
+- Cache NodeId/EnvironmentId/SectorId validation results if validating user input repeatedly
+- Prefer value types; avoid boxing in hot paths
+- Intern common ErrorCode values for faster comparison
 
 ---
 
@@ -510,9 +965,13 @@ public void CorrelationId_MaintainsSortOrder()
 |------|--------|--------|----------|
 | **NodeId** | Kebab-case | 3-64 chars | Node identification |
 | **CorrelationId** | ULID | 26 chars | Request tracing |
+| **CausationId** | ULID | 26 chars | Parent operation tracking |
 | **TenantId** | ULID | 26 chars | Multi-tenancy isolation |
 | **ProjectId** | ULID | 26 chars | Project/workspace organization |
 | **RunId** | ULID | 26 chars | Execution tracking |
+| **EnvironmentId** | Kebab-case | 3-32 chars | Environment identification |
+| **SectorId** | Kebab-case | 2-32 chars | Logical Node grouping |
+| **ErrorCode** | Dot-separated | 1-128 chars | Hierarchical error classification |
 
 **Common Properties:**
 - ✅ Type-safe
