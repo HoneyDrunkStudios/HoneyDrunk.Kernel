@@ -9,7 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHoneyDrunkNode(options =>
 {
     // Identity from static registries (canonical pattern)
-    options.NodeId = Nodes.Core.MinimalNode;
+    // Note: MinimalNode is a sample, so we define it inline here
+    // Production Nodes should use WellKnownNodes for infrastructure dependencies
+    options.NodeId = new("HoneyDrunk.Core.MinimalNode");
     options.SectorId = Sectors.Core;
     options.EnvironmentId = GridEnvironments.Development;
     

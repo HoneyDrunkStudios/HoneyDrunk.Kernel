@@ -94,6 +94,11 @@ string nodeIdString = nodeId; // "payment-node"
 - Telemetry tagging
 - Log correlation
 
+**Registry Pattern:**
+- **Infrastructure nodes** → Use `WellKnownNodes.Core.*` or `WellKnownNodes.Ops.*` (8 nodes)
+- **Application nodes** → Define inline or in app constants (e.g., `new NodeId("arcadia")`)
+- See [IdentityRegistries.md](IdentityRegistries.md) for details
+
 ### Why it matters
 Type-safe, validated identifiers prevent typos and ensure consistent naming conventions across the entire Grid.
 

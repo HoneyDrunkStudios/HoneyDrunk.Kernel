@@ -13,10 +13,7 @@
 - [Environments Registry](#environments-registry)
 - [ErrorCode Registry](#errorcode-registry-new-in-v030)
 - [Complete Example](#complete-example)
-- [Adding Custom Nodes](#adding-custom-nodes)
 - [Best Practices](#best-practices)
-- [IDE Support](#ide-support)
-- [Migration from v0.2.x](#migration-from-v02x)
 - [Summary](#summary)
 
 ---
@@ -76,125 +73,51 @@ builder.Services.AddHoneyDrunkNode(options =>
 ## Nodes Registry
 
 ### What it is
-Static registry of well-known Node identifiers organized by sector.
+Static registry of **infrastructure** Node identifiers required by Kernel and core Grid operations.
+
+### ⚠️ Architecture Note (v0.4.0)
+
+**Kernel only provides infrastructure node identities.**
+
+- **Infrastructure Nodes** (8 nodes) → Defined in `WellKnownNodes` (Core, Ops sectors)
+- **Application Nodes** (50+ nodes) → Define in your app or use Grid.Contracts (future)
+
+**Why?**
+- Kernel is the OS layer and shouldn't know about userland applications
+- Adding a product node shouldn't require a Kernel package update
+- Grid catalog (nodes.json) is the single source of truth for all nodes
 
 ### Location
-`HoneyDrunk.Kernel.Abstractions/Nodes.cs`
+`HoneyDrunk.Kernel.Abstractions/WellKnownNodes.cs`
 
 ### Structure
 
 ```csharp
-public static class Nodes
+public static class WellKnownNodes
 {
-    public static class Core { /* Core infrastructure Nodes */ }
-    public static class AI { /* AI and ML Nodes */ }
-    public static class Ops { /* Operations Nodes */ }
-    public static class Data { /* Data processing Nodes */ }
-    public static class Web { /* Web and API Nodes */ }
-    public static class Messaging { /* Messaging Nodes */ }
-    public static class Storage { /* Storage Nodes */ }
+    public static class Core { /* Core infrastructure (6 nodes) */ }
+    public static class Ops  { /* Observability and orchestration (2 nodes) */ }
 }
 ```
 
-### Available Nodes
+### Available Infrastructure Nodes
 
-#### Core Infrastructure
+#### Core Infrastructure (6 nodes)
 
 ```csharp
-Nodes.Core.Kernel             // "HoneyDrunk.Kernel"
-Nodes.Core.Transport           // "HoneyDrunk.Transport"
-Nodes.Core.Vault               // "HoneyDrunk.Vault"
-Nodes.Core.Data                // "HoneyDrunk.Data"
-Nodes.Core.WebRest             // "HoneyCore.Web.Rest"
-Nodes.Core.Auth                // "HoneyDrunk.Auth"
-Nodes.Core.Testing             // "HoneyDrunk.Testing"
-Nodes.Core.Build               // "HoneyDrunk.Build"
-Nodes.Core.Standards           // "HoneyDrunk.Standards"
-Nodes.Core.HiveXP              // "HiveXP"
-Nodes.Core.Assets              // "HoneyDrunk.Assets"
-Nodes.Core.MinimalNode         // "HoneyDrunk.Core.MinimalNode" (sample)
+WellKnownNodes.Core.Kernel     // "HoneyDrunk.Kernel"
+WellKnownNodes.Core.Transport  // "HoneyDrunk.Transport"
+WellKnownNodes.Core.Vault      // "HoneyDrunk.Vault"
+WellKnownNodes.Core.Data       // "HoneyDrunk.Data"
+WellKnownNodes.Core.WebRest    // "HoneyCore.Web.Rest"
+WellKnownNodes.Core.Auth       // "HoneyDrunk.Auth"
 ```
 
-#### Operations and Monitoring
+#### Observability and Orchestration (2 nodes)
 
 ```csharp
-Nodes.Ops.Pipelines            // "HoneyDrunk.Pipelines"
-Nodes.Ops.Actions              // "HoneyDrunk.Actions"
-Nodes.Ops.Deploy               // "HoneyDrunk.Deploy"
-Nodes.Ops.Tools                // "HoneyDrunk.Tools"
-Nodes.Ops.Pulse                // "Pulse"
-Nodes.Ops.Collector            // "HoneyDrunk.Collector"
-Nodes.Ops.Comms                // "HoneyDrunk.Comms"
-Nodes.Ops.Console              // "HoneyDrunk.Console"
-Nodes.Ops.AuditAgent           // "Audit.Agent"
-Nodes.Ops.Ledger               // "Ledger"
-Nodes.Ops.Invoice              // "Invoice"
-Nodes.Ops.Pay                  // "Pay"
-Nodes.Ops.Subs                 // "Subs"
-Nodes.Ops.ClientPortalOS       // "HoneyDrunk.ClientPortalOS"
-Nodes.Ops.HomeLab              // "HoneyDrunk.HomeLab"
-```
-
-#### AI and Machine Learning
-
-```csharp
-Nodes.AI.AgentKit              // "HoneyDrunk.AgentKit"
-Nodes.AI.Clarity               // "HoneyDrunk.Clarity"
-Nodes.AI.Governor              // "HoneyDrunk.Governor"
-Nodes.AI.Operator              // "HoneyDrunk.Operator"
-```
-
-#### Creator Tools
-
-```csharp
-Nodes.Creator.Signal           // "HoneyDrunk.Signal"
-Nodes.Creator.Forge            // "Forge"
-```
-
-#### Market Applications
-
-```csharp
-Nodes.Market.MarketCore        // "MarketCore"
-Nodes.Market.HiveGigs          // "HiveGigs"
-Nodes.Market.Tether            // "Tether"
-Nodes.Market.ReView            // "Re:View"
-Nodes.Market.MemoryBank        // "MemoryBank"
-Nodes.Market.DreamMarket       // "DreamMarket"
-Nodes.Market.Arcadia           // "Arcadia"
-```
-
-#### Gaming and Media
-
-```csharp
-Nodes.HoneyPlay.Draft          // "Draft"
-Nodes.HoneyPlay.GamePrototype  // "Game #1 (TBD)"
-```
-
-#### Robotics and Hardware
-
-```csharp
-Nodes.Cyberware.Courier        // "HoneyMech.Courier"
-Nodes.Cyberware.Sim            // "HoneyMech.Sim"
-Nodes.Cyberware.Servo          // "HoneyMech.Servo"
-```
-
-#### Security and Defense
-
-```csharp
-Nodes.HoneyNet.BreachLab       // "BreachLab.exe"
-Nodes.HoneyNet.Sentinel        // "HoneyDrunk.Sentinel"
-```
-
-#### Meta and Ecosystem
-
-```csharp
-Nodes.Meta.Grid                // "HoneyDrunk.Grid"
-Nodes.Meta.HoneyHub            // "HoneyHub"
-Nodes.Meta.HoneyConnect        // "HoneyConnect"
-Nodes.Meta.ArchiveLegacy       // "Archive.Legacy"
-Nodes.Meta.DevPortal           // "Meta.DevPortal"
-Nodes.Meta.PackagePublisher    // "Meta.PackagePublisher"
-Nodes.Meta.AtlasSync           // "Meta.AtlasSync"
+WellKnownNodes.Ops.Pulse       // "Pulse"
+WellKnownNodes.Ops.Grid        // "HoneyDrunk.Grid"
 ```
 
 ### Usage Example
@@ -204,24 +127,47 @@ using HoneyDrunk.Kernel.Abstractions;
 
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Core.Kernel; // Canonical pattern
+    // Infrastructure dependency - use WellKnownNodes
+    options.NodeId = WellKnownNodes.Core.Kernel;
     options.SectorId = Sectors.Core;
     options.EnvironmentId = GridEnvironments.Production;
 });
+```
+
+### For Application Nodes
+
+Application nodes should define their own NodeIds:
+
+```csharp
+// Option 1: Inline definition (simple apps)
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = new NodeId("arcadia");
+    options.SectorId = Sectors.Market;
+});
+
+// Option 2: Define in your app (recommended)
+public static class ArcadiaNodeIds
+{
+    public static readonly NodeId Self = new("Arcadia");
+    public static readonly NodeId Auth = WellKnownNodes.Core.Auth; // Reference infra
+}
+
+// Option 3: Use Grid.Contracts (future package)
+options.NodeId = GridNodes.Market.Arcadia; // From code-gen
 ```
 
 ### Naming Convention
 
 Node IDs follow these patterns:
 - **Core infrastructure**: `HoneyDrunk.{NodeName}` or `{NodeName}`
-- **Sectored Nodes**: Often include sector prefix (e.g., `HoneyMech.Courier`)
-- **Meta Nodes**: May use `Meta.{NodeName}` pattern
+- **Applications**: Define your own convention
 
 Examples:
-- `HoneyDrunk.Kernel`
-- `HoneyMech.Courier`
-- `Meta.DevPortal`
-- `Pulse` (single-word canonical name)
+- `HoneyDrunk.Kernel` (infrastructure)
+- `Pulse` (infrastructure, single-word)
+- `Arcadia` (application)
+- `HoneyMech.Courier` (application with namespace)
 
 ---
 
@@ -241,12 +187,12 @@ public static class Sectors
     public static readonly SectorId Core      = SectorId.WellKnown.Core;
     public static readonly SectorId Ops       = SectorId.WellKnown.Ops;
     public static readonly SectorId AI        = SectorId.WellKnown.AI;
-    public static readonly SectorId Creator   = new("Creator");
-    public static readonly SectorId Market    = new("Market");
-    public static readonly SectorId HoneyPlay = new("HoneyPlay");
-    public static readonly SectorId Cyberware = new("Cyberware");
-    public static readonly SectorId HoneyNet  = new("HoneyNet");
-    public static readonly SectorId Meta      = new("Meta");
+    public static readonly SectorId Creator   = SectorId.WellKnown.Creator;
+    public static readonly SectorId Market    = SectorId.WellKnown.Market;
+    public static readonly SectorId HoneyPlay = SectorId.WellKnown.HoneyPlay;
+    public static readonly SectorId Cyberware = SectorId.WellKnown.Cyberware;
+    public static readonly SectorId HoneyNet  = SectorId.WellKnown.HoneyNet;
+    public static readonly SectorId Meta      = SectorId.WellKnown.Meta;
 }
 ```
 
@@ -416,19 +362,16 @@ using GridEnvironments = HoneyDrunk.Kernel.Abstractions.Environments;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Canonical v3 pattern - all identities from static registries
+// Infrastructure node using WellKnownNodes
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    // Static registries (compile-time safe)
-    options.NodeId = Nodes.Web.RestApi;
-    options.SectorId = Sectors.Web;
+    options.NodeId = WellKnownNodes.Core.WebRest;
+    options.SectorId = Sectors.Core;
     options.EnvironmentId = GridEnvironments.Production;
     
-    // Configuration-driven values
     options.Version = builder.Configuration["Version"] ?? "1.0.0";
     options.StudioId = builder.Configuration["Grid:StudioId"] ?? "production";
     
-    // Observability tags
     options.Tags["region"] = builder.Configuration["Azure:Region"] ?? "us-east-1";
     options.Tags["deployment-slot"] = builder.Configuration["DeploymentSlot"] ?? "primary";
 });
@@ -439,58 +382,34 @@ app.UseGridContext();
 
 app.MapGet("/", (INodeContext node) => Results.Ok(new
 {
-    NodeId = node.NodeId,        // "HoneyDrunk.Web.RestApi"
-    Sector = node.Tags["sector"], // "web"
-    Environment = node.Environment // "production"
+    NodeId = node.NodeId,
+    Sector = node.Tags["sector"],
+    Environment = node.Environment
 }));
 
 app.Run();
 ```
 
----
-
-## Adding Custom Nodes
-
-### Option 1: Extend Existing Registry (Recommended)
-
-Create a partial class to extend `Nodes`:
+### Application Node Configuration
 
 ```csharp
-// MyCompany.Nodes.cs
-namespace HoneyDrunk.Kernel.Abstractions;
-
-public static partial class Nodes
+// Application defines its own NodeId
+public static class ArcadiaNodeIds
 {
-    public static class Financial
-    {
-        public static readonly NodeId PaymentService = new("HoneyDrunk.Financial.PaymentService");
-        public static readonly NodeId BillingService = new("HoneyDrunk.Financial.BillingService");
-        public static readonly NodeId InvoiceService = new("HoneyDrunk.Financial.InvoiceService");
-    }
+    public static readonly NodeId Self = new("Arcadia");
+    
+    // Reference infrastructure dependencies
+    public static readonly NodeId Auth = WellKnownNodes.Core.Auth;
+    public static readonly NodeId Data = WellKnownNodes.Core.Data;
 }
-```
 
-**Usage:**
-```csharp
-options.NodeId = Nodes.Financial.PaymentService;
-```
-
-### Option 2: Create Custom Registry
-
-```csharp
-// MyCompanyNodes.cs
-namespace MyCompany.Grid;
-
-public static class MyNodes
+// Usage
+builder.Services.AddHoneyDrunkNode(options =>
 {
-    public static readonly NodeId OrderService = new("MyCompany.OrderService");
-    public static readonly NodeId InventoryService = new("MyCompany.InventoryService");
-}
-```
-
-**Usage:**
-```csharp
-options.NodeId = MyNodes.OrderService;
+    options.NodeId = ArcadiaNodeIds.Self;
+    options.SectorId = Sectors.Market;
+    options.EnvironmentId = GridEnvironments.Production;
+});
 ```
 
 ---
@@ -500,15 +419,16 @@ options.NodeId = MyNodes.OrderService;
 ### ✅ DO
 
 ```csharp
-// Use static registries
-options.NodeId = Nodes.Core.ApiGateway;
+// Use WellKnownNodes for infrastructure dependencies
+options.NodeId = WellKnownNodes.Core.Kernel;
 options.SectorId = Sectors.Core;
 options.EnvironmentId = GridEnvironments.Production;
 
-// Extend registries for custom Nodes
-public static partial class Nodes
+// Define your own NodeIds for applications
+public static class MyAppNodeIds
 {
-    public static class MyDomain { /* custom nodes */ }
+    public static readonly NodeId Self = new("MyApp");
+    public static readonly NodeId Database = WellKnownNodes.Core.Data;
 }
 
 // Use using alias for Environments to avoid collision
@@ -518,114 +438,55 @@ using GridEnvironments = HoneyDrunk.Kernel.Abstractions.Environments;
 ### ❌ DON'T
 
 ```csharp
-// Don't use string literals (no compile-time safety)
-options.NodeId = new NodeId("my-service"); // ❌
+// Don't use string literals without constants (no compile-time safety)
+options.NodeId = new NodeId("my-service"); // ❌ Inline literal
 
 // Don't use inconsistent naming
 options.NodeId = new NodeId("payment_service"); // ❌ snake_case
-options.NodeId = new NodeId("PaymentService");  // ❌ PascalCase (no namespace)
+options.NodeId = new NodeId("PaymentService");  // ❌ PascalCase (use kebab-case)
 
-// Don't skip the namespace
-options.NodeId = new NodeId("ApiGateway"); // ❌ Missing "HoneyDrunk.Core."
+// Don't skip validation
+options.NodeId = new NodeId("p"); // ❌ Too short (min 3 chars)
 ```
 
 ### Naming Conventions
 
 | Identity Type | Pattern | Example |
 |---------------|---------|---------|
-| **NodeId** | `{Namespace}.{Sector}.{Name}` | `HoneyDrunk.Core.ApiGateway` |
-| **SectorId** | `{lowercase}` | `core`, `ai`, `web` |
+| **NodeId** | `{Namespace}.{Name}` or `{Name}` | `HoneyDrunk.Kernel`, `Pulse` |
+| **SectorId** | `{PascalCase}` | `Core`, `AI`, `HoneyPlay` |
 | **EnvironmentId** | `{lowercase}` | `production`, `staging`, `development` |
 | **ErrorCode** | `{category}.{detail}` | `validation.failed`, `auth.unauthorized` |
 
 ---
 
-## IDE Support
-
-### IntelliSense Discovery
-
-Type `Nodes.` and IntelliSense shows all available sectors:
-```
-Nodes.
-  ├─ Core
-  ├─ AI
-  ├─ Ops
-  ├─ Data
-  ├─ Web
-  ├─ Messaging
-  └─ Storage
-```
-
-Type `Nodes.Core.` and IntelliSense shows all Core nodes:
-```
-Nodes.Core.
-  ├─ Minimal
-  ├─ ApiGateway
-  ├─ ConfigService
-  ├─ SecretsService
-  └─ IdentityService
-```
-
-### Go-to-Definition
-
-F12 on `Nodes.Core.Minimal` jumps directly to the definition:
-```csharp
-public static readonly NodeId Minimal = new("HoneyDrunk.Core.Minimal");
-```
-
-### Refactoring Support
-
-Rename `Nodes.Core.Minimal` → `Nodes.Core.SampleNode` propagates everywhere automatically.
-
----
-
-## Migration from v0.2.x
-
-### Before (v0.2.x)
-
-```csharp
-builder.Services.AddHoneyDrunkNode(options =>
-{
-    options.NodeId = new NodeId("payment-service");
-    options.SectorId = SectorId.WellKnown.Core;
-    options.EnvironmentId = EnvironmentId.WellKnown.Production;
-});
-```
-
-### After (v0.3.0)
-
-```csharp
-using HoneyDrunk.Kernel.Abstractions;
-using GridEnvironments = HoneyDrunk.Kernel.Abstractions.Environments;
-
-builder.Services.AddHoneyDrunkNode(options =>
-{
-    options.NodeId = Nodes.Financial.PaymentService; // Static registry
-    options.SectorId = Sectors.Financial;             // Cleaner syntax
-    options.EnvironmentId = GridEnvironments.Production; // Alias for collision
-});
-```
-
----
-
 ## Summary
 
-| Registry | Purpose | Canonical Usage |
-|----------|---------|-----------------|
-| **Nodes** | Well-known Node identifiers | `Nodes.Core.ApiGateway` |
-| **Sectors** | Sector grouping | `Sectors.Web` |
-| **Environments** | Deployment stages | `GridEnvironments.Production` |
-| **ErrorCode.WellKnown** | Standard error codes | `ErrorCode.WellKnown.NotFound` |
+| Registry | Purpose | Canonical Usage | Count |
+|----------|---------|-----------------|-------|
+| **WellKnownNodes** | Infrastructure node identifiers | `WellKnownNodes.Core.Kernel` | 8 nodes |
+| **Sectors** | Sector grouping | `Sectors.Core` | 9 sectors |
+| **Environments** | Deployment stages | `GridEnvironments.Production` | 7 environments |
+| **ErrorCode.WellKnown** | Standard error codes | `ErrorCode.WellKnown.NotFound` | 11 codes |
 
 **Key Benefits:**
-- ✅ Compile-time type safety
+- ✅ Compile-time type safety for infrastructure dependencies
 - ✅ IDE support (IntelliSense, go-to-def, refactoring)
-- ✅ Consistent naming across the Grid
-- ✅ Discoverable via IntelliSense
-- ✅ Extensible via partial classes
+- ✅ Consistent naming for core primitives
+- ✅ Applications define their own NodeIds (no Kernel coupling)
+- ✅ Grid catalog (nodes.json) remains the single source of truth
+
+**Architecture:**
+```
+Kernel (WellKnownNodes) → 8 infrastructure nodes
+         ↓
+Grid.Contracts → Full catalog from nodes.json (future)
+         ↓
+Applications → Define their own NodeIds
+```
 
 **Best Practice:**
-Always prefer static registries over ad-hoc string creation. This is the **v3 golden path**.
+Use `WellKnownNodes` for infrastructure dependencies. Define your own constants for application nodes.
 
 ---
 
