@@ -4,6 +4,26 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [GridActivitySource](#gridactivitysource)
+- [Core Methods](#core-methods)
+  - [StartActivity](#startactivity)
+  - [StartHttpActivity](#starthttpactivity)
+  - [StartDatabaseActivity](#startdatabaseactivity)
+  - [StartMessageActivity](#startmessageactivity)
+- [Helper Methods](#helper-methods)
+- [OpenTelemetry Configuration](#opentelemetry-configuration)
+- [Trace Visualization](#trace-visualization)
+- [Complete Example](#complete-example)
+- [Activity Naming Conventions](#activity-naming-conventions)
+- [Best Practices](#best-practices)
+- [Testing](#testing)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 GridActivitySource provides OpenTelemetry-compatible distributed tracing using .NET's `System.Diagnostics.Activity` API with automatic Grid context enrichment.
@@ -747,4 +767,4 @@ public async Task ProcessPayment_CreatesActivity()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)

@@ -4,6 +4,27 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [HoneyDrunkException.cs](#honeydrunkexceptioncs)
+- [Typed Exception Hierarchy](#typed-exception-hierarchy)
+  - [ValidationException.cs](#validationexceptioncs)
+  - [NotFoundException.cs](#notfoundexceptioncs)
+  - [SecurityException.cs](#securityexceptioncs)
+  - [ConcurrencyException.cs](#concurrencyexceptioncs)
+  - [DependencyFailureException.cs](#dependencyfailureexceptioncs)
+- [ErrorCode.cs](#errorcodecs)
+- [ErrorClassification.cs](#errorclassificationcs)
+- [IErrorClassifier.cs](#ierrorclassifiercs)
+- [Complete Error Handling Example](#complete-error-handling-example)
+- [Best Practices](#best-practices)
+- [Error Code Taxonomy](#error-code-taxonomy)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 The Errors subsystem provides a structured exception hierarchy, error classification, and transport-friendly error mapping for distributed systems. Every exception carries Grid identity primitives (CorrelationId, NodeId, EnvironmentId) for cross-process correlation and debugging.
@@ -88,6 +109,8 @@ public class OrderService(IGridContext gridContext)
   "stackTrace": "..."
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -357,6 +380,8 @@ if (paymentResult.Declined)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## ErrorClassification.cs
@@ -386,6 +411,8 @@ var classification = new ErrorClassification(
     typeUri: "https://docs.honeydrunk.io/errors/not-found"
 );
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -479,6 +506,8 @@ public class ErrorHandlingMiddleware(
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Complete Error Handling Example
@@ -547,6 +576,8 @@ public class OrderController(
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Best Practices
@@ -609,6 +640,8 @@ catch (Exception ex)
 return Ok(new { error = ex.StackTrace }); // ❌ Security risk
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Error Code Taxonomy
@@ -646,6 +679,8 @@ public static class PaymentErrorCodes
     public static readonly ErrorCode ProcessorUnavailable = new("payment.processor.unavailable");
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -715,6 +750,8 @@ public void ErrorCode_ValidatesFormat()
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Summary
@@ -748,4 +785,4 @@ public void ErrorCode_ValidatesFormat()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)

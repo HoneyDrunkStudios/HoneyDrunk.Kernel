@@ -4,6 +4,25 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Type Model: Configuration vs Runtime](#type-model-configuration-vs-runtime)
+  - [Strongly-Typed Configuration](#strongly-typed-configuration)
+  - [String-Based Runtime](#string-based-runtime)
+  - [Why Both?](#why-both)
+  - [Conversion Flow](#conversion-flow)
+  - [When to Use Each](#when-to-use-each)
+- [IGridContext.cs](#igridcontextcs)
+- [INodeContext.cs](#inodecontextcs)
+- [IOperationContext.cs](#ioperationcontextcs)
+- [IGridContextAccessor.cs](#igridcontextaccessorcs)
+- [Context Mappers](#context-mappers-implementations)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 The context hierarchy provides three levels of context, each serving a different purpose:
@@ -447,5 +466,5 @@ public async Task OperationContext_Dispose_CompletesAutomatically()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

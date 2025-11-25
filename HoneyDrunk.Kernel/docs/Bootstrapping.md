@@ -4,6 +4,23 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [AddHoneyDrunkNode](#addhoneydrunknode)
+- [HoneyDrunkNodeOptions](#honeydrunk-nodeoptions)
+- [Basic Usage](#basic-usage)
+- [Service Validation](#service-validation)
+- [Middleware Registration](#middleware-registration)
+- [Fluent Builder Pattern](#fluent-builder-pattern)
+- [Complete Example](#complete-example)
+- [Configuration from appsettings.json](#configuration-from-appsettingsjson)
+- [Testing](#testing)
+- [Migration from v0.2.x](#migration-from-v02x)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Bootstrapping provides a unified, opinionated way to configure HoneyDrunk Nodes with all required services, validation, and middleware in a single registration call.
@@ -710,4 +727,4 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)

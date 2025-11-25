@@ -4,6 +4,24 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Test Structure](#test-structure)
+- [Testing Best Practices](#testing-best-practices)
+  - [Mocking Context](#mocking-context)
+  - [Testing Identity Types](#testing-identity-types)
+  - [Testing Context Behavior](#testing-context-behavior)
+  - [Testing Lifecycle Components](#testing-lifecycle-components)
+  - [Testing Agent Components](#testing-agent-components)
+  - [Testing with Deterministic Time](#testing-with-deterministic-time)
+  - [Integration Testing Patterns](#integration-testing-patterns)
+- [Test Helpers and Utilities](#test-helpers-and-utilities)
+- [Performance Testing](#performance-testing)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Testing guidance and patterns for HoneyDrunk.Kernel, including unit tests, integration tests, and testing best practices for Grid-aware applications.
@@ -568,6 +586,6 @@ public void CorrelationId_Generation_Performance()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 
 

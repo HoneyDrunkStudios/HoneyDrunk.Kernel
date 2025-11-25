@@ -4,6 +4,26 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [IAgentDescriptor.cs](#iagentdescriptorcs)
+- [IAgentExecutionContext.cs](#iagentexecutioncontextcs)
+- [IAgentCapability.cs](#iagentcapabilitycs)
+- [AgentContextScope.cs](#agentcontextscopecs)
+- [Complete Agent Execution Example](#complete-agent-execution-example)
+- [AgentsInterop - Serialization and Context Marshaling](#agentsinterop---serialization-and-context-marshaling)
+  - [AgentExecutionResult.cs](#agentexecutionresultcs)
+  - [AgentResultSerializer.cs](#agentresultserializercs)
+  - [GridContextSerializer.cs](#gridcontextserializercs)
+  - [AgentContextProjection.cs](#agentcontextprojectioncs)
+  - [Complete AgentsInterop Example](#complete-agentsinterop-example)
+  - [Cross-Process Agent Flow](#cross-process-agent-flow)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Agent abstractions enable AI assistants, automation scripts, and service accounts to operate within the Grid with scoped permissions, execution tracking, and capability-based security.
@@ -76,6 +96,8 @@ public class OrderProcessingAgent : IAgentDescriptor
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## IAgentExecutionContext.cs
@@ -141,6 +163,8 @@ public class AgentExecutor(IAgentExecutionContextFactory contextFactory)
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -254,6 +278,8 @@ public class ReadDatabaseCapability : IAgentCapability
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## AgentContextScope.cs
@@ -338,6 +364,8 @@ public class ContextScopeEnforcer
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Complete Agent Execution Example
@@ -420,6 +448,8 @@ public class AgentExecutionService(
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## AgentsInterop - Serialization and Context Marshaling
@@ -498,6 +528,8 @@ public class AgentExecutor
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -585,6 +617,8 @@ public class AgentService(IAgentExecutionContextFactory contextFactory)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ### GridContextSerializer.cs
@@ -660,6 +694,8 @@ public class AgentContextProvider
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ### AgentContextProjection.cs
@@ -702,11 +738,7 @@ public class AgentOrchestrator(
 }
 ```
 
-**What It Does:**
-1. Combines `IGridContext` + `IOperationContext` + `IAgentDescriptor`
-2. Creates mutable metadata dictionary for execution tracking
-3. Provides `CanAccess()` method for resource permission checks
-4. Returns fully-formed `IAgentExecutionContext` ready for execution
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -790,6 +822,8 @@ public class RemoteAgentExecutor(
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ### Cross-Process Agent Flow
@@ -857,9 +891,11 @@ public class RemoteAgentExecutor(
 └──────────────────────────────────────────────────────────────┘
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
-### Testing Patterns
+## Testing Patterns
 
 ```csharp
 [Fact]
@@ -936,6 +972,8 @@ public void AgentContextProjection_CreatesExecutionContext()
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Summary
@@ -968,5 +1006,5 @@ public void AgentContextProjection_CreatesExecutionContext()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

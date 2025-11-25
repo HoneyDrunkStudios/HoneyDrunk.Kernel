@@ -4,6 +4,23 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [ITransportEnvelopeBinder.cs](#itransportenvelopebindercs)
+- [Built-in Implementations](#built-in-implementations)
+  - [HttpResponseBinder](#httpresponsebinder)
+  - [MessagePropertiesBinder](#messagepropertiesbinder)
+  - [JobMetadataBinder](#jobmetadatabinder)
+- [GridHeaderNames](#gridheadernames-updated)
+- [Registration](#registration)
+- [Custom Transport Binders](#custom-transport-binders)
+- [Context Flow Example](#context-flow-example)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Transport abstractions enable automatic GridContext propagation across different transport mechanisms (HTTP, messaging, background jobs) without coupling to specific transport implementations.
@@ -645,4 +662,4 @@ public void JobMetadataBinder_BindsCreatedAtUtc()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)

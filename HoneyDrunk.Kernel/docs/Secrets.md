@@ -4,11 +4,21 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [ISecretsSource.cs](#isecretssourcecs)
+- [CompositeSecretsSource](#compositesecretssource-implementation)
+
+---
+
 ## Overview
 
 Secure access to passwords, API keys, and other sensitive data with fallback support.
 
 **Location:** `HoneyDrunk.Kernel.Abstractions/Config/`
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -37,6 +47,8 @@ public class DatabaseConnector(ISecretsSource secrets)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## CompositeSecretsSource (Implementation)
@@ -59,7 +71,9 @@ if (composite.TryGetSecret("DatabasePassword", out var password))
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
-[?[←[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

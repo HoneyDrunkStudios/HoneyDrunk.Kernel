@@ -4,6 +4,23 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Why Static Registries?](#why-static-registries)
+- [Nodes Registry](#nodes-registry)
+- [Sectors Registry](#sectors-registry)
+- [Environments Registry](#environments-registry)
+- [ErrorCode Registry](#errorcode-registry-new-in-v030)
+- [Complete Example](#complete-example)
+- [Adding Custom Nodes](#adding-custom-nodes)
+- [Best Practices](#best-practices)
+- [IDE Support](#ide-support)
+- [Migration from v0.2.x](#migration-from-v02x)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Identity registries provide static, well-known values for Node IDs, Sectors, and Environments. Using these registries ensures consistency across the Grid and prevents typos from string literals.
@@ -612,4 +629,4 @@ Always prefer static registries over ad-hoc string creation. This is the **v3 go
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)

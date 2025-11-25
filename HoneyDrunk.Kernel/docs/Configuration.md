@@ -4,6 +4,17 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [ConfigScopeType.cs](#configscopetypecs)
+- [IConfigScope.cs](#iconfigscopecs)
+- [ConfigKey.cs](#configkeycs)
+- [ConfigPath.cs](#configpathcs)
+- [NodeRuntimeOptions.cs](#noderuntimeoptionscs)
+
+---
+
 ## Overview
 
 Configuration in HoneyDrunk.Kernel follows a hierarchical model where settings can be scoped to different levels with automatic fallback:
@@ -14,6 +25,8 @@ Global → Studio → Node → Tenant → Project → Request
 ```
 
 **Location:** `HoneyDrunk.Kernel.Abstractions/Configuration/`
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -29,6 +42,8 @@ Enum defining configuration scope levels:
 | `Tenant` | Tenant-specific configuration | Tenant quotas, custom branding |
 | `Project` | Project-specific configuration | Project feature toggles |
 | `Request` | Per-request/operation overrides | A/B test variants, canary flags |
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -61,6 +76,8 @@ Console.WriteLine(nodeScope.ScopePath);
 // Lookup order: node → studio → global
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## ConfigKey.cs
@@ -74,6 +91,8 @@ var segments = dbKey.GetSegments(); // ["Database", "ConnectionString"]
 var childKey = dbKey.CreateChild("Timeout"); // "Database:ConnectionString:Timeout"
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## ConfigPath.cs
@@ -85,6 +104,8 @@ var path = new ConfigPath(studioScope, new ConfigKey("Database:ConnectionString"
 Console.WriteLine(path.FullPath); 
 // "studio:honeycomb/Database:ConnectionString"
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -121,7 +142,9 @@ public class Startup(IOptions<NodeRuntimeOptions> options)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

@@ -4,6 +4,20 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [INodeManifest.cs](#inodemanifeststcs)
+- [INodeDescriptor.cs](#inodedescriptorcs)
+- [INodeCapability.cs](#inodecapabilitycs)
+- [IStudioConfiguration.cs](#istudioconfigurationcs)
+- [GridOptions.cs](#gridoptionscs)
+- [Complete Hosting Example](#complete-hosting-example)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Hosting abstractions define how Nodes describe themselves, advertise capabilities, discover dependencies, and integrate into the Grid. This enables dynamic service discovery, capability-based routing, and runtime validation.
@@ -16,6 +30,8 @@ Hosting abstractions define how Nodes describe themselves, advertise capabilitie
 - **Node Capability** - Discoverable features/APIs a Node provides
 - **Studio Configuration** - Environment-wide settings shared across Nodes
 - **Grid Options** - Runtime configuration for Grid participation
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -96,6 +112,8 @@ public class PaymentNodeManifest : INodeManifest
 - **Documentation** - Manifest serves as living documentation
 - **Deployment** - CI/CD can validate manifest consistency
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## INodeDescriptor.cs
@@ -162,6 +180,8 @@ public class NodeRegistrationService(INodeDescriptor descriptor, IServiceDiscove
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -264,6 +284,8 @@ public class CapabilityRouter(IEnumerable<INodeDescriptor> nodes)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## IStudioConfiguration.cs
@@ -333,6 +355,8 @@ public class StudioConfigurationProvider : IStudioConfiguration
 - Observability[← Backend URLs
 - Multi-tenant isolation boundaries
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## GridOptions.cs
@@ -388,6 +412,8 @@ public class NodeInitializer(IOptions<GridOptions> gridOptions)
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -450,6 +476,8 @@ await discovery.RegisterNodeAsync(descriptor);
 app.Run();
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Testing Patterns
@@ -496,6 +524,8 @@ public void StudioConfiguration_TryGetValue_ReturnsValue()
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Summary
@@ -517,5 +547,5 @@ public void StudioConfiguration_TryGetValue_ReturnsValue()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

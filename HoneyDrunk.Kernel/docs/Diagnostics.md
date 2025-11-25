@@ -4,11 +4,21 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [IMetricsCollector.cs](#imetricscollectorcs)
+- [NoOpMetricsCollector](#noopmetricscollector-implementation)
+
+---
+
 ## Overview
 
 Abstractions for recording application metrics without coupling to specific telemetry systems.
 
 **Location:** `HoneyDrunk.Kernel.Abstractions/Diagnostics/`
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -45,6 +55,8 @@ public class PaymentProcessor(IMetricsCollector metrics)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## NoOpMetricsCollector (Implementation)
@@ -61,7 +73,9 @@ services.AddHoneyDrunkCore(...);  // Uses NoOpMetricsCollector
 services.AddSingleton<IMetricsCollector, OpenTelemetryCollector>();
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

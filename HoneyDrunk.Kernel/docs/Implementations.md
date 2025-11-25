@@ -4,6 +4,20 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Context Implementations](#context-implementations)
+- [Context Mappers](#context-mappers)
+- [Middleware](#middleware)
+- [Lifecycle](#lifecycle)
+- [Diagnostics](#diagnostics)
+- [Configuration](#configuration)
+- [Dependency Injection](#dependency-injection)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 This document covers the runtime implementations in `HoneyDrunk.Kernel` project. These are the concrete classes that bring the abstractions to life.
@@ -741,5 +755,5 @@ app.Services.ValidateHoneyDrunkServices(); // Throws if services missing
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

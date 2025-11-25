@@ -4,6 +4,21 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [INodeLifecycle.cs](#inodelifecyclecs)
+- [IStartupHook.cs](#istartuphookcs)
+- [IShutdownHook.cs](#ishutdownhookcs)
+- [IHealthContributor.cs](#ihealthcontributorcs)
+- [IReadinessContributor.cs](#ireadinesscontributorcs)
+- [NodeLifecycleStage.cs](#nodelifecyclestagecs)
+- [Complete Startup Sequence Example](#complete-startup-sequence-example)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Lifecycle management provides coordinated Node startup, shutdown, health monitoring, and readiness checks. This enables graceful initialization, zero-downtime deployments, and controlled shutdown sequences.
@@ -15,6 +30,8 @@ Lifecycle management provides coordinated Node startup, shutdown, health monitor
 - **Health Contributors** - Coordinated health monitoring
 - **Readiness Contributors** - Traffic gating based on readiness state
 - **Lifecycle Stages** - Standardized Node state machine
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -61,6 +78,8 @@ public class CacheWarmupLifecycle(ICacheService cache) : INodeLifecycle
 - Service registration/deregistration
 -[← Background service coordination
 - Resource cleanup on shutdown
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -126,6 +145,8 @@ public class CacheWarmupHook(ICacheService cache) : IStartupHook
 - Service discovery registration
 - Connection warmup
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## IShutdownHook.cs
@@ -189,6 +210,8 @@ public class ServiceDiscoveryDeregisterHook(IServiceDiscovery discovery) : IShut
 - Service discovery deregistration
 - Graceful request completion
 - Resource cleanup
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -284,6 +307,8 @@ public class CacheHealthContributor(ICache cache) : IHealthContributor
 - Message queue connectivity
 - File system access validation
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## IReadinessContributor.cs
@@ -370,6 +395,8 @@ public class CacheReadinessContributor(ICacheService cache) : IReadinessContribu
 - Service dependency readiness
 - Initial data loading
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## NodeLifecycleStage.cs
@@ -417,6 +444,8 @@ public class NodeMonitor(INodeContext nodeContext, IMetricsCollector metrics)
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -496,6 +525,8 @@ public class Program
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Testing Patterns
@@ -564,6 +595,8 @@ public async Task ReadinessContributor_RequiredNotReady_BlocksReadiness()
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Summary
@@ -583,7 +616,5 @@ public async Task ReadinessContributor_RequiredNotReady_BlocksReadiness()
 - Required readiness contributors block traffic if not ready
 - NodeLifecycleStage tracks current state
 
----
-
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

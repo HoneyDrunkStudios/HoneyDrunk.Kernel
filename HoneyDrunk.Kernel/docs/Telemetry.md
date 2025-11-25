@@ -4,6 +4,19 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [ITelemetryContext.cs](#itelemetrycontextcs)
+- [ITraceEnricher.cs](#itraceenrichercs)
+- [ILogScopeFactory.cs](#ilogscopefactorycs)
+- [TelemetryTags.cs](#telemetrytagscs)
+- [Complete Observability Example](#complete-observability-example)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Telemetry abstractions provide OpenTelemetry-ready tracing, enrichment, and log correlation for distributed observability. These abstractions enable unified querying, filtering, and correlation across the entire Grid without coupling to specific telemetry backends.
@@ -437,5 +450,5 @@ public void LogScopeFactory_CreatesScope()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

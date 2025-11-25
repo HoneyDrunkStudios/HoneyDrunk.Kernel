@@ -4,6 +4,27 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- **String-Based Identity Types**
+  - [NodeId](#nodeidcs) - Node identification (kebab-case)
+  - [EnvironmentId](#environmentidcs) - Deployment environment (kebab-case)
+  - [SectorId](#sectoridcs) - Logical Node grouping (kebab-case)
+  - [ErrorCode](#errorcodecs) - Hierarchical error classification (dot-separated)
+- **ULID-Based Identity Types**
+  - [CorrelationId](#correlationidcs) - Request tracing
+  - [CausationId](#causationidcs) - Parent operation tracking
+  - [TenantId](#tenantidcs) - Multi-tenancy isolation
+  - [ProjectId](#projectidcs) - Project/workspace organization
+  - [RunId](#runidcs) - Execution tracking
+- [Common Patterns](#common-patterns)
+- [Testing](#testing-with-identity-types)
+- [Performance Considerations](#performance-considerations)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 All identity types in HoneyDrunk.Kernel enforce validation rules at construction time, ensuring identifiers are well-formed throughout the system. They use **readonly record structs** for efficient value semantics.
@@ -75,6 +96,8 @@ string nodeIdString = nodeId; // "payment-node"
 
 ### Why it matters
 Type-safe, validated identifiers prevent typos and ensure consistent naming conventions across the entire Grid.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -151,6 +174,8 @@ Email Sent (CorrelationId in tracking)
 ```
 
 All logs across all services share the same CorrelationId → full trace reconstruction.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -237,6 +262,8 @@ User Request
 
 **Result:** You can reconstruct the entire execution tree and see which operations spawned which children.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## TenantId.cs
@@ -303,6 +330,8 @@ public class OrderService(IGridContext context, IOrderRepository repository)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## ProjectId.cs
@@ -365,6 +394,8 @@ public class ResourceService
 
 ### Why it matters
 Enables hierarchical organization: **Tenant → Projects → Resources**, allowing fine-grained access control and resource management.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -446,6 +477,8 @@ public class WorkflowEngine
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -536,6 +569,8 @@ var dbConfig = await _configService.GetConfigAsync<DatabaseConfig>(
     "database/connection-string"
 );
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -653,6 +688,8 @@ foreach (var node in creatorNodes)
     Console.WriteLine($"Creator Node: {node.NodeId}");
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -776,6 +813,8 @@ else if (response.ErrorCode == ErrorCode.WellKnown.AuthenticationFailure)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Common Patterns
@@ -837,8 +876,7 @@ All identity types serialize as strings:
 ```json
 {
   "nodeId": "payment-node",
-  "correlationId": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
-  "tenantId": "01HQXZ8K4TJ9X5B3N2YGF7WDCR",
+  "correlationId": "01HQXZ8K4TJ9X5B3N2YGF7WDCR",
   "projectId": "01HQXZ8K4TJ9X5B3N2YGF7WDCS",
   "runId": "01HQXZ8K4TJ9X5B3N2YGF7WDCT"
 }
@@ -849,6 +887,8 @@ Deserialization:
 var obj = JsonSerializer.Deserialize<MyObject>(json);
 // Identity types automatically validated during deserialization
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -957,6 +997,8 @@ public void ErrorCode_SupportsHierarchicalStructure()
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Performance Considerations
@@ -1009,5 +1051,5 @@ public void ErrorCode_SupportsHierarchicalStructure()
 
 ---
 
-[← Back to File Guide](FILE_GUIDE.md)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 
