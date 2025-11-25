@@ -24,22 +24,27 @@ This guide is organized into focused documents by domain:
 | Domain | Document | Description |
 |--------|----------|-------------|
 | 🆔 **Identity** | [Identity.md](Identity.md) | Strongly-typed identifiers (NodeId, CorrelationId, TenantId, ProjectId, RunId) |
+| 🏷️ **Identity Registries** | [IdentityRegistries.md](IdentityRegistries.md) | Static well-known values (Nodes, Sectors, Environments, ErrorCodes) |
 | 🌐 **Context** | [Context.md](Context.md) | Distributed context propagation (IGridContext, INodeContext, IOperationContext) |
 | ⚙️ **Configuration** | [Configuration.md](Configuration.md) | Hierarchical configuration (IConfigScope, ConfigKey, NodeRuntimeOptions) |
 | 🏢 **Hosting** | [Hosting.md](Hosting.md) | Node hosting and discovery (INodeDescriptor, INodeManifest, IStudioConfiguration) |
-| 🤖 **Agents** | [Agents.md](Agents.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext) |
+| 🤖 **Agents** | [Agents.md](Agents.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext, AgentsInterop) |
 | 🔄 **Lifecycle** | [Lifecycle.md](Lifecycle.md) | Node lifecycle management (INodeLifecycle, IStartupHook, IShutdownHook, Health/Readiness) |
 | 📡 **Telemetry** | [Telemetry.md](Telemetry.md) | Observability primitives (ITelemetryContext, ITraceEnricher, ILogScopeFactory) |
 | 🔐 **Secrets** | [Secrets.md](Secrets.md) | Secure secrets management (ISecretsSource) |
 | ❤️ **Health** | [Health.md](Health.md) | Service health monitoring (IHealthCheck, HealthStatus) |
 | 📈 **Diagnostics** | [Diagnostics.md](Diagnostics.md) | Metrics and diagnostics (IMetricsCollector) |
 | 🔌 **DI** | [DependencyInjection.md](DependencyInjection.md) | Modular service registration (IModule) |
+| 🚚 **Transport** | [Transport.md](Transport.md) | Context propagation across boundaries (ITransportEnvelopeBinder, HTTP/Message/Job binders) |
+| ⚠️ **Errors** | [Errors.md](Errors.md) | Exception hierarchy and error handling (HoneyDrunkException, ErrorCode, IErrorClassifier) |
 
 ### 🔸 HoneyDrunk.Kernel (Implementations)
 
 | Document | Description |
 |----------|-------------|
 | [Implementations.md](Implementations.md) | Runtime implementations of all abstractions |
+| [Bootstrapping.md](Bootstrapping.md) | Unified Node initialization with AddHoneyDrunkNode() |
+| [OpenTelemetry.md](OpenTelemetry.md) | Distributed tracing with GridActivitySource and Activity API |
 
 ### 🧪 HoneyDrunk.Kernel.Tests
 
@@ -180,6 +185,7 @@ HoneyDrunk.Kernel/
 │   ├── Health/                         # Health check contracts
 │   ├── Hosting/                        # Node hosting & discovery
 │   ├── Identity/                       # Strongly-typed IDs
+│   ├── IdentityRegistries/             # Static well-known values
 │   ├── Lifecycle/                      # Startup/shutdown hooks
 │   ├── Config/                         # Secrets management
 │   └── Telemetry/                      # Observability primitives
@@ -246,7 +252,7 @@ All other HoneyDrunk libraries depend on Kernel:
 
 ---
 
-*Last Updated: 2025-11-20*  
-*Version: 0.2.1*  
+*Last Updated: 2025-11-24*  
+*Version: 0.3.0*  
 *Target Framework: .NET 10.0*
 

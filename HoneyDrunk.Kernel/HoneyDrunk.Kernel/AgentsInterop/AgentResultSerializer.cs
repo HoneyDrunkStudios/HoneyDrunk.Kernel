@@ -1,5 +1,5 @@
-using System.Text.Json;
 using HoneyDrunk.Kernel.Abstractions.Agents;
+using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
 

@@ -422,57 +422,517 @@ public class AgentExecutionService(
 
 ---
 
-## Testing Patterns
+## AgentsInterop - Serialization and Context Marshaling
+
+**Location:** `HoneyDrunk.Kernel/AgentsInterop/`
+
+The AgentsInterop subsystem provides serialization, context marshaling, and result projection for agents executing across process boundaries (LLMs, remote workers, sandboxed scripts).
+
+---
+
+### AgentExecutionResult.cs
+
+#### What it is
+Serializable record representing the outcome of an agent execution.
+
+#### Properties
+
+```csharp
+public sealed record AgentExecutionResult
+{
+    public string? AgentId { get; init; }              // Agent identifier
+    public string? CorrelationId { get; init; }        // Correlation for tracing
+    public bool Success { get; init; }                  // Whether execution succeeded
+    public JsonElement? Result { get; init; }           // Execution result (dynamic JSON)
+    public string? ErrorMessage { get; init; }          // Error message if failed
+    public DateTimeOffset StartedAtUtc { get; init; }  // Execution start time
+    public DateTimeOffset CompletedAtUtc { get; init; } // Execution end time
+    public Dictionary<string, JsonElement>? Metadata { get; init; } // Execution metadata
+}
+```
+
+#### Usage Example
+
+```csharp
+public class AgentExecutor
+{
+    public async Task<AgentExecutionResult> ExecuteRemoteAgentAsync(
+        IAgentDescriptor agent,
+        IGridContext gridContext,
+        object input)
+    {
+        var startTime = DateTimeOffset.UtcNow;
+        
+        try
+        {
+            // Execute agent logic
+            var result = await InvokeAgentAsync(agent, input);
+            
+            return new AgentExecutionResult
+            {
+                AgentId = agent.AgentId,
+                CorrelationId = gridContext.CorrelationId,
+                Success = true,
+                Result = JsonSerializer.SerializeToElement(result),
+                StartedAtUtc = startTime,
+                CompletedAtUtc = DateTimeOffset.UtcNow,
+                Metadata = new Dictionary<string, JsonElement>
+                {
+                    ["tokensUsed"] = JsonSerializer.SerializeToElement(1500),
+                    ["model"] = JsonSerializer.SerializeToElement("gpt-4")
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AgentExecutionResult
+            {
+                AgentId = agent.AgentId,
+                CorrelationId = gridContext.CorrelationId,
+                Success = false,
+                ErrorMessage = ex.Message,
+                StartedAtUtc = startTime,
+                CompletedAtUtc = DateTimeOffset.UtcNow
+            };
+        }
+    }
+}
+```
+
+---
+
+### AgentResultSerializer.cs
+
+#### What it is
+Serializes agent execution results to JSON for Grid consumption.
+
+#### Methods
+
+```csharp
+public sealed class AgentResultSerializer
+{
+    // Serialize execution result to JSON
+    public static string SerializeResult(
+        IAgentExecutionContext context,
+        bool success,
+        object? result = null,
+        string? errorMessage = null);
+    
+    // Deserialize JSON to AgentExecutionResult
+    public static AgentExecutionResult? DeserializeResult(string json);
+}
+```
+
+#### Usage Example
+
+```csharp
+public class AgentService(IAgentExecutionContextFactory contextFactory)
+{
+    public async Task<string> ExecuteAndSerializeAsync(
+        IAgentDescriptor agent,
+        IGridContext gridContext,
+        object input)
+    {
+        using var execContext = contextFactory.Create(agent, gridContext);
+        
+        try
+        {
+            var result = await ExecuteAgentLogicAsync(input);
+            
+            // Serialize success result
+            return AgentResultSerializer.SerializeResult(
+                context: execContext,
+                success: true,
+                result: result
+            );
+        }
+        catch (Exception ex)
+        {
+            // Serialize failure result
+            return AgentResultSerializer.SerializeResult(
+                context: execContext,
+                success: false,
+                errorMessage: ex.Message
+            );
+        }
+    }
+    
+    public AgentExecutionResult? ParseResult(string json)
+    {
+        return AgentResultSerializer.DeserializeResult(json);
+    }
+}
+```
+
+**Serialized Output:**
+```json
+{
+  "agentId": "order-processor-v2",
+  "correlationId": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
+  "success": true,
+  "result": {
+    "ordersProcessed": 150,
+    "totalAmount": 45000.00
+  },
+  "errorMessage": null,
+  "startedAtUtc": "2025-01-11T10:30:00Z",
+  "completedAtUtc": "2025-01-11T10:30:45Z",
+  "metadata": {
+    "tokensUsed": 1500,
+    "model": "gpt-4",
+    "executionTimeMs": 45000
+  }
+}
+```
+
+---
+
+### GridContextSerializer.cs
+
+#### What it is
+Serializes GridContext for agent consumption with automatic security filtering.
+
+#### Methods
+
+```csharp
+public sealed class GridContextSerializer
+{
+    // Serialize GridContext to JSON (with optional full baggage)
+    public static string Serialize(
+        IGridContext context, 
+        bool includeFullBaggage = false);
+    
+    // Deserialize JSON to GridContext
+    public static IGridContext? Deserialize(string json);
+}
+```
+
+#### Security Filtering
+
+The serializer **automatically filters sensitive baggage keys** by default:
+
+**Filtered Keys:**
+- Contains "secret"
+- Contains "password"
+- Contains "token"
+- Contains "key"
+- Contains "credential"
+
+#### Usage Example
+
+```csharp
+public class AgentContextProvider
+{
+    public string CreateAgentContext(IGridContext gridContext, bool trustLevel)
+    {
+        // For untrusted agents: filter sensitive baggage
+        if (!trustLevel)
+        {
+            return GridContextSerializer.Serialize(gridContext, includeFullBaggage: false);
+        }
+        
+        // For trusted agents: include full context
+        return GridContextSerializer.Serialize(gridContext, includeFullBaggage: true);
+    }
+    
+    public IGridContext? RestoreContext(string json)
+    {
+        return GridContextSerializer.Deserialize(json);
+    }
+}
+```
+
+**Serialized Output (Filtered):**
+```json
+{
+  "correlationId": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
+  "causationId": "01HQXY7J3SI8W4A2M1XE6UFBZP",
+  "nodeId": "order-service",
+  "studioId": "honeycomb-prod",
+  "environment": "production",
+  "createdAtUtc": "2025-01-11T10:30:00Z",
+  "baggage": {
+    "TenantId": "01HQXZ7G5FH4C2B1N0XD5EWARP",
+    "UserId": "user-123"
+    // "ApiToken" filtered out (contains "token")
+    // "SecretKey" filtered out (contains "secret")
+  }
+}
+```
+
+---
+
+### AgentContextProjection.cs
+
+#### What it is
+Projects GridContext + OperationContext + AgentDescriptor into a complete `IAgentExecutionContext`.
+
+#### Method
+
+```csharp
+public static class AgentContextProjection
+{
+    public static IAgentExecutionContext ProjectToAgentContext(
+        IGridContext gridContext,
+        IOperationContext operationContext,
+        IAgentDescriptor agentDescriptor,
+        IReadOnlyDictionary<string, object?>? executionMetadata = null);
+}
+```
+
+#### Usage Example
+
+```csharp
+public class AgentOrchestrator(
+    IGridContext gridContext,
+    IOperationContext operationContext)
+{
+    public IAgentExecutionContext CreateAgentContext(
+        IAgentDescriptor agent,
+        Dictionary<string, object?> metadata)
+    {
+        // Project Grid and Operation contexts into Agent context
+        return AgentContextProjection.ProjectToAgentContext(
+            gridContext: gridContext,
+            operationContext: operationContext,
+            agentDescriptor: agent,
+            executionMetadata: metadata
+        );
+    }
+}
+```
+
+**What It Does:**
+1. Combines `IGridContext` + `IOperationContext` + `IAgentDescriptor`
+2. Creates mutable metadata dictionary for execution tracking
+3. Provides `CanAccess()` method for resource permission checks
+4. Returns fully-formed `IAgentExecutionContext` ready for execution
+
+---
+
+### Complete AgentsInterop Example
+
+```csharp
+public class RemoteAgentExecutor(
+    IGridContext gridContext,
+    IOperationContext operationContext,
+    IHttpClientFactory httpClientFactory,
+    ILogger<RemoteAgentExecutor> logger)
+{
+    public async Task<AgentExecutionResult?> ExecuteRemoteAsync(
+        IAgentDescriptor agent,
+        object input)
+    {
+        // 1. Project context for agent
+        var agentContext = AgentContextProjection.ProjectToAgentContext(
+            gridContext: gridContext,
+            operationContext: operationContext,
+            agentDescriptor: agent,
+            executionMetadata: new Dictionary<string, object?>
+            {
+                ["input"] = input,
+                ["startTime"] = DateTimeOffset.UtcNow
+            }
+        );
+        
+        // 2. Serialize GridContext for agent (filtered)
+        var contextJson = GridContextSerializer.Serialize(
+            context: gridContext,
+            includeFullBaggage: false
+        );
+        
+        // 3. Call remote agent endpoint
+        var client = httpClientFactory.CreateClient();
+        var requestBody = new
+        {
+            agentId = agent.AgentId,
+            context = contextJson,
+            input = input
+        };
+        
+        var response = await client.PostAsJsonAsync(
+            "https://agent-runner.grid/execute",
+            requestBody
+        );
+        
+        response.EnsureSuccessStatusCode();
+        
+        // 4. Deserialize result
+        var resultJson = await response.Content.ReadAsStringAsync();
+        var result = AgentResultSerializer.DeserializeResult(resultJson);
+        
+        // 5. Track execution metadata
+        if (result is not null)
+        {
+            agentContext.AddMetadata("executionDurationMs", 
+                (result.CompletedAtUtc - result.StartedAtUtc).TotalMilliseconds);
+            agentContext.AddMetadata("success", result.Success);
+            
+            if (result.Success)
+            {
+                operationContext.Complete();
+            }
+            else
+            {
+                operationContext.Fail($"Agent failed: {result.ErrorMessage}");
+            }
+        }
+        
+        logger.LogInformation(
+            "Agent {AgentId} executed with correlation {CorrelationId}: {Success}",
+            agent.AgentId,
+            gridContext.CorrelationId,
+            result?.Success ?? false
+        );
+        
+        return result;
+    }
+}
+```
+
+---
+
+### Cross-Process Agent Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Orchestrator Node                         │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │ 1. Create AgentExecutionContext                 │        │
+│  │    - GridContext                                 │        │
+│  │    - OperationContext                            │        │
+│  │    - AgentDescriptor                             │        │
+│  └──────────────────┬──────────────────────────────┘        │
+│                     │                                         │
+│  ┌─────────────────▼──────────────────────────────┐        │
+│  │ 2. Serialize GridContext (filtered)             │        │
+│  │    - GridContextSerializer.Serialize()          │        │
+│  │    - Removes sensitive baggage                  │        │
+│  └──────────────────┬──────────────────────────────┘        │
+└────────────────────┼─────────────────────────────────────────┘
+                     │
+         ╔═══════════▼═══════════╗
+         ║   HTTP POST /execute  ║
+         ║   (JSON payload)      ║
+         ╚═══════════╤═══════════╝
+                     │
+┌────────────────────▼─────────────────────────────────────────┐
+│                    Agent Runner Node                          │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │ 3. Deserialize GridContext                      │        │
+│  │    - GridContextSerializer.Deserialize()        │        │
+│  └──────────────────┬──────────────────────────────┘        │
+│                     │                                         │
+│  ┌─────────────────▼──────────────────────────────┐        │
+│  │ 4. Execute Agent Logic                          │        │
+│  │    - LLM invocation                             │        │
+│  │    - Tool execution                             │        │
+│  │    - Result generation                          │        │
+│  └──────────────────┬──────────────────────────────┘        │
+│                     │                                         │
+│  ┌─────────────────▼──────────────────────────────┐        │
+│  │ 5. Serialize Result                             │        │
+│  │    - AgentResultSerializer.SerializeResult()    │        │
+│  │    - Include metadata (tokens, model, timing)   │        │
+│  └──────────────────┬──────────────────────────────┘        │
+└────────────────────┼─────────────────────────────────────────┘
+                     │
+         ╔═══════════▼═══════════╗
+         ║   HTTP 200 OK         ║
+         ║   (AgentExecutionResult) ║
+         ╚═══════════╤═══════════╝
+                     │
+┌────────────────────▼─────────────────────────────────────────┐
+│                    Orchestrator Node                          │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │ 6. Deserialize Result                           │        │
+│  │    - AgentResultSerializer.DeserializeResult()  │        │
+│  └──────────────────┬──────────────────────────────┘        │
+│                     │                                         │
+│  ┌─────────────────▼──────────────────────────────┐        │
+│  │ 7. Complete OperationContext                    │        │
+│  │    - Track metrics (duration, success)          │        │
+│  │    - Log to Pulse                               │        │
+│  └─────────────────────────────────────────────────┘        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Testing Patterns
 
 ```csharp
 [Fact]
-public void AgentDescriptor_HasCapability_ReturnsTrue()
+public void GridContextSerializer_FiltersSecrets()
 {
     // Arrange
-    var agent = new CustomerSupportAgent();
+    var context = new GridContext(
+        correlationId: "corr-123",
+        nodeId: "test-node",
+        studioId: "test-studio",
+        environment: "test",
+        baggage: new Dictionary<string, string>
+        {
+            ["TenantId"] = "tenant-123",         // Safe
+            ["ApiToken"] = "secret-token-abc",   // Filtered
+            ["SecretKey"] = "key-xyz"            // Filtered
+        }
+    );
     
-    // Act & Assert
-    Assert.True(agent.HasCapability("read-database"));
-    Assert.False(agent.HasCapability("delete-records"));
+    // Act
+    var json = GridContextSerializer.Serialize(context, includeFullBaggage: false);
+    var restored = GridContextSerializer.Deserialize(json);
+    
+    // Assert
+    Assert.NotNull(restored);
+    Assert.True(restored.Baggage.ContainsKey("TenantId"));
+    Assert.False(restored.Baggage.ContainsKey("ApiToken"));   // Filtered out
+    Assert.False(restored.Baggage.ContainsKey("SecretKey")); // Filtered out
 }
 
 [Fact]
-public void AgentCapability_ValidateParameters_ReturnsFalseForInvalidMethod()
+public void AgentResultSerializer_RoundTrip()
 {
     // Arrange
-    var capability = new InvokeApiCapability("test-api");
-    var parameters = new Dictionary<string, object?>
-    {
-        ["method"] = "DELETE" // Not allowed
-    };
+    var agent = new TestAgentDescriptor();
+    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    var operationContext = new OperationContext(gridContext, new NodeContext());
+    var execContext = AgentContextProjection.ProjectToAgentContext(
+        gridContext, operationContext, agent);
     
     // Act
-    var isValid = capability.ValidateParameters(parameters, out var errorMessage);
+    var json = AgentResultSerializer.SerializeResult(
+        context: execContext,
+        success: true,
+        result: new { ordersProcessed = 10 }
+    );
+    
+    var result = AgentResultSerializer.DeserializeResult(json);
     
     // Assert
-    Assert.False(isValid);
-    Assert.Contains("not allowed", errorMessage);
+    Assert.NotNull(result);
+    Assert.True(result.Success);
+    Assert.Equal("corr-123", result.CorrelationId);
+    Assert.Equal(10, result.Result?.GetProperty("ordersProcessed").GetInt32());
 }
 
 [Fact]
-public void ContextScopeEnforcer_CorrelationOnly_FiltersContext()
+public void AgentContextProjection_CreatesExecutionContext()
 {
     // Arrange
-    var fullContext = new GridContext
-    {
-        CorrelationId = "corr-123",
-        NodeId = "sensitive-node",
-        Baggage = new Dictionary<string, string> { ["secret"] = "value" }
-    };
-    var enforcer = new ContextScopeEnforcer();
+    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    var operationContext = new OperationContext(gridContext, new NodeContext());
+    var agent = new TestAgentDescriptor();
     
     // Act
-    var scoped = enforcer.CreateScopedContext(fullContext, AgentContextScope.CorrelationOnly);
+    var execContext = AgentContextProjection.ProjectToAgentContext(
+        gridContext, operationContext, agent);
     
     // Assert
-    Assert.Equal("corr-123", scoped.CorrelationId);
-    Assert.Null(scoped.NodeId); // Filtered out
-    Assert.Empty(scoped.Baggage); // Filtered out
+    Assert.NotNull(execContext);
+    Assert.Equal("test-agent", execContext.Agent.AgentId);
+    Assert.Equal("corr-123", execContext.GridContext.CorrelationId);
+    Assert.NotNull(execContext.OperationContext);
 }
 ```
 
@@ -480,24 +940,31 @@ public void ContextScopeEnforcer_CorrelationOnly_FiltersContext()
 
 ## Summary
 
-| Component | Purpose | Scope |
-|-----------|---------|-------|
-| **IAgentDescriptor** | Agent identity & permissions | Static definition |
-| **IAgentExecutionContext** | Execution tracking & access control | Per-execution |
-| **IAgentCapability** | Fine-grained permissions | Per-action |
-| **AgentContextScope** | Context visibility control | Per-agent |
+| Component | Purpose | Security |
+|-----------|---------|----------|
+| **IAgentDescriptor** | Agent identity & capabilities | Declarative permissions |
+| **IAgentExecutionContext** | Execution tracking | Scoped Grid context |
+| **IAgentCapability** | Fine-grained permissions | Parameter validation |
+| **AgentContextScope** | Context visibility | Filtered baggage |
+| **AgentExecutionResult** | Serializable outcome | JSON-safe |
+| **AgentResultSerializer** | Result marshaling | Structured JSON |
+| **GridContextSerializer** | Context marshaling | Automatic secret filtering |
+| **AgentContextProjection** | Context composition | Combines Grid+Operation+Agent |
 
-**Key Patterns:**
-- Agents have declarative capabilities (not implicit permissions)
-- Context scoping protects sensitive data
-- Execution tracking enables observability and auditing
-- Capability validation prevents unauthorized actions
+**Key Benefits:**
+- ✅ Agents operate with scoped permissions and context
+- ✅ Grid context automatically filtered for security
+- ✅ Structured serialization for cross-process communication
+- ✅ Execution results traceable via CorrelationId
+- ✅ Metadata tracking for LLM token usage, timing, etc.
+- ✅ Type-safe projection from Grid primitives to Agent context
 
 **Security Guidelines:**
-- Use `CorrelationOnly` or `NodeAndCorrelation` for untrusted agents
-- Use `Standard` for most LLM assistants (filters secrets)
-- Reserve `Full` scope for privileged automation
-- Always validate capability parameters before execution
+- Use `GridContextSerializer` with `includeFullBaggage: false` for untrusted agents
+- Always validate agent capabilities before execution
+- Filter sensitive baggage keys (automatic in serializer)
+- Use `AgentContextScope` to limit context visibility
+- Track execution metadata for audit and billing
 
 ---
 

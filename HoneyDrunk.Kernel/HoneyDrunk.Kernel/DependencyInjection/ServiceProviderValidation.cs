@@ -1,6 +1,9 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Errors;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
+using HoneyDrunk.Kernel.Abstractions.Transport;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace HoneyDrunk.Kernel.DependencyInjection;
 
@@ -16,29 +19,69 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
     /// <inheritdoc />
     public void Validate(IServiceProvider services)
     {
-        // Validate required services
-        EnsureServiceRegistered<INodeContext>(services, "INodeContext");
-        EnsureServiceRegistered<IGridContextAccessor>(services, "IGridContextAccessor");
+        var logger = services.GetService<ILogger<ServiceProviderValidation>>();
+        var errors = new List<string>();
+        var warnings = new List<string>();
 
-        // Validate optional but recommended services
-        WarnIfServiceMissing<IStudioConfiguration>(services, "IStudioConfiguration");
-    }
+        // Validate core context services (required)
+        ValidateRequired<INodeContext>(services, errors, "INodeContext", "AddHoneyDrunkNode()");
+        ValidateRequired<IGridContextAccessor>(services, errors, "IGridContextAccessor", "AddHoneyDrunkNode()");
+        ValidateRequired<IOperationContextAccessor>(services, errors, "IOperationContextAccessor", "AddHoneyDrunkNode()");
+        ValidateRequired<IOperationContextFactory>(services, errors, "IOperationContextFactory", "AddHoneyDrunkNode()");
 
-    private static void EnsureServiceRegistered<T>(IServiceProvider services, string serviceName)
-    {
-        _ = services.GetService<T>() ?? throw new InvalidOperationException(
-                $"Required service {serviceName} is not registered. " +
-                $"Call AddHoneyDrunkCoreNode() to register core services.");
-    }
+        // Validate hosting services (required)
+        ValidateRequired<INodeDescriptor>(services, errors, "INodeDescriptor", "AddHoneyDrunkNode()");
 
-    private static void WarnIfServiceMissing<T>(IServiceProvider services, string serviceName)
-    {
-        var service = services.GetService<T>();
-        if (service == null)
+        // Validate error handling (required)
+        ValidateRequired<IErrorClassifier>(services, errors, "IErrorClassifier", "AddHoneyDrunkNode()");
+
+        // Validate transport binders (recommended)
+        ValidateRecommended<IEnumerable<ITransportEnvelopeBinder>>(services, warnings, "ITransportEnvelopeBinder", "AddHoneyDrunkNode() registers default binders");
+
+        // Validate configuration (recommended)
+        ValidateRecommended<IStudioConfiguration>(services, warnings, "IStudioConfiguration", "Configure studio settings for multi-environment support");
+
+        // Log warnings
+        if (warnings.Count > 0 && logger is not null)
         {
-            // In a real implementation, this would use ILogger
-            // For now, we just skip the warning in the validation phase
-            Console.WriteLine($"Warning: Recommended service {serviceName} is not registered.");
+            foreach (var warning in warnings)
+            {
+                logger.LogWarning("Service validation warning: {Warning}", warning);
+            }
+        }
+
+        // Throw if any required services are missing
+        if (errors.Count > 0)
+        {
+            var errorMessage = string.Join(Environment.NewLine, errors);
+            throw new InvalidOperationException(
+                $"Required HoneyDrunk services are not registered:{Environment.NewLine}{errorMessage}");
+        }
+
+        logger?.LogInformation("Service validation completed successfully. All required services are registered.");
+    }
+
+    private static void ValidateRequired<T>(
+        IServiceProvider services,
+        List<string> errors,
+        string serviceName,
+        string registrationHint)
+    {
+        if (services.GetService<T>() is null)
+        {
+            errors.Add($"  - {serviceName} is missing. Register via: {registrationHint}");
+        }
+    }
+
+    private static void ValidateRecommended<T>(
+        IServiceProvider services,
+        List<string> warnings,
+        string serviceName,
+        string registrationHint)
+    {
+        if (services.GetService<T>() is null)
+        {
+            warnings.Add($"{serviceName} is not registered. {registrationHint}");
         }
     }
 }

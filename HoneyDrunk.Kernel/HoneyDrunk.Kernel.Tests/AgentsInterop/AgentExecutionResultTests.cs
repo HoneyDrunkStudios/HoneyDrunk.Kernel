@@ -1,6 +1,6 @@
-using System.Text.Json;
 using FluentAssertions;
 using HoneyDrunk.Kernel.AgentsInterop;
+using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.Tests.AgentsInterop;
 

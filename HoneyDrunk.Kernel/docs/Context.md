@@ -16,6 +16,147 @@ The context hierarchy provides three levels of context, each serving a different
 
 ---
 
+## Type Model: Configuration vs Runtime
+
+### Strongly-Typed Configuration
+
+At **configuration time** (bootstrap/DI), identity values use **strongly-typed structs** for validation:
+
+```csharp
+// HoneyDrunkNodeOptions uses strongly-typed identities
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = new NodeId("payment-node");          // NodeId struct
+    options.SectorId = new SectorId("financial");         // SectorId struct
+    options.EnvironmentId = new EnvironmentId("production"); // EnvironmentId struct
+});
+```
+
+**Benefits:**
+- ✅ **Compile-time validation** - Invalid formats caught at build time
+- ✅ **IntelliSense support** - IDE autocomplete for well-known values
+- ✅ **Refactoring safety** - Renames propagate correctly
+- ✅ **Format enforcement** - Structs validate kebab-case, length, etc.
+
+### String-Based Runtime
+
+At **runtime** (context propagation/wire protocol), contexts use **strings** for performance:
+
+```csharp
+// IGridContext and INodeContext use strings
+public interface IGridContext
+{
+    string CorrelationId { get; }  // string, not CorrelationId struct
+    string NodeId { get; }         // string, not NodeId struct
+    string StudioId { get; }       // string, not StudioId struct
+    string Environment { get; }    // string, not EnvironmentId struct
+}
+
+public interface INodeContext
+{
+    string NodeId { get; }         // string, not NodeId struct
+    string Version { get; }        // string
+    string StudioId { get; }       // string
+    string Environment { get; }    // string
+}
+```
+
+**Benefits:**
+- ✅ **Wire compatibility** - Direct serialization to HTTP headers, message properties, logs
+- ✅ **Performance** - No struct allocation/boxing in hot paths
+- ✅ **Interop** - External systems don't need to understand Kernel types
+- ✅ **Simplicity** - Logging, tracing, debugging use plain strings
+
+### Why Both?
+
+This two-layer design provides **safety where it matters** (configuration) and **speed where it matters** (runtime):
+
+| Layer | Type System | Purpose | Example |
+|-------|-------------|---------|---------|
+| **Configuration** | Strongly-typed structs | Validation at build/startup | `options.NodeId = new NodeId("payment-node")` |
+| **Runtime** | Strings | Fast propagation across boundaries | `gridContext.NodeId` → `"payment-node"` |
+
+### Conversion Flow
+
+The framework handles conversion automatically during bootstrap:
+
+```csharp
+// 1. Configuration: Strongly-typed validation
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = new NodeId("payment-node"); // Validates format
+});
+
+// 2. Bootstrap converts to runtime strings
+services.AddSingleton<INodeContext>(sp =>
+{
+    var opts = sp.GetRequiredService<HoneyDrunkNodeOptions>();
+    return new NodeContext(
+        nodeId: opts.NodeId!.Value,  // .Value extracts the string
+        // ...
+    );
+});
+
+// 3. Runtime: String-based for performance
+public class OrderService(INodeContext nodeContext)
+{
+    public void LogNodeInfo()
+    {
+        // nodeContext.NodeId is a string here
+        logger.LogInformation("Running on node: {NodeId}", nodeContext.NodeId);
+    }
+}
+```
+
+### Real-World Analogy
+
+**Configuration (structs)** = Passport application  
+- Strict validation: correct format, valid country codes, required fields
+- Catches errors before you travel
+
+**Runtime (strings)** = Passport at border crossings  
+- Fast scanning: bar code reader, plain text fields
+- No validation needed (already validated at issuance)
+
+### When to Use Each
+
+| Scenario | Use |
+|----------|-----|
+| Configuring a Node | Strongly-typed: `new NodeId("my-node")` |
+| Registering services | Strongly-typed: `options.SectorId = Sectors.Core` |
+| Accessing context in code | String-based: `gridContext.NodeId` |
+| Propagating context | String-based: HTTP headers, message properties |
+| Logging/telemetry | String-based: `logger.LogInformation("{NodeId}", nodeContext.NodeId)` |
+| Testing context behavior | String-based: `new GridContext(correlationId: "test-123", nodeId: "test-node", ...)` |
+
+### Migration Note
+
+If you're coming from v0.2.x where everything was strings:
+
+```csharp
+// v0.2.x - All strings
+builder.Services.AddHoneyDrunkGrid(options =>
+{
+    options.NodeId = "payment-node";        // string
+    options.Environment = "production";     // string
+});
+
+// v0.3.0 - Strongly-typed configuration
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = new NodeId("payment-node");             // struct
+    options.EnvironmentId = new EnvironmentId("production"); // struct
+});
+
+// Runtime behavior unchanged - still strings
+public class MyService(INodeContext nodeContext)
+{
+    // nodeContext.NodeId is still a string (unchanged)
+}
+```
+
+---
+
 ## IGridContext.cs
 
 ### What it is
