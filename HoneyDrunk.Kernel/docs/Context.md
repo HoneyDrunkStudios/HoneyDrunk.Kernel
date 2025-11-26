@@ -52,7 +52,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 ```
 
 **Benefits:**
-- ✅ **Compile-time validation** - Invalid formats caught at build time
+- ✅ **Configuration-time validation** - Invalid formats caught at startup, not in production
 - ✅ **IntelliSense support** - IDE autocomplete for well-known values
 - ✅ **Refactoring safety** - Renames propagate correctly
 - ✅ **Format enforcement** - Structs validate kebab-case, length, etc.
@@ -92,8 +92,8 @@ This two-layer design provides **safety where it matters** (configuration) and *
 
 | Layer | Type System | Purpose | Example |
 |-------|-------------|---------|---------|
-| **Configuration** | Strongly-typed structs | Validation at build/startup | `options.NodeId = new NodeId("payment-node")` |
-| **Runtime** | Strings | Fast propagation across boundaries | `gridContext.NodeId` → `"payment-node"` |
+| **Configuration** | Strongly-typed structs | Validation at startup | `options.NodeId = new NodeId("payment-node")` |
+| **Runtime** | Strings | Fast propagation across boundaries | `gridContext.NodeId` → `"payment-node"` (implicit conversion) |
 
 ### Conversion Flow
 
@@ -111,7 +111,10 @@ services.AddSingleton<INodeContext>(sp =>
 {
     var opts = sp.GetRequiredService<HoneyDrunkNodeOptions>();
     return new NodeContext(
-        nodeId: opts.NodeId!.Value,  // .Value extracts the string
+        nodeId: opts.NodeId!,  // Implicit string conversion
+        version: opts.Version,
+        studioId: opts.StudioId!,
+        environment: opts.EnvironmentId!,  // Implicit string conversion
         // ...
     );
 });
@@ -148,32 +151,6 @@ public class OrderService(INodeContext nodeContext)
 | Logging/telemetry | String-based: `logger.LogInformation("{NodeId}", nodeContext.NodeId)` |
 | Testing context behavior | String-based: `new GridContext(correlationId: "test-123", nodeId: "test-node", ...)` |
 
-### Migration Note
-
-If you're coming from v0.2.x where everything was strings:
-
-```csharp
-// v0.2.x - All strings
-builder.Services.AddHoneyDrunkGrid(options =>
-{
-    options.NodeId = "payment-node";        // string
-    options.Environment = "production";     // string
-});
-
-// v0.3.0 - Strongly-typed configuration
-builder.Services.AddHoneyDrunkNode(options =>
-{
-    options.NodeId = new NodeId("payment-node");             // struct
-    options.EnvironmentId = new EnvironmentId("production"); // struct
-});
-
-// Runtime behavior unchanged - still strings
-public class MyService(INodeContext nodeContext)
-{
-    // nodeContext.NodeId is still a string (unchanged)
-}
-```
-
 ---
 
 ## IGridContext.cs
@@ -188,11 +165,11 @@ Like a passport that travels with a person across borders, carrying identity and
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `CorrelationId` | string | Groups all operations from a single user request |
+| `CorrelationId` | string | Groups all operations from a single user request (constant across tree) |
 | `CausationId` | string? | Which operation triggered this one (parent-child chain) |
 | `NodeId` | string | Which Node is currently executing |
-| `StudioId` | string | Which Studio/environment owns this execution |
-| `Environment` | string | Production, staging, development, etc. |
+| `StudioId` | string | Which Studio owns this execution |
+| `Environment` | string | Which environment (production, staging, development, etc.) |
 | `Baggage` | IReadOnlyDictionary<string, string> | Key-value pairs propagated across boundaries |
 | `Cancellation` | CancellationToken | Cooperative cancellation |
 | `CreatedAtUtc` | DateTimeOffset | When this context was created |
@@ -228,8 +205,12 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
             .WithBaggage("customer_id", order.CustomerId);
         
         // Call downstream service with child context
+        // CorrelationId stays the same, CausationId points to this operation
         var childContext = enrichedContext.CreateChildContext("payment-node");
         await _paymentClient.ChargeAsync(order, childContext);
+        
+        // childContext.CorrelationId == gridContext.CorrelationId (same request)
+        // childContext.CausationId == gridContext.CorrelationId (parent operation)
     }
 }
 ```
@@ -242,13 +223,17 @@ User Request (CorrelationId: ABC123)
 API Gateway creates GridContext(CorrelationId: ABC123, CausationId: null)
     ↓
 Order Service receives context, creates child:
-    GridContext(CorrelationId: XYZ789, CausationId: ABC123)
+    GridContext(CorrelationId: ABC123, CausationId: ABC123)
     ↓
 Payment Service receives context, creates child:
-    GridContext(CorrelationId: DEF456, CausationId: XYZ789)
+    GridContext(CorrelationId: ABC123, CausationId: [Order's OperationId or ABC123])
 ```
 
-Trace reconstruction: DEF456 → XYZ789 → ABC123
+**Key Points:**
+- **CorrelationId stays constant** (`ABC123`) throughout the entire request tree
+- **CausationId points to parent** operation (who called me)
+- Trace reconstruction: All operations with `ABC123` are part of the same user request
+- Parent-child relationships revealed by CausationId chain
 
 ---
 
@@ -267,12 +252,12 @@ Like a server's hostname and system info - static per process.
 | `NodeId` | string | This Node's identifier |
 | `Version` | string | Semantic version of this Node |
 | `StudioId` | string | Which Studio owns this Node |
-| `Environment` | string | Which environment (production, staging, etc.) |
+| `Environment` | string | Which environment (production, staging, development, etc.) |
 | `LifecycleStage` | NodeLifecycleStage | Current stage (Starting, Ready, Stopping, Stopped) |
 | `StartedAtUtc` | DateTimeOffset | When this Node process started |
 | `MachineName` | string | Host machine name |
 | `ProcessId` | int | OS process ID |
-| `Tags` | IReadOnlyDictionary<string, string> | Custom labels for routing/filtering |
+| `Tags` | IReadOnlyDictionary<string, string> | Custom labels (sector, region, deployment-slot) for routing/filtering |
 
 ### Usage Example
 
@@ -411,7 +396,7 @@ Maps message properties to GridContext:
 
 ```csharp
 [Fact]
-public async Task GridContext_CreateChildContext_SetsCausationId()
+public async Task GridContext_CreateChildContext_PreservesCorrelationId()
 {
     // Arrange
     var parentContext = new GridContext(
@@ -426,9 +411,9 @@ public async Task GridContext_CreateChildContext_SetsCausationId()
     // Act
     var childContext = parentContext.CreateChildContext("child-node");
     
-    // Assert
-    Assert.NotEqual(parentContext.CorrelationId, childContext.CorrelationId);
-    Assert.Equal(parentContext.CorrelationId, childContext.CausationId);
+    // Assert - CorrelationId stays the same (Model A)
+    Assert.Equal(parentContext.CorrelationId, childContext.CorrelationId);
+    Assert.Equal(parentContext.CorrelationId, childContext.CausationId); // Parent ID becomes causation
     Assert.Equal("child-node", childContext.NodeId);
 }
 
@@ -446,6 +431,7 @@ public async Task OperationContext_Dispose_CompletesAutomatically()
     }
     
     // Assert - disposed operation auto-completes if not explicitly failed
+    // Verify operation was marked as successful and duration was recorded
 }
 ```
 

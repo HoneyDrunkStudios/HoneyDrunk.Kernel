@@ -20,7 +20,7 @@ public class GridContextMiddlewareTests
         var nodeContext = CreateTestNodeContext();
         var gridAccessor = new GridContextAccessor();
         var opAccessor = new OperationContextAccessor();
-        var opFactory = CreateTestOperationContextFactory(gridAccessor, opAccessor);
+        var opFactory = CreateTestOperationContextFactory();
 
         var middleware = new GridContextMiddleware(
             next: async _ => await Task.CompletedTask,
@@ -44,7 +44,7 @@ public class GridContextMiddlewareTests
         var nodeContext = CreateTestNodeContext();
         var gridAccessor = new GridContextAccessor();
         var opAccessor = new OperationContextAccessor();
-        var opFactory = CreateTestOperationContextFactory(gridAccessor, opAccessor);
+        var opFactory = CreateTestOperationContextFactory();
 
         var middleware = new GridContextMiddleware(
             next: async _ => await Task.CompletedTask,
@@ -115,7 +115,7 @@ public class GridContextMiddlewareTests
         var nodeContext = CreateTestNodeContext();
         var gridAccessor = new GridContextAccessor();
         var opAccessor = new OperationContextAccessor();
-        var opFactory = CreateTestOperationContextFactory(gridAccessor, opAccessor);
+        var opFactory = CreateTestOperationContextFactory();
 
         var middleware = new GridContextMiddleware(
             next: async _ => await Task.CompletedTask,
@@ -242,12 +242,7 @@ public class GridContextMiddlewareTests
         };
     }
 
-    private static IOperationContextFactory CreateTestOperationContextFactory(
-        IGridContextAccessor gridAccessor,
-        IOperationContextAccessor opAccessor)
-    {
-        return new TestOperationContextFactory();
-    }
+    private static TestOperationContextFactory CreateTestOperationContextFactory() => new();
 
     private sealed class TestNodeContext : INodeContext
     {
@@ -293,23 +288,15 @@ public class GridContextMiddlewareTests
         }
     }
 
-    private sealed class TestOperationContext : IOperationContext
+    private sealed class TestOperationContext(IGridContext gridContext, string operationName, IReadOnlyDictionary<string, object?>? metadata) : IOperationContext
     {
-        private readonly Dictionary<string, object?> _metadata;
+        private readonly Dictionary<string, object?> _metadata = metadata != null ? new Dictionary<string, object?>(metadata) : [];
 
-        public TestOperationContext(IGridContext gridContext, string operationName, IReadOnlyDictionary<string, object?>? metadata)
-        {
-            GridContext = gridContext;
-            OperationName = operationName;
-            _metadata = metadata != null ? new Dictionary<string, object?>(metadata) : [];
-            StartedAtUtc = DateTimeOffset.UtcNow;
-        }
+        public IGridContext GridContext { get; } = gridContext;
 
-        public IGridContext GridContext { get; }
+        public string OperationName { get; } = operationName;
 
-        public string OperationName { get; }
-
-        public DateTimeOffset StartedAtUtc { get; }
+        public DateTimeOffset StartedAtUtc { get; } = DateTimeOffset.UtcNow;
 
         public DateTimeOffset? CompletedAtUtc { get; private set; }
 

@@ -7,10 +7,11 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// <remarks>
 /// GridContext is the fundamental OS-level primitive that flows through every operation
 /// in the HoneyDrunk ecosystem. It carries:
-/// - Correlation ID: Groups related operations across Nodes
-/// - Causation ID: Tracks which operation triggered this one
+/// - Correlation ID: Groups related operations across Nodes (stays constant per user request)
+/// - Causation ID: Tracks which operation triggered this one (parent-child chain)
 /// - Node Identity: Which Node is executing this operation
-/// - Studio Context: Which Studio/environment owns this execution
+/// - Studio Context: Which Studio owns this execution
+/// - Environment: Which environment (production, staging, development, etc.)
 /// - Baggage: User-defined metadata that propagates with the context
 /// - Cancellation: Cooperative cancellation for the entire operation chain.
 /// </remarks>
@@ -18,31 +19,33 @@ public interface IGridContext
 {
     /// <summary>
     /// Gets the correlation identifier that groups related operations across the Grid.
-    /// This ID remains constant as work flows through multiple Nodes.
+    /// This ID remains constant as work flows through multiple Nodes within a single user request.
+    /// Created once at the edge and propagated unchanged through all downstream operations.
     /// </summary>
     string CorrelationId { get; }
 
     /// <summary>
     /// Gets the causation identifier indicating which operation triggered this one.
-    /// Forms a chain: Operation A causes Operation B (B.CausationId = A.CorrelationId).
+    /// Forms a parent-child chain: if Operation A triggers Operation B, then B.CausationId points to A's identifier.
+    /// Null for root operations (no parent).
     /// </summary>
     string? CausationId { get; }
 
     /// <summary>
     /// Gets the identifier of the Node currently executing this operation.
-    /// Example: "payment-node", "notification-node", "auth-gateway".
+    /// Uses kebab-case format (e.g., "kernel", "payment-service", "auth-gateway").
     /// </summary>
     string NodeId { get; }
 
     /// <summary>
     /// Gets the Studio identifier that owns this execution context.
-    /// Example: "honeycomb", "staging", "dev-alice".
+    /// Identifies which logical Studio (organization/tenant) this execution belongs to.
     /// </summary>
     string StudioId { get; }
 
     /// <summary>
     /// Gets the environment in which this operation is executing.
-    /// Example: "production", "staging", "development".
+    /// Uses kebab-case format (e.g., "production", "staging", "development", "local").
     /// </summary>
     string Environment { get; }
 
@@ -70,11 +73,12 @@ public interface IGridContext
     IDisposable BeginScope();
 
     /// <summary>
-    /// Creates a new child context for a downstream operation with a new correlation ID.
-    /// The current context's correlation ID becomes the causation ID of the child.
+    /// Creates a new child context for a downstream operation.
+    /// The current context's CorrelationId is preserved (stays constant for the entire request tree).
+    /// The current context's CorrelationId becomes the CausationId of the child (forming parent-child chain).
     /// </summary>
     /// <param name="nodeId">Optional Node ID if crossing Node boundaries; if null, uses current NodeId.</param>
-    /// <returns>A new GridContext with the current context as its cause.</returns>
+    /// <returns>A new GridContext with the same CorrelationId and the current context as its cause.</returns>
     IGridContext CreateChildContext(string? nodeId = null);
 
     /// <summary>
