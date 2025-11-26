@@ -48,7 +48,7 @@ public class GridContextTraceEnricherTests
     public void Enrich_AddsCorrectValues()
     {
         var enricher = new GridContextTraceEnricher();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
         var telemetryContext = new TelemetryContext(gridContext, "trace-id", "span-id");
         var tags = new Dictionary<string, object?>();
 
@@ -66,6 +66,7 @@ public class GridContextTraceEnricherTests
         var enricher = new GridContextTraceEnricher();
         var gridContext = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -83,7 +84,7 @@ public class GridContextTraceEnricherTests
     public void Enrich_WithoutCausationId_DoesNotAddCausationTag()
     {
         var enricher = new GridContextTraceEnricher();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
         var telemetryContext = new TelemetryContext(gridContext, "trace-id", "span-id");
         var tags = new Dictionary<string, object?>();
 
@@ -103,6 +104,7 @@ public class GridContextTraceEnricherTests
         };
         var gridContext = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -122,7 +124,7 @@ public class GridContextTraceEnricherTests
     public void Enrich_WithoutBaggage_DoesNotAddBaggageTags()
     {
         var enricher = new GridContextTraceEnricher();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
         var telemetryContext = new TelemetryContext(gridContext, "trace-id", "span-id");
         var tags = new Dictionary<string, object?>();
 
@@ -135,7 +137,7 @@ public class GridContextTraceEnricherTests
     public void Enrich_ExistingTags_AreOverwritten()
     {
         var enricher = new GridContextTraceEnricher();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
         var telemetryContext = new TelemetryContext(gridContext, "trace-id", "span-id");
         var tags = new Dictionary<string, object?>
         {
@@ -167,9 +169,9 @@ public class GridContextTraceEnricherTests
     public void Enrich_MultipleCalls_UpdatesTags()
     {
         var enricher = new GridContextTraceEnricher();
-        var gridContext1 = new GridContext("corr-1", "node-1", "studio-1", "env-1");
+        var gridContext1 = new GridContext("corr-1", Ulid.NewUlid().ToString(), "node-1", "studio-1", "env-1");
         var telemetryContext1 = new TelemetryContext(gridContext1, "trace-1", "span-1");
-        var gridContext2 = new GridContext("corr-2", "node-2", "studio-2", "env-2");
+        var gridContext2 = new GridContext("corr-2", Ulid.NewUlid().ToString(), "node-2", "studio-2", "env-2");
         var telemetryContext2 = new TelemetryContext(gridContext2, "trace-2", "span-2");
         var tags = new Dictionary<string, object?>();
 
@@ -182,7 +184,7 @@ public class GridContextTraceEnricherTests
 
     private static TelemetryContext CreateTestTelemetryContext()
     {
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+        var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
         return new TelemetryContext(gridContext, "trace-id", "span-id");
     }
 }

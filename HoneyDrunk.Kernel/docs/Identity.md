@@ -14,6 +14,7 @@
   - [ErrorCode](#errorcodecs) - Hierarchical error classification (dot-separated)
 - **ULID-Based Identity Types**
   - [CorrelationId](#correlationidcs) - Request tracing
+  - [OperationId](#operationidcs) - Operation/span identification
   - [CausationId](#causationidcs) - Parent operation tracking
   - [TenantId](#tenantidcs) - Multi-tenancy isolation
   - [ProjectId](#projectidcs) - Project/workspace organization
@@ -186,6 +187,89 @@ All logs across all services share the same CorrelationId → full trace reconst
 
 ---
 
+## OperationId.cs
+
+### What it is
+ULID-based identifier for a single operation (span) within a distributed trace.
+
+### Real-world analogy
+Like a unique transaction ID on a receipt - identifies this specific step in a larger journey.
+
+### Format
+**ULID** (same format as CorrelationId)
+
+### Properties
+- **Uniqueness:** Globally unique across all operations
+- **Sortability:** Lexicographically sortable by creation time
+- **Span Identity:** Maps to W3C traceparent span-id and OpenTelemetry span_id
+- **Per-Operation:** Created fresh for each unit of work (HTTP request, message handler, job step)
+
+### Usage
+
+```csharp
+// Generate new operation ID (for new operation/span)
+var operationId = OperationId.NewId();
+Console.WriteLine(operationId); // "01HQXZ8K4TJ9X5B3N2YGF7WDCQ"
+
+// Parse from string (incoming trace context)
+if (OperationId.TryParse(headers["X-Operation-ID"], out var id))
+{
+    _logger.LogInformation("Operation span: {OperationId}", id);
+}
+
+// Convert to/from Ulid
+Ulid ulid = operationId.ToUlid();
+var fromUlid = OperationId.FromUlid(ulid);
+
+// Implicit conversions
+string idString = operationId;           // To string
+Ulid ulidValue = operationId;            // To Ulid
+```
+
+### When to use
+- Every operation creates its own OperationId
+- Identifies a unit of work within a larger trace
+- Maps to span_id in distributed tracing systems
+- Parent's OperationId becomes child's CausationId
+
+### Why it matters
+**Enables proper distributed tracing** - the missing piece that completes the three-ID model:
+- **CorrelationId (trace-id)**: "All of these belong together"
+- **OperationId (span-id)**: "This specific unit of work"
+- **CausationId (parent-span-id)**: "Who called me"
+
+Without OperationId, you can't distinguish between different operations in the same trace or build proper parent-child span relationships.
+
+### Three-ID Model Example
+
+```
+User Request
+  ├─ CorrelationId: ABC123 (constant - trace ID)
+  ├─ OperationId: OP-001 (this operation - span ID)
+  └─ CausationId: null (no parent - root span)
+      │
+      ├─ API Gateway
+      │   ├─ CorrelationId: ABC123 (same trace)
+      │   ├─ OperationId: OP-002 (new span)
+      │   └─ CausationId: OP-001 (parent span)
+      │       │
+      │       ├─ Auth Service
+      │       │   ├─ CorrelationId: ABC123 (same trace)
+      │       │   ├─ OperationId: OP-003 (new span)
+      │       │   └─ Causation Id: OP-002 (parent span)
+      │       │
+      │       └─ Payment Service
+      │           ├─ CorrelationId: ABC123 (same trace)
+      │           ├─ OperationId: OP-004 (new span)
+      │           └─ CausationId: OP-002 (parent span)
+```
+
+**Result:** Perfect tree reconstruction with W3C/OpenTelemetry compatibility.
+
+[↑ Back to top](#table-of-contents)
+
+---
+
 ## CausationId.cs
 
 ### What it is
@@ -195,31 +279,33 @@ ULID-based identifier for tracking the direct parent operation that triggered th
 Like "Reply-To" in email threads - it points to the immediate message that caused this response, helping you trace back through the conversation tree.
 
 ### Format
-**ULID** (same format as CorrelationId)
+**ULID** (same format as CorrelationId/OperationId)
 
 ### Properties
 - **Uniqueness:** Globally unique across all operations
 - **Sortability:** Lexicographically sortable by creation time
 - **Causal Chain:** Forms a parent-child execution tree
-- **Correlation vs Causation:** CorrelationId stays the same for a request; CausationId points to the parent operation
+- **Points to Parent's OperationId:** Not CorrelationId - points to the parent operation's span ID
 
 ### Usage
 
 ```csharp
 // Incoming request (root operation - single CorrelationId for entire flow)
 var correlationId = CorrelationId.NewId();
+var operationId = OperationId.NewId();
 var causationId = (CausationId?)null; // No parent
 
-// First downstream operation (same CorrelationId, new CausationId)
-var operation1CausationId = new CausationId(correlationId); // Parent = original request
-_logger.LogInformation("Operation 1: {CorrelationId} caused by {CausationId}", 
-    correlationId, operation1CausationId);
+// First downstream operation (same CorrelationId, new OperationId, CausationId points to parent OperationId)
+var operation1OperationId = OperationId.NewId();
+var operation1CausationId = new CausationId(operationId); // Parent = original request's OperationId
+_logger.LogInformation("Operation 1: Correlation={CorrelationId} Operation={OperationId} Causation={CausationId}", 
+    correlationId, operation1OperationId, operation1CausationId);
 
-// Second level operation (same CorrelationId, different CausationId)
-var operation2RunId = RunId.NewId(); // Assume operation1 has a RunId
-var operation2CausationId = new CausationId(operation2RunId); // Parent = operation1's RunId
-_logger.LogInformation("Operation 2: {CorrelationId} caused by {CausationId}", 
-    correlationId, operation2CausationId);
+// Second level operation (same CorrelationId, different OperationId/CausationId)
+var operation2OperationId = OperationId.NewId();
+var operation2CausationId = new CausationId(operation1OperationId); // Parent = operation1's OperationId
+_logger.LogInformation("Operation 2: Correlation={CorrelationId} Operation={OperationId} Causation={CausationId}", 
+    correlationId, operation2OperationId, operation2CausationId);
 
 // Parse from message metadata
 if (CausationId.TryParse(message.Properties["causation-id"], out var parsedCausationId))
@@ -244,40 +330,43 @@ Ulid ulidValue = causationId;            // To Ulid
 - Audit trails showing who-called-whom
 
 ### Why it matters
-**Enables causal tracing** - while CorrelationId shows you all operations related to a user request, CausationId shows you the parent-child relationships and execution order.
+**Enables causal tracing** - while CorrelationId shows you all operations related to a user request, CausationId shows you the parent-child relationships by pointing to the parent's OperationId.
 
 ### Execution Tree Example
 
 ```
 User Request
-  ├─ Correlation: 01HQXZ8K... (created once, propagated everywhere)
+  ├─ Correlation: ABC123 (created once, propagated everywhere)
+  ├─ Operation: OP-001 (this operation/span)
   └─ Causation: null
       │
       ├─ API Gateway
-      │   ├─ Correlation: 01HQXZ8K... (same)
-      │   ├─ RunId: 01HQXZ8L... (new operation instance)
-      │   └─ Causation: 01HQXZ8K... (points to User Request)
+      │   ├─ Correlation: ABC123 (same)
+      │   ├─ Operation: OP-002 (new)
+      │   └─ Causation: OP-001 (points to User Request's OperationId)
       │       │
       │       ├─ Auth Service
-      │       │   ├─ Correlation: 01HQXZ8K... (same)
-      │       │   ├─ RunId: 01HQXZ8M... (new)
-      │       │   └─ Causation: 01HQXZ8L... (points to API Gateway RunId)
+      │       │   ├─ Correlation: ABC123 (same)
+      │       │   ├─ Operation: OP-003 (new)
+      │       │   └─ Causation: OP-002 (points to API Gateway's OperationId)
       │       │
       │       └─ Payment Service
-      │           ├─ Correlation: 01HQXZ8K... (same)
-      │           ├─ RunId: 01HQXZ8N... (new)
-      │           └─ Causation: 01HQXZ8L... (points to API Gateway RunId)
+      │           ├─ Correlation: ABC123 (same)
+      │           ├─ Operation: OP-004 (new)
+      │           └─ Causation: OP-002 (points to API Gateway's OperationId)
       │               │
       │               └─ Notification Service
-      │                   ├─ Correlation: 01HQXZ8K... (same)
-      │                   ├─ RunId: 01HQXZ8P... (new)
-      │                   └─ Causation: 01HQXZ8N... (points to Payment Service RunId)
+      │                   ├─ Correlation: ABC123 (same)
+      │                   ├─ Operation: OP-005 (new)
+      │                   └─ Causation: OP-004 (points to Payment Service's OperationId)
 ```
 
 **Result:** 
-- **CorrelationId** is the same everywhere (`01HQXZ8K...`) - links all operations to the original user request
-- **CausationId** changes at each level - points to the parent operation that triggered this one
-- **RunId** is unique per operation instance - identifies each individual execution
+- **CorrelationId** is the same everywhere (`ABC123`) - links all operations to the original user request
+- **OperationId** is unique per operation - identifies each individual span
+- **CausationId** points to parent's OperationId - forms the tree structure
+
+You can reconstruct the entire execution tree and see which operations spawned which children.
 
 [↑ Back to top](#table-of-contents)
 
@@ -1046,8 +1135,9 @@ public void ErrorCode_SupportsHierarchicalStructure()
 | Type | Format | Length | Use Case |
 |------|--------|--------|----------|
 | **NodeId** | Kebab-case | 3-64 chars | Node identification |
-| **CorrelationId** | ULID | 26 chars | Request tracing (single ID per request) |
-| **CausationId** | ULID | 26 chars | Parent operation tracking (changes per hop) |
+| **CorrelationId** | ULID | 26 chars | Request tracing (trace-id - constant per request) |
+| **OperationId** | ULID | 26 chars | Operation/span identification (span-id - unique per operation) |
+| **CausationId** | ULID | 26 chars | Parent operation tracking (parent-span-id - points to parent OperationId) |
 | **TenantId** | ULID | 26 chars | Multi-tenancy isolation |
 | **ProjectId** | ULID | 26 chars | Project/workspace organization |
 | **RunId** | ULID | 26 chars | Execution instance tracking |
@@ -1059,6 +1149,11 @@ public void ErrorCode_SupportsHierarchicalStructure()
 - **Kebab-case** = lowercase + hyphens (`kernel`, `payment-service`, `rate-limit.exceeded`)
 - **ULID** = chronologically sortable, 26-char Base32 (`01HQXZ8K...`)
 
+**Three-ID Tracing Model (W3C/OpenTelemetry Compatible):**
+- **CorrelationId (trace-id)** = Constant across entire request tree
+- **OperationId (span-id)** = Unique per operation/span
+- **CausationId (parent-span-id)** = Points to parent's OperationId
+
 **Common Properties:**
 - ✅ Type-safe
 - ✅ Validated at construction
@@ -1068,7 +1163,7 @@ public void ErrorCode_SupportsHierarchicalStructure()
 - ✅ JSON serialization friendly
 
 **Grid-Native Design:**
-- **Context propagation** - CorrelationId stays constant, CausationId points to parent
+- **Context propagation** - CorrelationId stays constant, OperationId uniquely identifies each span, CausationId points to parent
 - **Multi-tenancy** - TenantId, ProjectId enforce isolation at type level
 - **Distributed state** - ErrorCode includes `state.version-conflict`, `operation.idempotent-replay`
 - **Runtime gating** - ErrorCode includes `feature.disabled`, `quota.exceeded`

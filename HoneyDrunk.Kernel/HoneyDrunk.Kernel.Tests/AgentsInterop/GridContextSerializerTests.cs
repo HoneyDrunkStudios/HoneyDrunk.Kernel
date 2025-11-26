@@ -17,7 +17,7 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_ValidContext_ReturnsJsonString()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -31,7 +31,7 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_IncludesAllRequiredFields()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -46,6 +46,7 @@ public class GridContextSerializerTests
     {
         var context = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -59,7 +60,7 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_WithoutCausationId_IncludesNullCausation()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -78,6 +79,7 @@ public class GridContextSerializerTests
         };
         var context = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -102,6 +104,7 @@ public class GridContextSerializerTests
         };
         var context = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -128,6 +131,7 @@ public class GridContextSerializerTests
         };
         var context = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -146,7 +150,7 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_UsesCamelCase()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -286,6 +290,7 @@ public class GridContextSerializerTests
     {
         var original = new GridContext(
             "corr-123",
+            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -311,7 +316,7 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_EmptyBaggage_SerializesEmptyObject()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "production");
 
         var json = GridContextSerializer.Serialize(context);
 

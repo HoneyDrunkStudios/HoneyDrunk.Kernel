@@ -718,7 +718,7 @@ public async Task ProcessPayment_CreatesActivity()
     
     ActivitySource.AddActivityListener(activityListener);
     
-    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
     var service = new PaymentService(gridContext);
     
     // Act

@@ -99,6 +99,7 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
             var nc = sp.GetRequiredService<INodeContext>();
             return new GridContext(
                 correlationId: Ulid.NewUlid().ToString(),
+                operationId: Ulid.NewUlid().ToString(),
                 nodeId: nc.NodeId,
                 studioId: nc.StudioId,
                 environment: nc.Environment);

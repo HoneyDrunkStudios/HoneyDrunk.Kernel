@@ -9,7 +9,7 @@ public class OperationContextTests
     public void Constructor_ValidParameters_CreatesContext()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
 
         // Act
         var opContext = new OperationContext(gridContext, "TestOperation");
@@ -28,7 +28,7 @@ public class OperationContextTests
     public void Constructor_WithMetadata_CreatesContextWithMetadata()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var metadata = new Dictionary<string, object?>
         {
             ["key1"] = "value1",
@@ -61,7 +61,7 @@ public class OperationContextTests
     public void Constructor_NullOrWhitespaceOperationName_ThrowsArgumentException(string? operationName)
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
 
         // Act
         var act = () => new OperationContext(gridContext, operationName!);
@@ -74,7 +74,7 @@ public class OperationContextTests
     public void Complete_MarksOperationAsSuccessful()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -91,7 +91,7 @@ public class OperationContextTests
     public void Complete_CalledMultipleTimes_OnlyCompletesOnce()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -108,7 +108,7 @@ public class OperationContextTests
     public void Fail_MarksOperationAsFailed()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -124,7 +124,7 @@ public class OperationContextTests
     public void Fail_WithException_MarksOperationAsFailed()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
         var exception = new InvalidOperationException("Test exception");
 
@@ -142,7 +142,7 @@ public class OperationContextTests
     public void Fail_NullOrWhitespaceErrorMessage_ThrowsArgumentException(string errorMessage)
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -156,7 +156,7 @@ public class OperationContextTests
     public void Fail_CalledMultipleTimes_OnlyFailsOnce()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -175,7 +175,7 @@ public class OperationContextTests
     public void AddMetadata_AddsNewMetadata()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -192,7 +192,7 @@ public class OperationContextTests
     public void AddMetadata_UpdatesExistingMetadata()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
         opContext.AddMetadata("key", "old-value");
 
@@ -209,7 +209,7 @@ public class OperationContextTests
     public void AddMetadata_NullOrWhitespaceKey_ThrowsArgumentException(string key)
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -223,7 +223,7 @@ public class OperationContextTests
     public void Dispose_WithoutCompletionOrFailure_AutomaticallyCompletes()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act
@@ -238,7 +238,7 @@ public class OperationContextTests
     public void Dispose_AfterCompletion_DoesNotChangeState()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
         opContext.Complete();
         var completedAt = opContext.CompletedAtUtc;
@@ -254,7 +254,7 @@ public class OperationContextTests
     public void Dispose_CalledMultipleTimes_IsSafe()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         var opContext = new OperationContext(gridContext, "TestOperation");
 
         // Act & Assert - Should not throw
@@ -267,7 +267,7 @@ public class OperationContextTests
     public void UsingPattern_AutomaticallyDisposesAndCompletes()
     {
         // Arrange
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
         OperationContext? opContext;
 
         // Act

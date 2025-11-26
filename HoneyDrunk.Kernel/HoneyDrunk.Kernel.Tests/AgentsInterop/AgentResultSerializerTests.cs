@@ -231,7 +231,7 @@ public class AgentResultSerializerTests
         return new TestAgentExecutionContext
         {
             Agent = new TestAgentDescriptor { AgentId = "test-agent" },
-            GridContext = new GridContext("corr-123", "test-node", "test-studio", "test"),
+            GridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test"),
             StartedAtUtc = DateTimeOffset.UtcNow
         };
     }

@@ -931,7 +931,7 @@ public void AgentResultSerializer_RoundTrip()
 {
     // Arrange
     var agent = new TestAgentDescriptor();
-    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
     var operationContext = new OperationContext(gridContext, new NodeContext());
     var execContext = AgentContextProjection.ProjectToAgentContext(
         gridContext, operationContext, agent);
@@ -956,7 +956,7 @@ public void AgentResultSerializer_RoundTrip()
 public void AgentContextProjection_CreatesExecutionContext()
 {
     // Arrange
-    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
     var operationContext = new OperationContext(gridContext, new NodeContext());
     var agent = new TestAgentDescriptor();
     

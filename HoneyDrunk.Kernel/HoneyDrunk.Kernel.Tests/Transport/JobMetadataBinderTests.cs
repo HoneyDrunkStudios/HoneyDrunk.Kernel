@@ -42,7 +42,7 @@ public class JobMetadataBinderTests
     {
         var binder = new JobMetadataBinder();
         var metadata = new Dictionary<string, string>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env");
 
         binder.Bind(metadata, gridContext);
 
@@ -75,7 +75,7 @@ public class JobMetadataBinderTests
     {
         var binder = new JobMetadataBinder();
         var metadata = new Dictionary<string, string>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env");
 
         binder.Bind(metadata, gridContext);
 
@@ -90,6 +90,7 @@ public class JobMetadataBinderTests
         var createdAt = new DateTimeOffset(2025, 1, 11, 10, 30, 45, TimeSpan.Zero);
         var gridContext = new GridContext(
             "corr-123",
+            "opid-456",
             "test-node",
             "test-studio",
             "test-env",
@@ -112,7 +113,7 @@ public class JobMetadataBinderTests
             ["tenant_id"] = "tenant-123",
             ["user_id"] = "user-456"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env", baggage: baggage);
 
         binder.Bind(metadata, gridContext);
 
@@ -127,7 +128,7 @@ public class JobMetadataBinderTests
     {
         var binder = new JobMetadataBinder();
         var metadata = new Dictionary<string, string>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env");
 
         binder.Bind(metadata, gridContext);
 
@@ -139,7 +140,7 @@ public class JobMetadataBinderTests
     public void Bind_WithNullEnvelope_ThrowsArgumentNullException()
     {
         var binder = new JobMetadataBinder();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env");
 
         var act = () => binder.Bind(null!, gridContext);
 
@@ -164,7 +165,7 @@ public class JobMetadataBinderTests
     {
         var binder = new JobMetadataBinder();
         var notDictionary = new object();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env");
 
         var act = () => binder.Bind(notDictionary, gridContext);
 
@@ -178,8 +179,8 @@ public class JobMetadataBinderTests
     {
         var binder = new JobMetadataBinder();
         var metadata = new Dictionary<string, string>();
-        var gridContext1 = new GridContext("corr-123", "node-1", "studio", "env");
-        var gridContext2 = new GridContext("corr-456", "node-2", "studio", "env");
+        var gridContext1 = new GridContext("corr-123", Ulid.NewUlid().ToString(), "node-1", "studio", "env");
+        var gridContext2 = new GridContext("corr-456", Ulid.NewUlid().ToString(), "node-2", "studio", "env");
 
         binder.Bind(metadata, gridContext1);
         binder.Bind(metadata, gridContext2);
@@ -199,7 +200,7 @@ public class JobMetadataBinderTests
             ["key2"] = "value2",
             ["key3"] = "value3"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env", baggage: baggage);
 
         binder.Bind(metadata, gridContext);
 
@@ -216,7 +217,7 @@ public class JobMetadataBinderTests
         {
             ["CustomMetadata"] = "custom-value"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", Ulid.NewUlid().ToString(), "test-node", "test-studio", "test-env");
 
         binder.Bind(metadata, gridContext);
 

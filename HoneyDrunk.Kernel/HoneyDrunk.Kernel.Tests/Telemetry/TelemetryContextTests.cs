@@ -156,6 +156,6 @@ public class TelemetryContextTests
 
     private static GridContext CreateTestGridContext()
     {
-        return new GridContext("corr-123", "test-node", "test-studio", "test");
+        return new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
     }
 }

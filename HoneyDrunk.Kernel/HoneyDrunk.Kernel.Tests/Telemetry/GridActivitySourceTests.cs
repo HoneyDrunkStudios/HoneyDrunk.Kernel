@@ -46,7 +46,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
 
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
 
@@ -91,7 +91,7 @@ public class GridActivitySourceTests
             ["tenant_id"] = "tenant-123",
             ["user_id"] = "user-456"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env", baggage: baggage);
 
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
 
@@ -110,7 +110,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
         var customTags = new Dictionary<string, object?>
         {
             ["custom.key1"] = "value1",
@@ -134,7 +134,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
 
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext, ActivityKind.Server);
 
@@ -148,7 +148,7 @@ public class GridActivitySourceTests
     [InlineData(null)]
     public void StartActivity_WithNullOrWhitespaceOperationName_ThrowsArgumentException(string? operationName)
     {
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
 
         var act = () => GridActivitySource.StartActivity(operationName!, gridContext);
 
@@ -173,7 +173,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
 
         using var activity = GridActivitySource.StartHttpActivity("GET", "/api/users", gridContext);
 
@@ -194,7 +194,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
 
         using var activity = GridActivitySource.StartDatabaseActivity("query", "users", gridContext);
 
@@ -215,7 +215,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
 
         using var activity = GridActivitySource.StartMessageActivity("OrderCreated", "orders-queue", gridContext, ActivityKind.Producer);
 
@@ -236,7 +236,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
         var exception = new InvalidOperationException("Test error");
 
@@ -268,7 +268,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
 
         var act = () => GridActivitySource.RecordException(activity, null!);
@@ -286,7 +286,7 @@ public class GridActivitySourceTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = new GridContext("corr-123", "test-op", "test-node", "test-studio", "test-env");
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
 
         GridActivitySource.SetSuccess(activity);

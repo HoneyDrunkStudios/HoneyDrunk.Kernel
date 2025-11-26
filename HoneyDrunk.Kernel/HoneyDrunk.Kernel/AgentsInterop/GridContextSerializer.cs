@@ -31,6 +31,7 @@ public sealed class GridContextSerializer
         var data = new
         {
             correlationId = context.CorrelationId,
+            operationId = context.OperationId,
             causationId = context.CausationId,
             nodeId = context.NodeId,
             studioId = context.StudioId,
@@ -58,6 +59,7 @@ public sealed class GridContextSerializer
 
             // Safely try to get required properties
             if (!root.TryGetProperty("correlationId", out var correlationIdElement) ||
+                !root.TryGetProperty("operationId", out var operationIdElement) ||
                 !root.TryGetProperty("nodeId", out var nodeIdElement) ||
                 !root.TryGetProperty("studioId", out var studioIdElement) ||
                 !root.TryGetProperty("environment", out var environmentElement))
@@ -66,12 +68,14 @@ public sealed class GridContextSerializer
             }
 
             var correlationId = correlationIdElement.GetString();
+            var operationId = operationIdElement.GetString();
             var nodeId = nodeIdElement.GetString();
             var studioId = studioIdElement.GetString();
             var environment = environmentElement.GetString();
 
-            if (string.IsNullOrEmpty(correlationId) || string.IsNullOrEmpty(nodeId) ||
-                string.IsNullOrEmpty(studioId) || string.IsNullOrEmpty(environment))
+            if (string.IsNullOrEmpty(correlationId) || string.IsNullOrEmpty(operationId) ||
+                string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(studioId) ||
+                string.IsNullOrEmpty(environment))
             {
                 return null;
             }
@@ -103,6 +107,7 @@ public sealed class GridContextSerializer
 
             return new Context.GridContext(
                 correlationId: correlationId,
+                operationId: operationId,
                 nodeId: nodeId,
                 studioId: studioId,
                 environment: environment,

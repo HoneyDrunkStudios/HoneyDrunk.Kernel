@@ -7,27 +7,39 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// <remarks>
 /// GridContext is the fundamental OS-level primitive that flows through every operation
 /// in the HoneyDrunk ecosystem. It carries:
-/// - Correlation ID: Groups related operations across Nodes (stays constant per user request)
-/// - Causation ID: Tracks which operation triggered this one (parent-child chain)
+/// - Correlation ID (Trace ID): Groups related operations across Nodes (constant per request)
+/// - Operation ID (Span ID): Uniquely identifies this unit of work within the trace
+/// - Causation ID (Parent Span ID): Tracks which operation triggered this one
 /// - Node Identity: Which Node is executing this operation
 /// - Studio Context: Which Studio owns this execution
 /// - Environment: Which environment (production, staging, development, etc.)
 /// - Baggage: User-defined metadata that propagates with the context
 /// - Cancellation: Cooperative cancellation for the entire operation chain.
+/// This three-ID model (CorrelationId, OperationId, CausationId) aligns with W3C Trace Context
+/// and OpenTelemetry standards for distributed tracing.
 /// </remarks>
 public interface IGridContext
 {
     /// <summary>
-    /// Gets the correlation identifier that groups related operations across the Grid.
+    /// Gets the correlation identifier (trace ID) that groups related operations across the Grid.
     /// This ID remains constant as work flows through multiple Nodes within a single user request.
     /// Created once at the edge and propagated unchanged through all downstream operations.
+    /// Maps to W3C traceparent trace-id and OpenTelemetry trace_id.
     /// </summary>
     string CorrelationId { get; }
 
     /// <summary>
-    /// Gets the causation identifier indicating which operation triggered this one.
-    /// Forms a parent-child chain: if Operation A triggers Operation B, then B.CausationId points to A's identifier.
+    /// Gets the operation identifier (span ID) that uniquely identifies this unit of work.
+    /// Created fresh for each operation (HTTP request, message handler, job step, etc.).
+    /// Maps to W3C traceparent span-id and OpenTelemetry span_id.
+    /// </summary>
+    string OperationId { get; }
+
+    /// <summary>
+    /// Gets the causation identifier (parent span ID) indicating which operation triggered this one.
+    /// Points to the parent operation's OperationId (not CorrelationId).
     /// Null for root operations (no parent).
+    /// Maps to W3C traceparent parent-id and OpenTelemetry parent_span_id.
     /// </summary>
     string? CausationId { get; }
 
@@ -74,11 +86,12 @@ public interface IGridContext
 
     /// <summary>
     /// Creates a new child context for a downstream operation.
-    /// The current context's CorrelationId is preserved (stays constant for the entire request tree).
-    /// The current context's CorrelationId becomes the CausationId of the child (forming parent-child chain).
+    /// - CorrelationId: Preserved (stays constant for the entire request tree)
+    /// - OperationId: New ULID generated for this child operation
+    /// - CausationId: Set to current OperationId (forming parent-child chain).
     /// </summary>
     /// <param name="nodeId">Optional Node ID if crossing Node boundaries; if null, uses current NodeId.</param>
-    /// <returns>A new GridContext with the same CorrelationId and the current context as its cause.</returns>
+    /// <returns>A new GridContext with the same CorrelationId and the current OperationId as CausationId.</returns>
     IGridContext CreateChildContext(string? nodeId = null);
 
     /// <summary>

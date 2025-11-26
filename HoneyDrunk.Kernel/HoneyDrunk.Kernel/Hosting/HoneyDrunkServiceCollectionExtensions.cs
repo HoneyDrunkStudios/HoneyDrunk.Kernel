@@ -54,6 +54,7 @@ public static class HoneyDrunkServiceCollectionExtensions
             var nodeContext = sp.GetRequiredService<INodeContext>();
             return new GridContext(
                 correlationId: Ulid.NewUlid().ToString(),
+                operationId: Ulid.NewUlid().ToString(),
                 nodeId: nodeContext.NodeId,
                 studioId: nodeContext.StudioId,
                 environment: nodeContext.Environment);

@@ -17,6 +17,7 @@
 - [INodeContext.cs](#inodecontextcs)
 - [IOperationContext.cs](#ioperationcontextcs)
 - [IOperationContextFactory.cs](#ioperationcontextfactorycs)
+- [IOperationContextAccessor.cs](#ioperationcontextaccessorcs)
 - [IGridContextAccessor.cs](#igridcontextaccessorcs)
 - [GridHeaderNames.cs](#gridheadernamescs)
 - [NodeLifecycleStage.cs](#nodelifecyclestagecs)
@@ -49,8 +50,8 @@ At **configuration time** (bootstrap/DI), identity values use **strongly-typed s
 // HoneyDrunkNodeOptions uses strongly-typed identities
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = new NodeId("payment-node");          // NodeId struct
-    options.SectorId = new SectorId("financial");         // SectorId struct
+    options.NodeId = new NodeId("arcadia");               // NodeId struct
+    options.SectorId = Sectors.Market;                    // SectorId struct (well-known)
     options.EnvironmentId = new EnvironmentId("production"); // EnvironmentId struct
 });
 ```
@@ -107,7 +108,7 @@ The framework handles conversion automatically during bootstrap:
 // 1. Configuration: Strongly-typed validation
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = new NodeId("payment-node"); // Validates format
+    options.NodeId = new NodeId("arcadia"); // Validates format
 });
 
 // 2. Bootstrap converts to runtime strings
@@ -117,7 +118,7 @@ services.AddSingleton<INodeContext>(sp =>
     return new NodeContext(
         nodeId: opts.NodeId!,  // Implicit string conversion
         version: opts.Version,
-        studioId: opts.StudioId!,
+        studioId: opts.Severity!,
         environment: opts.EnvironmentId!,  // Implicit string conversion
         // ...
     );
@@ -148,8 +149,8 @@ public class OrderService(INodeContext nodeContext)
 
 | Scenario | Use |
 |----------|-----|
-| Configuring a Node | Strongly-typed: `new NodeId("my-node")` |
-| Registering services | Strongly-typed: `options.SectorId = Sectors.Core` |
+| Configuring a Node | Strongly-typed: `new NodeId("arcadia")` |
+| Registering services | Strongly-typed: `options.SectorId = Sectors.Market` |
 | Accessing context in code | String-based: `gridContext.NodeId` |
 | Propagating context | String-based: HTTP headers, message properties |
 | Logging/telemetry | String-based: `logger.LogInformation("{NodeId}", nodeContext.NodeId)` |
@@ -169,8 +170,9 @@ Like a passport that travels with a person across borders, carrying identity and
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `CorrelationId` | string | Groups all operations from a single user request (constant across tree) |
-| `CausationId` | string? | Which operation triggered this one (parent-child chain) |
+| `CorrelationId` | string | Groups all operations from a single user request (constant across tree - trace-id) |
+| `OperationId` | string | Uniquely identifies this unit of work (span-id - new per operation) |
+| `CausationId` | string? | Which operation triggered this one (parent-span-id - points to parent OperationId) |
 | `NodeId` | string | Which Node is currently executing |
 | `StudioId` | string | Which Studio owns this execution |
 | `Environment` | string | Which environment (production, staging, development, etc.) |
@@ -199,9 +201,10 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
     public async Task ProcessOrderAsync(Order order)
     {
         logger.LogInformation(
-            "Processing order {OrderId} with {CorrelationId}",
+            "Processing order {OrderId} - Trace: {CorrelationId}, Span: {OperationId}",
             order.Id,
-            gridContext.CorrelationId);
+            gridContext.CorrelationId,
+            gridContext.OperationId);
         
         // Add context baggage
         var enrichedContext = gridContext
@@ -209,12 +212,17 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
             .WithBaggage("customer_id", order.CustomerId);
         
         // Call downstream service with child context
-        // CorrelationId stays the same, CausationId points to this operation
+        // Three-ID Model in action:
+        // - CorrelationId stays the same (same trace)
+        // - OperationId is new (new span)
+        // - CausationId points to current OperationId (parent-child link)
         var childContext = enrichedContext.CreateChildContext("payment-node");
         await _paymentClient.ChargeAsync(order, childContext);
         
-        // childContext.CorrelationId == gridContext.CorrelationId (same request)
-        // childContext.CausationId == gridContext.CorrelationId (parent operation)
+        // Verify three-ID relationships:
+        // childContext.CorrelationId == gridContext.CorrelationId (same trace)
+        // childContext.OperationId != gridContext.OperationId (new span)
+        // childContext.CausationId == gridContext.OperationId (parent-child link)
     }
 }
 ```
@@ -222,22 +230,26 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
 ### Causation Chain Example
 
 ```
-User Request (CorrelationId: ABC123)
+User Request
+    ├─ CorrelationId: ABC123 (constant - trace-id)
+    ├─ OperationId: OP-001 (this operation - span-id)
+    └─ CausationId: null (no parent)
     ↓
-API Gateway creates GridContext(CorrelationId: ABC123, CausationId: null)
+API Gateway creates GridContext(CorrelationId: ABC123, OperationId: OP-002, CausationId: OP-001)
     ↓
 Order Service receives context, creates child:
-    GridContext(CorrelationId: ABC123, CausationId: ABC123)
+    GridContext(CorrelationId: ABC123, OperationId: OP-003, CausationId: OP-002)
     ↓
 Payment Service receives context, creates child:
-    GridContext(CorrelationId: ABC123, CausationId: [Order's OperationId or ABC123])
+    GridContext(CorrelationId: ABC123, OperationId: OP-004, CausationId: OP-003)
 ```
 
 **Key Points:**
-- **CorrelationId stays constant** (`ABC123`) throughout the entire request tree
-- **CausationId points to parent** operation (who called me)
+- **CorrelationId stays constant** (`ABC123`) throughout the entire request tree (trace-id)
+- **OperationId is unique** per operation (`OP-001`, `OP-002`, etc.) (span-id)
+- **CausationId points to parent's OperationId** (parent-span-id) - forms the tree structure
 - Trace reconstruction: All operations with `ABC123` are part of the same user request
-- Parent-child relationships revealed by CausationId chain
+- Span relationships: CausationId shows who-called-whom via OperationId references
 
 ---
 
@@ -400,6 +412,64 @@ public class OrderProcessor(IOperationContextFactory opFactory)
 
 ---
 
+## IOperationContextAccessor.cs
+
+### What it is
+Ambient accessor for current OperationContext (companion to `IGridContextAccessor`).
+
+### Real-world analogy
+Like a shared scoreboard showing the current active operation - visible from anywhere.
+
+### Properties
+
+```csharp
+public interface IOperationContextAccessor
+{
+    /// <summary>
+    /// Gets or sets the current operation context.
+    /// </summary>
+    IOperationContext? Current { get; set; }
+}
+```
+
+### Usage
+
+```csharp
+public class LegacyMetricsCollector(IOperationContextAccessor opAccessor)
+{
+    public void RecordMetric(string name, double value)
+    {
+        var operation = opAccessor.Current;
+        if (operation != null)
+        {
+            // Tag metric with current operation details
+            _metrics.Record(name, value, new Dictionary<string, object?>
+            {
+                ["operation_name"] = operation.OperationName,
+                ["correlation_id"] = operation.GridContext.CorrelationId,
+                ["operation_id"] = operation.GridContext.OperationId
+            });
+        }
+    }
+}
+```
+
+### When to use
+- Infrastructure code that needs operation context but can't accept injection
+- Legacy code integration
+- Metrics/logging systems that need current operation metadata
+- Diagnostic tools that query "what's running right now?"
+
+### How it works
+- `IOperationContextFactory.Create()` automatically sets `Current` when creating operations
+- Middleware (e.g., `GridContextMiddleware`) manages lifecycle - sets on request start, clears on finish
+- AsyncLocal storage ensures context flows correctly across async/await boundaries
+
+### ⚠️ Caution
+Prefer explicit `IOperationContext` injection; use accessor only when necessary (async-local storage has performance overhead). The accessor is provided for scenarios where dependency injection is impractical.
+
+---
+
 ## IGridContextAccessor.cs
 
 ### What it is
@@ -446,12 +516,13 @@ Like well-known HTTP headers (`Content-Type`, `Authorization`) but for Grid cont
 
 | Header | Purpose | Example |
 |--------|---------|---------|
-| `X-Correlation-Id` | Groups operations from single user request | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
-| `X-Causation-Id` | Points to parent operation | `01HQXZ8K4TJ9X5B3N2YGF7WDCR` |
+| `X-Correlation-Id` | Groups operations from single user request (trace-id) | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
+| `X-Operation-Id` | Uniquely identifies this operation/span (span-id) | `01HQXZ8K4TJ9X5B3N2YGF7WDCR` |
+| `X-Causation-Id` | Points to parent operation (parent-span-id) | `01HQXZ8K4TJ9X5B3N2YGF7WDCS` |
 | `X-Studio-Id` | Which Studio owns execution | `honeydrunk-studios` |
 | `X-Node-Id` | Which Node is executing | `kernel`, `payment-service` |
 | `X-Environment` | Which environment | `production`, `staging` |
-| `traceparent` | W3C trace context (interop) | `00-...` |
+| `traceparent` | W3C trace context (interop) | `00-{trace-id}-{span-id}-01` |
 | `baggage` | W3C baggage (comma-separated) | `tenant=abc,project=xyz` |
 | `X-Baggage-*` | Custom baggage prefix | `X-Baggage-TenantId: abc123` |
 
@@ -500,6 +571,8 @@ public class NodeLifecycleManager(INodeContext nodeContext, ILogger logger)
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // NodeContext implementation provides SetLifecycleStage for internal use
+        // (not on INodeContext interface - managed by NodeLifecycleManager)
         nodeContext.SetLifecycleStage(NodeLifecycleStage.Starting);
         
         // Initialize resources
@@ -524,19 +597,7 @@ public class NodeLifecycleManager(INodeContext nodeContext, ILogger logger)
 }
 ```
 
-### Health Check Integration
-
-```csharp
-public class NodeReadinessCheck(INodeContext nodeContext) : IHealthCheck
-{
-    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken)
-    {
-        return nodeContext.LifecycleStage == NodeLifecycleStage.Ready
-            ? Task.FromResult(HealthCheckResult.Healthy("Node is ready"))
-            : Task.FromResult(HealthCheckResult.Unhealthy($"Node is {nodeContext.LifecycleStage}"));
-    }
-}
-```
+**Note:** `SetLifecycleStage()` is available on the concrete `NodeContext` implementation, not on the `INodeContext` interface. Lifecycle stage mutation is managed internally by `NodeLifecycleManager` - application code reads the stage via `INodeContext.LifecycleStage` property.
 
 ---
 
@@ -628,105 +689,34 @@ private const int MaxHeaderLength = 256; // Prevent abuse
 [Fact]
 public async Task Middleware_ExtractsCorrelationId()
 {
+    // Arrange
     var context = new DefaultHttpContext();
     context.Request.Headers[GridHeaderNames.CorrelationId] = "test-123";
     
-    IGridContext? capturedContext = null;
-    var middleware = new GridContextMiddleware(
-        next: async (ctx) => { capturedContext = accessor.GridContext; },
-        logger: logger);
+    var nodeContext = CreateMockNodeContext();
+    var gridAccessor = new GridContextAccessor();
+    var opAccessor = new OperationContextAccessor();
+    var opFactory = CreateMockOperationContextFactory(gridAccessor);
     
+    IGridContext? capturedContext = null;
+    
+    // Middleware constructor takes RequestDelegate and ILogger
+    var middleware = new GridContextMiddleware(
+        next: async (ctx) => 
+        {
+            capturedContext = gridAccessor.GridContext;
+            await Task.CompletedTask;
+        },
+        logger: NullLogger<GridContextMiddleware>.Instance);
+    
+    // Act - InvokeAsync receives dependencies via DI in real scenarios
+    // (Here we pass them explicitly for testing)
     await middleware.InvokeAsync(context, nodeContext, gridAccessor, opAccessor, opFactory);
     
+    // Assert
     Assert.Equal("test-123", capturedContext?.CorrelationId);
 }
 ```
 
----
-
-## Context Mappers (Implementations)
-
-**Location:** `HoneyDrunk.Kernel/Context/Mappers/`
-
-### HttpContextMapper.cs
-Maps HTTP request headers to GridContext:
-- Reads `X-Correlation-ID`, `X-Causation-ID` from headers
-- Extracts baggage from `X-Baggage-*` headers
-- Creates GridContext for incoming HTTP requests
-
-### JobContextMapper.cs
-Maps background job metadata to GridContext:
-- Reads correlation/causation from job payload
-- Attaches job-specific baggage
-- Enables tracing across async boundaries
-
-### MessagingContextMapper.cs
-Maps message properties to GridContext:
-- Reads from message headers/properties
-- Propagates context across message brokers
-- Maintains causation chains in event-driven architectures
-
----
-
-## Testing Patterns
-
-```csharp
-[Fact]
-public async Task GridContext_CreateChildContext_PreservesCorrelationId()
-{
-    // Arrange
-    var parentContext = new GridContext(
-        correlationId: "parent-123",
-        causationId: null,
-        nodeId: "test-node",
-        studioId: "test-studio",
-        environment: "test",
-        baggage: new Dictionary<string, string>(),
-        cancellation: CancellationToken.None);
-    
-    // Act
-    var childContext = parentContext.CreateChildContext("child-node");
-    
-    // Assert - CorrelationId stays the same (Model A)
-    Assert.Equal(parentContext.CorrelationId, childContext.CorrelationId);
-    Assert.Equal(parentContext.CorrelationId, childContext.CausationId); // Parent ID becomes causation
-    Assert.Equal("child-node", childContext.NodeId);
-}
-
-[Fact]
-public async Task OperationContext_Dispose_CompletesAutomatically()
-{
-    // Arrange
-    var factory = new OperationContextFactory(gridContext, metrics);
-    
-    // Act
-    using (var operation = factory.Create("TestOperation"))
-    {
-        operation.AddMetadata("key", "value");
-        // Not calling Complete() or Fail()
-    }
-    
-    // Assert - disposed operation auto-completes if not explicitly failed
-    // Verify operation was marked as successful and duration was recorded
-}
-```
-
----
-
-## Summary
-
-| Context Type | Scope | Lifetime | Purpose |
-|-------------|-------|----------|---------|
-| **GridContext** | Per-operation | Request duration | Correlation, causation, baggage |
-| **NodeContext** | Per-process | Process lifetime | Node identity, version, lifecycle |
-| **OperationContext** | Per-unit-of-work | Operation duration | Timing, outcome, metadata |
-
-**Key Patterns:**
-- GridContext flows across boundaries (HTTP, messaging, RPC)
-- NodeContext provides static identity (health checks, metrics)
-- OperationContext wraps units of work (requests, jobs, messages)
-
----
-
-[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
+**Note:** In production, ASP.NET Core DI injects `INodeContext`, `IGridContextAccessor`, `IOperationContextAccessor`, and `IOperationContextFactory` automatically into `InvokeAsync()`. The test shows the dependencies explicitly for clarity.
 

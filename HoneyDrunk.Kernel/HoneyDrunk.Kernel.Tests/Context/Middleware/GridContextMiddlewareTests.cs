@@ -282,7 +282,7 @@ public class GridContextMiddlewareTests
         {
             LastCreatedOperationName = operationName;
             LastCreatedMetadata = metadata;
-            var gridContext = new GridContext("test-corr", "test-node", "test-studio", "test-env");
+            var gridContext = new GridContext("test-corr", "test-op", "test-node", "test-studio", "test-env");
             LastCreatedOperation = new TestOperationContext(gridContext, operationName, metadata);
             return LastCreatedOperation;
         }
