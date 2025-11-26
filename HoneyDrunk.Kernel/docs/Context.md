@@ -16,7 +16,11 @@
 - [IGridContext.cs](#igridcontextcs)
 - [INodeContext.cs](#inodecontextcs)
 - [IOperationContext.cs](#ioperationcontextcs)
+- [IOperationContextFactory.cs](#ioperationcontextfactorycs)
 - [IGridContextAccessor.cs](#igridcontextaccessorcs)
+- [GridHeaderNames.cs](#gridheadernamescs)
+- [NodeLifecycleStage.cs](#nodelifecyclestagecs)
+- [GridContextMiddleware.cs](#gridcontextmiddlewarecs)
 - [Context Mappers](#context-mappers-implementations)
 - [Testing Patterns](#testing-patterns)
 - [Summary](#summary)
@@ -334,6 +338,68 @@ public class PaymentProcessor(IOperationContextFactory factory)
 
 ---
 
+## IOperationContextFactory.cs
+
+### What it is
+Factory for creating `IOperationContext` instances with automatic ambient accessor management.
+
+### Real-world analogy
+Like a factory that starts stopwatches and automatically registers them in a shared scoreboard.
+
+### Key Method
+
+```csharp
+IOperationContext Create(string operationName, IReadOnlyDictionary<string, object?>? metadata = null);
+```
+
+### Behavior
+- Creates a new `IOperationContext` for the given operation name
+- Uses current `IGridContext` from accessor
+- Automatically sets `IOperationContextAccessor.Current` to the created context
+- Returns disposable context that logs duration and outcome on disposal
+
+### Usage Example
+
+```csharp
+public class OrderProcessor(IOperationContextFactory opFactory)
+{
+    public async Task ProcessAsync(Order order)
+    {
+        // Factory creates context AND sets ambient accessor
+        using var operation = opFactory.Create("ProcessOrder", new Dictionary<string, object?>
+        {
+            ["order_id"] = order.Id,
+            ["customer_id"] = order.CustomerId
+        });
+        
+        try
+        {
+            await ValidateAsync(order);
+            await SaveAsync(order);
+            operation.Complete();
+        }
+        catch (Exception ex)
+        {
+            operation.Fail("Order processing failed", ex);
+            throw;
+        }
+        // Dispose automatically:
+        // 1. Logs operation duration
+        // 2. Emits telemetry with outcome
+        // 3. Clears ambient accessor
+    }
+}
+```
+
+### Why use Factory vs Direct Construction?
+
+| Approach | When to Use |
+|----------|-------------|
+| **Factory** | Most scenarios - handles ambient accessor, telemetry hooks, standard lifecycle |
+| **Direct** | Testing, custom scenarios where you control the full lifecycle |
+
+---
+
 ## IGridContextAccessor.cs
 
 ### What it is
@@ -365,6 +431,216 @@ public class LegacyLogger(IGridContextAccessor contextAccessor)
 
 ### ⚠️ Caution
 Prefer explicit injection; use accessor only when necessary (async-local storage has performance overhead).
+
+---
+
+## GridHeaderNames.cs
+
+### What it is
+Standard HTTP header names for Grid context propagation.
+
+### Real-world analogy
+Like well-known HTTP headers (`Content-Type`, `Authorization`) but for Grid context.
+
+### Header Constants
+
+| Header | Purpose | Example |
+|--------|---------|---------|
+| `X-Correlation-Id` | Groups operations from single user request | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
+| `X-Causation-Id` | Points to parent operation | `01HQXZ8K4TJ9X5B3N2YGF7WDCR` |
+| `X-Studio-Id` | Which Studio owns execution | `honeydrunk-studios` |
+| `X-Node-Id` | Which Node is executing | `kernel`, `payment-service` |
+| `X-Environment` | Which environment | `production`, `staging` |
+| `traceparent` | W3C trace context (interop) | `00-...` |
+| `baggage` | W3C baggage (comma-separated) | `tenant=abc,project=xyz` |
+| `X-Baggage-*` | Custom baggage prefix | `X-Baggage-TenantId: abc123` |
+
+### Usage in Middleware
+
+```csharp
+// Reading headers (HttpContextMapper)
+var correlationId = httpContext.Request.Headers[GridHeaderNames.CorrelationId].FirstOrDefault();
+var causationId = httpContext.Request.Headers[GridHeaderNames.CausationId].FirstOrDefault();
+
+// Writing response headers
+httpContext.Response.Headers[GridHeaderNames.CorrelationId] = gridContext.CorrelationId;
+httpContext.Response.Headers[GridHeaderNames.NodeId] = nodeContext.NodeId;
+```
+
+### Design Notes
+
+- **Stable contracts** - These names are used across all Grid Nodes
+- **X- prefixes** - Custom headers for Grid-specific values
+- **W3C interop** - `traceparent` and `baggage` for external system compatibility
+- **Minimal set** - Prefer baggage for ad-hoc keys instead of defining new headers
+
+---
+
+## NodeLifecycleStage.cs
+
+### What it is
+Enum representing the lifecycle stages of a Node process.
+
+### Real-world analogy
+Like a server's state machine (starting → running → shutting down → stopped).
+
+### Stages
+
+| Stage | Description | Typical Actions |
+|-------|-------------|-----------------|
+| `Starting` | Node is initializing | Loading config, connecting to dependencies |
+| `Ready` | Node is accepting work | Healthy, can serve requests |
+| `Stopping` | Node is gracefully shutting down | Draining requests, closing connections |
+| `Stopped` | Node has terminated | Process exiting |
+
+### Usage
+
+```csharp
+public class NodeLifecycleManager(INodeContext nodeContext, ILogger logger)
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Starting);
+        
+        // Initialize resources
+        await InitializeDatabaseAsync(cancellationToken);
+        await WarmupCachesAsync(cancellationToken);
+        
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
+        logger.LogInformation("Node {NodeId} is ready", nodeContext.NodeId);
+    }
+    
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Stopping);
+        logger.LogInformation("Node {NodeId} is stopping", nodeContext.NodeId);
+        
+        // Drain requests, close connections
+        await DrainRequestsAsync(cancellationToken);
+        await CloseConnectionsAsync(cancellationToken);
+        
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Stopped);
+    }
+}
+```
+
+### Health Check Integration
+
+```csharp
+public class NodeReadinessCheck(INodeContext nodeContext) : IHealthCheck
+{
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken)
+    {
+        return nodeContext.LifecycleStage == NodeLifecycleStage.Ready
+            ? Task.FromResult(HealthCheckResult.Healthy("Node is ready"))
+            : Task.FromResult(HealthCheckResult.Unhealthy($"Node is {nodeContext.LifecycleStage}"));
+    }
+}
+```
+
+---
+
+## GridContextMiddleware.cs
+
+### What it is
+ASP.NET Core middleware that establishes Grid and Operation contexts for HTTP requests.
+
+### Real-world analogy
+Like a security checkpoint that validates passports (context) before letting travelers (requests) through.
+
+### Responsibilities
+
+1. **Extract context from headers** - Reads `X-Correlation-ID`, `X-Causation-ID`, etc.
+2. **Create GridContext** - Maps headers to `IGridContext`
+3. **Set ambient accessors** - Makes context available via `IGridContextAccessor` and `IOperationContextAccessor`
+4. **Create OperationContext** - Tracks request timing and outcome
+5. **Echo headers** - Returns `X-Correlation-ID` and `X-Node-ID` in response for traceability
+6. **Sanitize inputs** - Defensive truncation of header values (max 256 chars)
+
+### Registration
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Register services
+builder.Services.AddHoneyDrunkNode(options => { /* ... */ });
+builder.Services.AddGridContext();  // Registers middleware and accessors
+
+var app = builder.Build();
+
+// Use middleware (typically early in pipeline)
+app.UseGridContext();  // Adds GridContextMiddleware
+
+app.MapGet("/", (IGridContext gridContext) => Results.Ok(new
+{
+    CorrelationId = gridContext.CorrelationId,
+    NodeId = gridContext.NodeId
+}));
+
+app.Run();
+```
+
+### Flow Diagram
+
+```
+Incoming Request
+    ↓
+[GridContextMiddleware]
+    ├─ Read headers (X-Correlation-ID, X-Causation-ID, etc.)
+    ├─ Create GridContext
+    ├─ Set IGridContextAccessor.GridContext
+    ├─ Create OperationContext (opFactory.Create("HttpRequest"))
+    ├─ Set IOperationContextAccessor.Current
+    ├─ Echo headers to response (OnStarting)
+    ↓
+[Your Controllers/Endpoints]
+    ↓ (can inject IGridContext, IOperationContext)
+    ↓
+[GridContextMiddleware - Finally Block]
+    ├─ operation.Complete() or operation.Fail()
+    ├─ Clear IGridContextAccessor.GridContext
+    ├─ Clear IOperationContextAccessor.Current
+    ├─ operation.Dispose() (logs duration, emits telemetry)
+    ↓
+Response with X-Correlation-ID and X-Node-ID headers
+```
+
+### Defensive Features
+
+**Header Length Limits:**
+```csharp
+private const int MaxHeaderLength = 256; // Prevent abuse
+```
+
+**Sanitization:**
+- Truncates correlation/causation/studio IDs to 256 chars
+- Preserves baggage as-is (upstream should filter high cardinality keys)
+
+**Error Handling:**
+- Catches unhandled exceptions
+- Marks operation as failed with `operation.Fail()`
+- Logs with correlation context
+- Re-throws to let upstream middleware handle response
+
+### Testing
+
+```csharp
+[Fact]
+public async Task Middleware_ExtractsCorrelationId()
+{
+    var context = new DefaultHttpContext();
+    context.Request.Headers[GridHeaderNames.CorrelationId] = "test-123";
+    
+    IGridContext? capturedContext = null;
+    var middleware = new GridContextMiddleware(
+        next: async (ctx) => { capturedContext = accessor.GridContext; },
+        logger: logger);
+    
+    await middleware.InvokeAsync(context, nodeContext, gridAccessor, opAccessor, opFactory);
+    
+    Assert.Equal("test-123", capturedContext?.CorrelationId);
+}
+```
 
 ---
 
