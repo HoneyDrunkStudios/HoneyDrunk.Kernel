@@ -7,6 +7,7 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// OperationContext wraps a unit of work (e.g., HTTP request, message processing, background job)
 /// and provides standardized telemetry, timing, and outcome tracking. It bridges the gap between
 /// the long-lived NodeContext and the flowing GridContext.
+/// This is the span abstraction - it represents "this specific unit of work" with its own identity.
 /// </remarks>
 public interface IOperationContext : IDisposable
 {
@@ -20,6 +21,28 @@ public interface IOperationContext : IDisposable
     /// Example: "ProcessPayment", "HandleWebhook", "SyncInventory".
     /// </summary>
     string OperationName { get; }
+
+    /// <summary>
+    /// Gets the operation identifier (span-id) that uniquely identifies this unit of work.
+    /// Maps to W3C traceparent span-id and OpenTelemetry span_id.
+    /// Convenience property that surfaces GridContext.OperationId.
+    /// </summary>
+    string OperationId { get; }
+
+    /// <summary>
+    /// Gets the correlation identifier (trace-id) that groups all operations in this request tree.
+    /// Maps to W3C traceparent trace-id and OpenTelemetry trace_id.
+    /// Convenience property that surfaces GridContext.CorrelationId.
+    /// </summary>
+    string CorrelationId { get; }
+
+    /// <summary>
+    /// Gets the causation identifier (parent-span-id) indicating which operation triggered this one.
+    /// Points to the parent operation's OperationId. Null for root operations.
+    /// Maps to W3C traceparent parent-id and OpenTelemetry parent_span_id.
+    /// Convenience property that surfaces GridContext.CausationId.
+    /// </summary>
+    string? CausationId { get; }
 
     /// <summary>
     /// Gets the UTC timestamp when this operation started.

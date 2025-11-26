@@ -296,6 +296,12 @@ public class GridContextMiddlewareTests
 
         public string OperationName { get; } = operationName;
 
+        public string OperationId => GridContext.OperationId;
+
+        public string CorrelationId => GridContext.CorrelationId;
+
+        public string? CausationId => GridContext.CausationId;
+
         public DateTimeOffset StartedAtUtc { get; } = DateTimeOffset.UtcNow;
 
         public DateTimeOffset? CompletedAtUtc { get; private set; }

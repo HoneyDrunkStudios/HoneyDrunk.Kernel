@@ -50,6 +50,15 @@ public sealed class OperationContext : IOperationContext
     public string OperationName { get; }
 
     /// <inheritdoc />
+    public string OperationId => GridContext.OperationId;
+
+    /// <inheritdoc />
+    public string CorrelationId => GridContext.CorrelationId;
+
+    /// <inheritdoc />
+    public string? CausationId => GridContext.CausationId;
+
+    /// <inheritdoc />
     public DateTimeOffset StartedAtUtc { get; }
 
     /// <inheritdoc />
