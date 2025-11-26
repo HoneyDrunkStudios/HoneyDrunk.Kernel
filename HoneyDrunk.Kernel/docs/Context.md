@@ -81,6 +81,9 @@ public interface IGridContext
     string NodeId { get; }         // string, not NodeId struct
     string StudioId { get; }       // string, not StudioId struct
     string Environment { get; }    // string, not EnvironmentId struct
+    CancellationToken Cancellation { get; } // cooperative cancellation
+    IReadOnlyDictionary<string, string> Baggage { get; } // key-value pairs
+    DateTimeOffset CreatedAtUtc { get; } // when context was created
 }
 
 public interface INodeContext
@@ -125,7 +128,7 @@ services.AddSingleton<INodeContext>(sp =>
     return new NodeContext(
         nodeId: opts.NodeId!,  // Implicit string conversion
         version: opts.Version,
-        studioId: opts.SstudioId!,  // Implicit string conversion
+        studioId: opts.StudioId!,  // Implicit string conversion
         environment: opts.EnvironmentId!,  // Implicit string conversion
         // ...
     );
@@ -162,6 +165,8 @@ public class OrderService(INodeContext nodeContext)
 | Propagating context | String-based: HTTP headers, message properties |
 | Logging/telemetry | String-based: `logger.LogInformation("{NodeId}", nodeContext.NodeId)` |
 | Testing context behavior | String-based: `new GridContext(correlationId: "test-123", nodeId: "test-node", ...)` |
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -223,7 +228,7 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
         // - CorrelationId stays the same (same trace)
         // - OperationId is new (new span)
         // - CausationId points to current OperationId (parent-child link)
-        var childContext = enrichedContext.CreateChildContext("payment-node");
+        var childContext = enrichedContext.CreateChildContext("arcadia");
         await _paymentClient.ChargeAsync(order, childContext);
         
         // Verify three-ID relationships:
@@ -257,6 +262,8 @@ Payment Service receives context, creates child:
 - **CausationId points to parent's OperationId** (parent-span-id) - forms the tree structure
 - Trace reconstruction: All operations with `ABC123` are part of the same user request
 - Span relationships: CausationId shows who-called-whom via OperationId references
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -401,6 +408,7 @@ public class OrderProcessor(IOperationContextFactory opFactory)
     public async Task ProcessAsync(Order order)
     {
         // Factory creates context AND sets ambient accessor
+        // Factory generates OperationId and wires CorrelationId/CausationId on GridContext
         using var operation = opFactory.Create("ProcessOrder", new Dictionary<string, object?>
         {
             ["order_id"] = order.Id,
@@ -432,6 +440,8 @@ public class OrderProcessor(IOperationContextFactory opFactory)
 |----------|-------------|
 | **Factory** | Most scenarios - handles ambient accessor, telemetry hooks, standard lifecycle |
 | **Direct** | Testing, custom scenarios where you control the full lifecycle |
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -491,6 +501,8 @@ public class LegacyMetricsCollector(IOperationContextAccessor opAccessor)
 ### ⚠️ Caution
 Prefer explicit `IOperationContext` injection; use accessor only when necessary (async-local storage has performance overhead). The accessor is provided for scenarios where dependency injection is impractical.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## IGridContextAccessor.cs
@@ -524,6 +536,8 @@ public class LegacyLogger(IGridContextAccessor contextAccessor)
 
 ### ⚠️ Caution
 Prefer explicit injection; use accessor only when necessary (async-local storage has performance overhead).
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -575,6 +589,8 @@ httpContext.Response.Headers[GridHeaderNames.NodeId] = nodeContext.NodeId;
 - **X- prefixes** - Custom headers for Grid-specific values
 - **W3C interop** - `traceparent` and `baggage` for external system compatibility
 - **Minimal set** - Prefer baggage for ad-hoc keys instead of defining new headers
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -629,6 +645,8 @@ public class NodeLifecycleManager(NodeContext nodeContext, ILogger logger)
 ```
 
 **Note:** `NodeLifecycleManager` depends on the concrete `NodeContext` type (not `INodeContext`) to access `SetLifecycleStage()`. This method is internal to the lifecycle management system - application code only reads the stage via `INodeContext.LifecycleStage` property.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -752,4 +770,8 @@ public async Task Middleware_ExtractsCorrelationId()
 
 **Note:** In production, ASP.NET Core DI injects `INodeContext`, `IGridContextAccessor`, `IOperationContextAccessor`, and `IOperationContextFactory` automatically into `InvokeAsync()`. The test shows the dependencies explicitly for clarity.
 
+[↑ Back to top](#table-of-contents)
 
+---
+
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
