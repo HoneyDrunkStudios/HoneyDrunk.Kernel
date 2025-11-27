@@ -8,7 +8,7 @@
 
 - [Overview](#overview)
 - **Bootstrap Configuration**
-  - [HoneyDrunkNodeOptions.cs](#honeydrunk-node-optionscs)
+  - [HoneyDrunkNodeOptions.cs](#honeydrunknodeoptionscs)
   - [HoneyDrunkTelemetryOptions.cs](#honeydrunktelemetryoptionscs)
   - [MultiTenancyMode.cs](#multitenancymodecs)
 - **DI Registration**
@@ -26,9 +26,9 @@
   - [INodeManifestSource.cs](#inodemanifestsourcecs)
 - **Studio Configuration**
   - [IStudioConfiguration.cs](#istudioconfigurationcs)
-- **Complete Bootstrap Example](#complete-bootstrap-example)
-- **Testing Patterns](#testing-patterns)
-- **Summary](#summary)
+- [Complete Bootstrap Example](#complete-bootstrap-example)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
 
 ---
 
