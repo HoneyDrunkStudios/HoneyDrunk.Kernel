@@ -31,7 +31,7 @@ public sealed class NodeLifecycleHealthContributor(INodeContext nodeContext) : I
 
         return stage switch
         {
-            NodeLifecycleStage.Running => Task.FromResult((status: HealthStatus.Healthy, message: (string?)"Node is running")),
+            NodeLifecycleStage.Ready => Task.FromResult((status: HealthStatus.Healthy, message: (string?)"Node is ready")),
             NodeLifecycleStage.Degraded => Task.FromResult((status: HealthStatus.Degraded, message: (string?)"Node is degraded")),
             NodeLifecycleStage.Failed => Task.FromResult((status: HealthStatus.Unhealthy, message: (string?)"Node has failed")),
             NodeLifecycleStage.Stopping => Task.FromResult((status: HealthStatus.Unhealthy, message: (string?)"Node is stopping")),

@@ -203,6 +203,7 @@ Like a unique transaction ID on a receipt - identifies this specific step in a l
 - **Sortability:** Lexicographically sortable by creation time
 - **Span Identity:** Maps to W3C traceparent span-id and OpenTelemetry span_id
 - **Per-Operation:** Created fresh for each unit of work (HTTP request, message handler, job step)
+- **Owned by IOperationContext:** Each `IOperationContext` instance generates and exposes its own `OperationId` to identify that span
 
 ### Usage
 
@@ -427,8 +428,8 @@ public class OrderService(IGridContext context, IOrderRepository repository)
 {
     public async Task<Order> GetOrderAsync(string orderId)
     {
-        // TenantId extracted from context baggage
-        var tenantId = GetTenantIdFromContext(context);
+        // TenantId typically comes from IGridContext.TenantId (or baggage at external boundaries)
+        var tenantId = context.TenantId;
         
         // Query automatically scoped to tenant
         return await repository.GetOrderAsync(orderId, tenantId);
@@ -1042,14 +1043,14 @@ public async Task CorrelationId_MaintainsSortOrder()
 public void CausationId_LinksOperations()
 {
     // Arrange
-    var parentId = CorrelationId.NewId();
-    var causationId = new CausationId(parentId);
+    var parentOperationId = OperationId.NewId();
+    var causationId = new CausationId(parentOperationId);
     
     // Act
     var reconstructed = causationId.ToUlid();
     
     // Assert
-    Assert.Equal(parentId.ToUlid(), reconstructed);
+    Assert.Equal(parentOperationId.ToUlid(), reconstructed);
 }
 
 [Fact]
@@ -1111,7 +1112,7 @@ public void ErrorCode_SupportsHierarchicalStructure()
 - **Storage:** Stack-allocated (value type), no heap allocations
 - **Comparison:** String comparison overhead
 
-### ULID-based IDs (CorrelationId, CausationId, TenantId, ProjectId, RunId)
+### ULID-based IDs (CorrelationId, OperationId, CausationId, TenantId, ProjectId, RunId)
 - **Generation:** O(1), faster than GUIDv4
 - **Storage:** 16 bytes (same as GUID)
 - **String representation:** 26 characters (vs 36 for GUID)

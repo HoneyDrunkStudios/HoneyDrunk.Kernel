@@ -90,8 +90,8 @@ public class NodeContextTests
         context.SetLifecycleStage(NodeLifecycleStage.Starting);
         context.LifecycleStage.Should().Be(NodeLifecycleStage.Starting);
 
-        context.SetLifecycleStage(NodeLifecycleStage.Running);
-        context.LifecycleStage.Should().Be(NodeLifecycleStage.Running);
+        context.SetLifecycleStage(NodeLifecycleStage.Ready);
+        context.LifecycleStage.Should().Be(NodeLifecycleStage.Ready);
 
         context.SetLifecycleStage(NodeLifecycleStage.Degraded);
         context.LifecycleStage.Should().Be(NodeLifecycleStage.Degraded);

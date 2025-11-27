@@ -105,7 +105,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Register Node with Grid
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Core.Kernel;
+    options.NodeId = WellKnownNodes.Core.Kernel;
     options.SectorId = Sectors.Core;
     options.EnvironmentId = Environments.Development;
     options.StudioId = "honeydrunk-studios";
@@ -121,8 +121,7 @@ app.MapGet("/whoami", (INodeContext node, IGridContext grid) => new
 {
     node.NodeId,
     node.Environment,
-    grid.CorrelationId,
-    grid.OperationId
+    grid.CorrelationId
 });
 
 app.Run();
@@ -188,7 +187,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Register Node with strongly-typed identity
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Market.Arcadia;           // From static registry
+    options.NodeId = WellKnownNodes.Market.Arcadia;           // From static registry
     options.SectorId = Sectors.Market;                // From static registry
     options.EnvironmentId = Environments.Development; // From static registry
     options.StudioId = "honeydrunk-studios";
@@ -251,7 +250,7 @@ See [Context.md](Context.md) for details on the dual type system.
 ```csharp
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Ops.Pulse;
+    options.NodeId = WellKnownNodes.Ops.Pulse;
     // ... other required fields
     
     // Telemetry configuration
@@ -291,7 +290,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 ```csharp
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Market.Arcadia;
+    options.NodeId = WellKnownNodes.Market.Arcadia;
     // ... other fields
     
     // Default: SingleTenant (most common)
@@ -417,7 +416,7 @@ var builder = WebApplication.CreateBuilder(args);
 // STEP 1: Register Node (validates + wires all services)
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Core.Kernel;
+    options.NodeId = WellKnownNodes.Core.Kernel;
     options.SectorId = Sectors.Core;
     options.EnvironmentId = Environments.Development;
     options.StudioId = "demo-studio";
@@ -485,7 +484,7 @@ HTTP Request with X-Correlation-Id header
 [GridContextMiddleware]
     ├─ Extract headers (correlation, causation, tenant, project)
     ├─ Generate new OperationId (span-id)
-    ├─ Create GridContext (three-ID model: Correlation, Operation, Causation)
+    ├─ Create GridContext (CorrelationId + CausationId), then create OperationContext (OperationId)
     ├─ Set IGridContextAccessor.GridContext
     ├─ Create OperationContext (timing/outcome tracking)
     ├─ Set IOperationContextAccessor.Current
@@ -582,7 +581,7 @@ The following interfaces participate in Node lifecycle. All are documented in de
    - Sets `NodeLifecycleStage.Starting`
    - Executes `IStartupHook` implementations (ordered by priority)
    - Starts `INodeLifecycle` implementations
-   - Sets `NodeLifecycleStage.Running`
+   - Sets `NodeLifecycleStage.Ready`
 
 2. **Shutdown Coordination**
    - Sets `NodeLifecycleStage.Stopping`
@@ -608,8 +607,8 @@ Application Start
     │   ├─ CacheWarmupHook (Priority: 200)
     │   └─ HealthCheckRegistrationHook (Priority: 300)
     ├─ Start INodeLifecycle implementations
-    ├─ Set NodeLifecycleStage.Running
-    ├─ Log: "Node {NodeId} is now running"
+    ├─ Set NodeLifecycleStage.Ready
+    ├─ Log: "Node {NodeId} is now ready"
     ↓
 Application Accepting Requests
 ```
@@ -671,6 +670,8 @@ Kernel's three-ID model (CorrelationId, OperationId, CausationId) maps directly 
 | `OperationId` | `Activity.SpanId` | `traceparent.span-id` | Uniquely identifies this operation/span |
 | `CausationId` | `Activity.ParentSpanId` | `traceparent.parent-id` | Points to parent operation |
 
+Note: These are conceptual mappings. OpenTelemetry generates and manages actual Activity IDs. Kernel aligns its CorrelationId, OperationId, and CausationId with the resulting Activity.TraceId, SpanId, and ParentSpanId automatically.
+
 #### How It Works
 
 Kernel's three-ID model maps conceptually to OpenTelemetry/W3C Trace Context:
@@ -711,7 +712,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Register Node
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Core.Kernel;
+    options.NodeId = WellKnownNodes.Core.Kernel;
     // ... other options
     
     options.Telemetry.EnableTracing = true;
@@ -924,7 +925,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Register Node with strongly-typed identity
 builder.Services.AddHoneyDrunkNode(options =>
 {
-    options.NodeId = Nodes.Market.Arcadia;           // From static registry
+    options.NodeId = WellKnownNodes.Market.Arcadia;           // From static registry
     options.SectorId = Sectors.Market;                // From static registry  
     options.EnvironmentId = Environments.Production; // From static registry
     options.StudioId = "honeydrunk-studios";
@@ -1049,7 +1050,7 @@ public void AddHoneyDrunkNode_WithValidOptions_RegistersAllServices()
     // Act
     services.AddHoneyDrunkNode(options =>
     {
-        options.NodeId = Nodes.Core.Kernel;
+        options.NodeId = WellKnownNodes.Core.Kernel;
         options.SectorId = Sectors.Core;
         options.EnvironmentId = Environments.Development;
         options.StudioId = "test-studio";
@@ -1101,7 +1102,7 @@ public async Task UseGridContext_ExtractsCorrelationIdFromHeaders()
     services.AddLogging();
     services.AddHoneyDrunkNode(options =>
     {
-        options.NodeId = Nodes.Core.Kernel;
+        options.NodeId = WellKnownNodes.Core.Kernel;
         options.SectorId = Sectors.Core;
         options.EnvironmentId = Environments.Development;
         options.StudioId = "test-studio";
@@ -1150,7 +1151,7 @@ public async Task NodeLifecycleHost_ExecutesStartupHooksInPriorityOrder()
     services.AddSingleton<IStartupHook>(hook3);
     services.AddHoneyDrunkNode(options =>
     {
-        options.NodeId = Nodes.Core.Kernel;
+        options.NodeId = WellKnownNodes.Core.Kernel;
         options.SectorId = Sectors.Core;
         options.EnvironmentId = Environments.Development;
         options.StudioId = "test-studio";
@@ -1217,7 +1218,7 @@ private class TestStartupHook(int priority, Action callback) : IStartupHook
 **Lifecycle Flow:**
 1. `NodeLifecycleHost` starts with `NodeLifecycleStage.Starting`
 2. Executes `IStartupHook` implementations in priority order
-3. Transitions to `NodeLifecycleStage.Running`
+3. Transitions to `NodeLifecycleStage.Ready`
 4. On shutdown signal, transitions to `NodeLifecycleStage.Stopping`
 5. Executes `IShutdownHook` implementations in priority order
 6. Transitions to `NodeLifecycleStage.Stopped`

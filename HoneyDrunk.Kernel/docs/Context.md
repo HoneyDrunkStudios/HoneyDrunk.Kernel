@@ -14,7 +14,7 @@
   - [Conversion Flow](#conversion-flow)
   - [When to Use Each](#when-to-use-each)
 - [IGridContext.cs](#igridcontextcs)
-- [IGridContextFactory.cs (NEW v0.3.0)](#igridcontextfactorycs-new-v030)
+- [IGridContextFactory.cs](#igridcontextfactorycs-new-v030)
 - [INodeContext.cs](#inodecontextcs)
 - [IOperationContext.cs](#ioperationcontextcs)
 - [IOperationContextFactory.cs](#ioperationcontextfactorycs)
@@ -138,7 +138,7 @@ services.AddSingleton<INodeContext>(sp =>
     return new NodeContext(
         nodeId: opts.NodeId!,  // Implicit string conversion
         version: opts.Version,
-        studioId: opts.SudioId!,  // Implicit string conversion
+        studioId: opts.StudioId!,  // Implicit string conversion
         environment: opts.EnvironmentId!,  // Implicit string conversion
         // ...
     );
@@ -220,12 +220,14 @@ public interface IGridContext
 
 **Important: Identity Only, Not Authorization**
 
-- ✅ **DO use for**: Correlation in logs, metrics, traces, and telemetry
+- ✅ **DO use for**: Correlation in logs, metrics, traces, telemetry, and as inputs to your authorization/data filtering logic
 - ✅ **DO propagate**: Across Node boundaries via headers (`X-Tenant-Id`, `X-Project-Id`)
 - ✅ **DO surface**: In `IOperationContext` for convenience (`operation.TenantId`)
-- ❌ **DO NOT use for**: Access control, authorization decisions, or data filtering
-- ❌ **DO NOT enforce**: Kernel does not validate, interpret, or authorize based on these values
-- ❌ **DO NOT depend on**: For security boundaries (implement authorization in application layer)
+- ❌ **Kernel does not**: Validate or enforce authorization based on these values
+- ❌ **DO NOT treat**: Their mere presence as proof of authorization
+
+**Design Intent:**
+Kernel propagates TenantId/ProjectId so your authorization and data layers can enforce isolation. Applications use these values for filtering queries and authorization decisions, but only after performing their own authentication and authorization checks.
 
 **Propagation Example:**
 
@@ -235,7 +237,10 @@ public interface IGridContext
 // X-Project-Id: project-xyz
 
 // GridContext automatically includes these values
-public class OrderService(IGridContext gridContext, ILogger logger)
+public class OrderService(
+    IGridContextFactory gridFactory,
+    IGridContext gridContext,
+    ILogger logger)
 {
     public async Task ProcessOrderAsync(Order order)
     {
@@ -245,8 +250,10 @@ public class OrderService(IGridContext gridContext, ILogger logger)
             gridContext.TenantId,    // "tenant-abc" (from header)
             gridContext.ProjectId);  // "project-xyz" (from header)
         
-        // Create child context - tenant/project propagate automatically
-        var childContext = gridContext.CreateChildContext("payment-node");
+        // Create child context via factory - tenant/project propagate automatically
+        var childContext = gridFactory.CreateChild(
+            parent: gridContext,
+            nodeId: "payment-node");
         // childContext.TenantId == gridContext.TenantId (preserved)
         // childContext.ProjectId == gridContext.ProjectId (preserved)
         
@@ -568,8 +575,8 @@ public class LegacyMetricsCollector(IOperationContextAccessor opAccessor)
             _metrics.Record(name, value, new Dictionary<string, object?>
             {
                 ["operation_name"] = operation.OperationName,
-                ["correlation_id"] = operation.GridContext.CorrelationId,
-                ["operation_id"] = operation.GridContext.OperationId
+                ["correlation_id"] = operation.CorrelationId,
+                ["operation_id"] = operation.OperationId
             });
         }
     }
@@ -663,14 +670,15 @@ var operationId = httpContext.Request.Headers[GridHeaderNames.OperationId].First
 var causationId = httpContext.Request.Headers[GridHeaderNames.CausationId].FirstOrDefault();
 
 // If OperationId not provided by client, generate new one server-side
+// (Factory will use this value when creating OperationContext)
 if (string.IsNullOrWhiteSpace(operationId))
 {
     operationId = Ulid.NewUlid().ToString();
 }
 
-// Writing response headers
+// Writing response headers (use OperationContext for OperationId)
 httpContext.Response.Headers[GridHeaderNames.CorrelationId] = gridContext.CorrelationId;
-httpContext.Response.Headers[GridHeaderNames.OperationId] = gridContext.OperationId;
+httpContext.Response.Headers[GridHeaderNames.OperationId] = operationContext.OperationId;
 httpContext.Response.Headers[GridHeaderNames.NodeId] = nodeContext.NodeId;
 ```
 
@@ -752,11 +760,12 @@ Like a security checkpoint that validates passports (context) before letting tra
 ### Responsibilities
 
 1. **Extract context from headers** - Reads `X-Correlation-Id`, `X-Operation-Id`, `X-Causation-Id`, etc.
-2. **Create GridContext** - Maps headers to `IGridContext` (generates new OperationId if not provided)
-3. **Set ambient accessors** - Makes context available via `IGridContextAccessor` and `IOperationContextAccessor`
-4. **Create OperationContext** - Tracks request timing and outcome
-5. **Echo headers** - Returns `X-Correlation-Id`, `X-Operation-Id`, and `X-Node-Id` in response for traceability
-6. **Sanitize inputs** - Defensive truncation of header values (max 256 chars)
+2. **Create GridContext** - Maps headers to `IGridContext` with CorrelationId and CausationId (identity rails)
+3. **Create OperationContext** - Uses `IOperationContextFactory` to create context with OperationId (span-id)
+4. **Set ambient accessors** - Makes contexts available via `IGridContextAccessor` and `IOperationContextAccessor`
+5. **Track request** - Times request duration and captures outcome
+6. **Echo headers** - Returns `X-Correlation-Id`, `X-Operation-Id`, and `X-Node-Id` in response for traceability
+7. **Sanitize inputs** - Defensive truncation of header values (max 256 chars)
 
 ### Registration
 
@@ -788,12 +797,12 @@ Incoming Request
     ↓
 [GridContextMiddleware]
     ├─ Read headers (X-Correlation-Id, X-Operation-Id, X-Causation-Id, etc.)
-    ├─ Generate new OperationId if not provided by client
-    ├─ Create GridContext with three-ID model (CorrelationId, OperationId, CausationId)
+    ├─ Generate or accept OperationId string as input
+    ├─ Create GridContext with CorrelationId and CausationId (identity rails)
     ├─ Set IGridContextAccessor.GridContext
-    ├─ Create OperationContext (opFactory.Create("HttpRequest"))
+    ├─ Create OperationContext (opFactory.Create("HttpRequest")) with OperationId (span-id)
     ├─ Set IOperationContextAccessor.Current
-    ├─ Echo headers to response (OnStarting) - includes X-Operation-Id
+    ├─ Echo headers to response (OnStarting) - includes X-Operation-Id from OperationContext
     ↓
 [Your Controllers/Endpoints]
     ↓ (can inject IGridContext, IOperationContext)
@@ -804,7 +813,7 @@ Incoming Request
     ├─ Clear IOperationContextAccessor.Current
     ├─ operation.Dispose() (logs duration, emits telemetry)
     ↓
-Response with X-Correlation-Id, X-Operation-Id, and X-Node-Id headers
+Response with X-Correlation-Id, X-Operation-Id (from OperationContext), and X-Node-Id headers
 ```
 
 ### Defensive Features
@@ -892,3 +901,7 @@ Payment Service creates child context
 - **Separation of concerns**: GridContext carries correlation/causation for propagation, OperationContext owns the span identity
 - Trace reconstruction: All operations with `ABC123` are part of the same user request
 - Span relationships: CausationId shows who-called-whom via OperationId references
+
+---
+
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)

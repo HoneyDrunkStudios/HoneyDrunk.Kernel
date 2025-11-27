@@ -268,21 +268,21 @@ public class NodeLifecycleManagerTests
         var nodeContext = CreateTestNodeContext();
         var manager = CreateManager(nodeContext);
 
-        manager.TransitionToStage(NodeLifecycleStage.Running);
+        manager.TransitionToStage(NodeLifecycleStage.Ready);
 
-        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Running);
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Ready);
     }
 
     [Fact]
     public void TransitionToStage_SameStage_DoesNothing()
     {
         var nodeContext = CreateTestNodeContext();
-        nodeContext.SetLifecycleStage(NodeLifecycleStage.Running);
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
         var manager = CreateManager(nodeContext);
 
-        manager.TransitionToStage(NodeLifecycleStage.Running);
+        manager.TransitionToStage(NodeLifecycleStage.Ready);
 
-        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Running);
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Ready);
     }
 
     private static NodeLifecycleManager CreateManager(

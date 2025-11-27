@@ -35,6 +35,8 @@ Global → Studio → Node → Tenant → Project → Request
 
 **Configuration includes both regular settings and secure secrets management.**
 
+**In v0.3, the hierarchical scope types (`ConfigScope`, `ConfigKey`, `ConfigPath`) do not back a custom `IConfigurationProvider` yet. All runtime configuration still comes from standard .NET `IConfiguration` plus `ISecretsSource`.**
+
 **Location:** `HoneyDrunk.Kernel.Abstractions/Configuration/`
 
 ### Configuration System Architecture
@@ -75,11 +77,14 @@ All three share `Environment` as a common identity dimension - ensure they stay 
 
 ### Environment Alignment
 
-The `Environment` value appears in three places and **must match** across all layers:
+The `Environment` value appears in four places and **must match** across all layers:
 
 - **HoneyDrunkGridOptions.Environment** → Grid identity (who am I in the Grid)
 - **INodeContext.Environment** → Runtime identity (string-based for performance)
+- **IGridContext.Environment** → Per-request context (mirrors the same string value)
 - **NodeRuntimeOptions.Environment** → Behavior knobs (telemetry, health, rotation)
+
+**At runtime, `IGridContext.Environment` mirrors the same string value for each request. All four should align; `HoneyDrunkGridOptions` remains the source of truth.**
 
 **Validation Pattern:**
 ```csharp
@@ -289,6 +294,9 @@ public class TelemetryInitializer(
 - **INodeContext** - Runtime Node identity (string-based for performance)
 - **NodeRuntimeOptions** - Runtime behavior knobs (telemetry, health, secrets)
 
+**Environment Flow:**
+`HoneyDrunkNodeOptions.EnvironmentId` → `INodeContext.Environment` (string) → `NodeRuntimeOptions.Environment` (string, validated at startup)
+
 **Recommended Values:**
 
 NodeRuntimeOptions.Environment should match values from the `Environments` registry (`production`, `staging`, `development`, etc.) to stay aligned with `EnvironmentId` rules. See [Identity.md](Identity.md) for well-known environment values and validation.
@@ -454,7 +462,7 @@ public interface IStudioConfiguration
 }
 ```
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/IStudioConfiguration.cs`
+**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/IStudioConfiguration.cs` (next to hosting primitives, not under Configuration/)
 
 [↑ Back to top](#table-of-contents)
 
@@ -686,7 +694,7 @@ services.AddSingleton(options);                                    // Direct acc
 services.AddSingleton<IOptions<HoneyDrunkGridOptions>>(/* ... */); // Options pattern
 ```
 
-**Important:** Once `AddHoneyDrunkGridConfiguration` is used, `HoneyDrunkGridOptions` should always be resolved from DI. Avoid manually constructing separate instances - this ensures a single source of truth for `StudioId` and `Environment`.
+**Important:** Once `AddHoneyDrunkGridConfiguration` is used, `HoneyDrunkGridOptions` should always be resolved from DI. Avoid manually constructing separate instances - this ensures a single source of truth for `StudioId` and `Environment`, otherwise you risk diverging values between different parts of the app.
 
 ### Dependency Injection Usage
 
@@ -996,6 +1004,8 @@ public class StudioConfiguration : IStudioConfiguration
     }
 }
 ```
+
+---
 
 [← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

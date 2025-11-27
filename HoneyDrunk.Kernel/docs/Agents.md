@@ -61,8 +61,8 @@ Agent abstractions enable AI assistants, automation scripts, and service account
 Agent execution contexts inherit identity from Kernel's context primitives:
 
 **Identity Sources:**
-- **IGridContext** provides: `CorrelationId`, `OperationId`, `CausationId`, `NodeId`, `StudioId`, `Environment`, `TenantId`, `ProjectId`, `Baggage`
-- **IOperationContext** provides: Operation timing, outcome tracking, metadata
+- **IGridContext** provides: `CorrelationId`, `CausationId`, `NodeId`, `StudioId`, `Environment`, `TenantId`, `ProjectId`, `Baggage`
+- **IOperationContext** provides: `OperationId`, operation timing, outcome tracking, metadata
 - **INodeContext** provides: Node identity, version, lifecycle stage
 
 **Security Model (Two Layers):**
@@ -72,7 +72,7 @@ Agent execution contexts inherit identity from Kernel's context primitives:
    - `CorrelationOnly` → Tracing IDs only
    - `NodeAndCorrelation` → Node identity + tracing
    - `StudioAndNode` → Environment info + Node identity
-   - `Standard` → All context except sensitive baggage
+   - `Standard` → All fields including TenantId/ProjectId; sensitive baggage filtered
    - `Full` → Complete access (trusted agents only)
 
 2. **GridContextSerializer** - Filters sensitive baggage keys during serialization
@@ -352,14 +352,15 @@ The `CanAccess` method provides a lightweight pre-flight check before accessing 
 - ❌ Not a full authorization system replacement
 - ❌ Not application-level permission enforcement
 - ❌ Not row-level security
+- ❌ Does not validate individual resource IDs - checks capability class only (e.g., `access:database`, not specific table names)
 
-**Design:** `CanAccess` is a lightweight capability check. Applications should still enforce their own authorization policies based on Grid context (`TenantId`, `ProjectId`, user identity) when accessing actual resources.
+**Design:** `CanAccess` is a lightweight capability check at the resource type level. Applications should still enforce their own authorization policies based on Grid context (`TenantId`, `ProjectId`, user identity) when accessing actual resources.
 
 **Typical Implementation:**
 ```csharp
 public bool CanAccess(string resourceType, string resourceId)
 {
-    // Check if agent has capability for this resource type
+    // Check if agent has capability for this resource type (class-level, not ID-level)
     var capabilityName = $"access:{resourceType}";
     return Agent.HasCapability(capabilityName);
 }
@@ -539,8 +540,8 @@ Like privacy levels - public, friends-only, private.
 | `CorrelationOnly` | Basic tracing | CorrelationId, CausationId only |
 | `NodeAndCorrelation` | Node identity + tracing | NodeId, CorrelationId, CausationId |
 | `StudioAndNode` | Environment info | StudioId, Environment, NodeId, tracing |
-| `Standard` | Non-sensitive data | All except secret baggage |
-| `Full` | Complete access | All Grid context including baggage |
+| `Standard` | Non-sensitive data | All fields including TenantId/ProjectId; sensitive baggage filtered |
+| `Full` | Complete access | All fields including TenantId/ProjectId and full baggage |
 
 ### Usage Example
 
@@ -664,6 +665,8 @@ public class AgentExecutionService(
         try
         {
             // Validate capabilities before execution
+            // Note: In real Nodes, ValidateParameters is typically called only when 
+            // invoking a capability, not for every capability at start of execution.
             foreach (var capability in agent.Capabilities)
             {
                 if (!capability.ValidateParameters(parameters, out var error))
@@ -888,9 +891,9 @@ public sealed class GridContextSerializer
 
 #### Security Filtering
 
-The serializer **automatically filters sensitive baggage keys** by default:
+The serializer **automatically filters sensitive baggage keys** by default. **Only baggage keys are filtered** - all top-level fields (`TenantId`, `ProjectId`, `NodeId`, `StudioId`, `Environment`, `CorrelationId`, `CausationId`, `CreatedAtUtc`) are always included unless the agent's `AgentContextScope` reduces visibility.
 
-**Filtered Keys:**
+**Filtered Baggage Keys:**
 - Contains "secret"
 - Contains "password"
 - Contains "token"
@@ -1172,5 +1175,6 @@ All transport adapters follow the same flow:
 
 See [Transport.md](Transport.md) for message-based agent invocation patterns and [Jobs.md](Jobs.md) for background agent execution.
 
-[↑ Back to top](#table-of-contents)
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
+
 

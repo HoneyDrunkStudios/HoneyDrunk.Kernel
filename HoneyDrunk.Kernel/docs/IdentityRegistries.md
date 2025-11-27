@@ -149,7 +149,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 // Option 2: Define in your app (recommended)
 public static class ArcadiaNodeIds
 {
-    public static readonly NodeId Self = new("Arcadia");
+    public static readonly NodeId Self = new("arcadia");
     public static readonly NodeId Auth = WellKnownNodes.Core.Auth; // Reference infra
 }
 
@@ -491,7 +491,7 @@ app.Run();
 // Application defines its own NodeId
 public static class ArcadiaNodeIds
 {
-    public static readonly NodeId Self = new("Arcadia");
+    public static readonly NodeId Self = new("arcadia");
     
     // Reference infrastructure dependencies
     public static readonly NodeId Auth = WellKnownNodes.Core.Auth;
@@ -522,7 +522,7 @@ options.EnvironmentId = GridEnvironments.Production;
 // Define your own NodeIds for applications
 public static class MyAppNodeIds
 {
-    public static readonly NodeId Self = new("MyApp");
+    public static readonly NodeId Self = new("my-app");
     public static readonly NodeId Database = WellKnownNodes.Core.Data;
 }
 
@@ -549,10 +549,11 @@ options.NodeId = new NodeId("p"); // ❌ Too short (min 3 chars)
 | Identity Type | Pattern | Example |
 |---------------|---------|---------|
 | **NodeId** | kebab-case | `kernel`, `web-rest`, `payment-service` |
-| **SectorId** | `{PascalCase}` | `Core`, `AI`, `HoneyPlay` |
-| **EnvironmentId** | `{lowercase}` | `production`, `staging`, `development` |
-| **ErrorCode** | `{category}.{detail}` | `validation.input`, `context.missing` |
+| **SectorId** | kebab-case | `core`, `ai`, `honeyplay` |
+| **EnvironmentId** | kebab-case | `production`, `staging`, `development` |
+| **ErrorCode** | category.detail | `validation.input`, `context.missing` |
 
+**Note:** Registry classes (`Sectors`, `Environments`) use PascalCase property names (e.g., `Sectors.Core`, `Environments.Production`) that map to the kebab-case identity values shown above.
 ---
 
 ## Summary

@@ -31,6 +31,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Config\**" />
+    <EmbeddedResource Remove="Config\**" />
+    <None Remove="Config\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HoneyDrunk.Kernel.Abstractions\HoneyDrunk.Kernel.Abstractions.csproj" />
   </ItemGroup>
 
@@ -53,10 +59,6 @@
 
   <ItemGroup>
     <PackageReference Update="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Config\Secrets\" />
   </ItemGroup>
 
 </Project>
