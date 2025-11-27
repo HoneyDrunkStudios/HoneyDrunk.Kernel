@@ -1,6 +1,6 @@
-using HoneyDrunk.Kernel.Abstractions.Config;
+using HoneyDrunk.Kernel.Abstractions.Configuration;
 
-namespace HoneyDrunk.Kernel.Config.Secrets;
+namespace HoneyDrunk.Kernel.Configuration.Secrets;
 
 /// <summary>
 /// Composite secrets source that checks multiple sources in order, returning the first match.

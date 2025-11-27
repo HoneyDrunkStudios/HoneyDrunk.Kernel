@@ -26,12 +26,11 @@ This guide is organized into focused documents by domain:
 | 🆔 **Identity** | [Identity.md](Identity.md) | Strongly-typed identifiers (NodeId, CorrelationId, TenantId, ProjectId, RunId) |
 | 🏷️ **Identity Registries** | [IdentityRegistries.md](IdentityRegistries.md) | Static well-known values (Nodes, Sectors, Environments, ErrorCodes) |
 | 🌐 **Context** | [Context.md](Context.md) | Distributed context propagation (IGridContext, INodeContext, IOperationContext) |
-| ⚙️ **Configuration** | [Configuration.md](Configuration.md) | Hierarchical configuration (IConfigScope, ConfigKey, NodeRuntimeOptions) |
+| ⚙️ **Configuration** | [Configuration.md](Configuration.md) | Hierarchical configuration + secrets management (IConfigScope, ISecretsSource, CompositeSecretsSource) |
 | 🏢 **Hosting** | [Hosting.md](Hosting.md) | Node hosting and discovery (INodeDescriptor, INodeManifest, IStudioConfiguration) |
 | 🤖 **Agents** | [Agents.md](Agents.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext, AgentsInterop) |
 | 🔄 **Lifecycle** | [Lifecycle.md](Lifecycle.md) | Node lifecycle management (INodeLifecycle, IStartupHook, IShutdownHook, Health/Readiness) |
 | 📡 **Telemetry** | [Telemetry.md](Telemetry.md) | Observability primitives (ITelemetryContext, ITraceEnricher, ILogScopeFactory) |
-| 🔐 **Secrets** | [Secrets.md](Secrets.md) | Secure secrets management (ISecretsSource) |
 | ❤️ **Health** | [Health.md](Health.md) | Service health monitoring (IHealthCheck, HealthStatus) |
 | 📈 **Diagnostics** | [Diagnostics.md](Diagnostics.md) | Metrics and diagnostics (IMetricsCollector) |
 | 🔌 **DI** | [DependencyInjection.md](DependencyInjection.md) | Modular service registration (IModule) |
@@ -96,7 +95,7 @@ Global → Studio → Node → Tenant → Project → Request
 dotnet add package HoneyDrunk.Kernel.Abstractions
 
 # Install runtime (includes abstractions)
-dotnet add package HoneyDrunk.Kernel
+dotenv add package HoneyDrunk.Kernel
 ```
 
 ### Basic Usage
@@ -178,7 +177,7 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
 HoneyDrunk.Kernel/
 ├── HoneyDrunk.Kernel.Abstractions/    # Contracts (zero dependencies)
 │   ├── Agents/                         # Agent execution abstractions
-│   ├── Configuration/                  # Hierarchical config
+│   ├── Configuration/                  # Hierarchical config + secrets
 │   ├── Context/                        # Grid/Node/Operation context
 │   ├── Diagnostics/                    # Metrics abstractions
 │   ├── DI/                            # Module registration
@@ -187,12 +186,12 @@ HoneyDrunk.Kernel/
 │   ├── Identity/                       # Strongly-typed IDs
 │   ├── IdentityRegistries/             # Static well-known values
 │   ├── Lifecycle/                      # Startup/shutdown hooks
-│   ├── Config/                         # Secrets management
 │   └── Telemetry/                      # Observability primitives
 │
 ├── HoneyDrunk.Kernel/                  # Runtime implementations
 │   ├── AgentsInterop/                  # Agent serialization
-│   ├── Configuration/                  # Studio configuration
+│   ├── Configuration/                  # Studio configuration + secrets
+│   │   └── Secrets/                    # CompositeSecretsSource
 │   ├── Context/                        # Context implementations
 │   │   └── Mappers/                    # HTTP/Job/Messaging mappers
 │   ├── DependencyInjection/           # Service registration
@@ -200,7 +199,6 @@ HoneyDrunk.Kernel/
 │   ├── Health/                         # Composite health checks
 │   ├── Hosting/                        # Node lifecycle host
 │   ├── Lifecycle/                      # Lifecycle manager
-│   ├── Config/                         # Composite secrets source
 │   └── Telemetry/                      # Trace enrichment
 │
 └── HoneyDrunk.Kernel.Tests/           # Unit & integration tests

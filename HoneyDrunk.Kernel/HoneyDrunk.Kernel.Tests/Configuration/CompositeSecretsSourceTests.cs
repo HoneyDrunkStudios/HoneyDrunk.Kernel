@@ -1,8 +1,8 @@
 using FluentAssertions;
-using HoneyDrunk.Kernel.Abstractions.Config;
-using HoneyDrunk.Kernel.Config.Secrets;
+using HoneyDrunk.Kernel.Abstractions.Configuration;
+using HoneyDrunk.Kernel.Configuration.Secrets;
 
-namespace HoneyDrunk.Kernel.Tests.Config;
+namespace HoneyDrunk.Kernel.Tests.Configuration;
 
 public class CompositeSecretsSourceTests
 {

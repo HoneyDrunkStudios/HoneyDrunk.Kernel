@@ -1,5 +1,5 @@
 using FluentAssertions;
-using HoneyDrunk.Kernel.Abstractions.Config;
+using HoneyDrunk.Kernel.Abstractions.Configuration;
 using HoneyDrunk.Kernel.Configuration;
 using Microsoft.Extensions.Configuration;
 

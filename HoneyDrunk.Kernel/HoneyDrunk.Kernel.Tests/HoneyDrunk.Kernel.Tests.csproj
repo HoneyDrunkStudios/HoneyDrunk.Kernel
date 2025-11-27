@@ -55,6 +55,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Config\" />
     <Folder Include="DependencyInjection\" />
     <Folder Include="Errors\" />
     <Folder Include="Hosting\" />
