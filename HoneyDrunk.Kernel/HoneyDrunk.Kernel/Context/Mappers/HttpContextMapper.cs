@@ -12,12 +12,16 @@ namespace HoneyDrunk.Kernel.Context.Mappers;
 /// - X-Correlation-Id or traceparent.
 /// - X-Causation-Id.
 /// - X-Studio-Id.
+/// - X-Tenant-Id (optional, identity only).
+/// - X-Project-Id (optional, identity only).
 /// </remarks>
 public sealed class HttpContextMapper
 {
     private const string CorrelationIdHeader = "X-Correlation-Id";
     private const string CausationIdHeader = "X-Causation-Id";
     private const string StudioIdHeader = "X-Studio-Id";
+    private const string TenantIdHeader = "X-Tenant-Id";
+    private const string ProjectIdHeader = "X-Project-Id";
     private const string TraceParentHeader = "traceparent";
 
     private readonly string _nodeId;
@@ -54,6 +58,8 @@ public sealed class HttpContextMapper
         var operationId = Ulid.NewUlid().ToString(); // New span for this HTTP request
         var causationId = ExtractHeader(httpContext, CausationIdHeader);
         var studioId = ExtractHeader(httpContext, StudioIdHeader) ?? _defaultStudioId;
+        var tenantId = ExtractHeader(httpContext, TenantIdHeader);
+        var projectId = ExtractHeader(httpContext, ProjectIdHeader);
 
         var baggage = ExtractBaggage(httpContext);
 
@@ -64,6 +70,8 @@ public sealed class HttpContextMapper
             studioId: studioId,
             environment: _environment,
             causationId: causationId,
+            tenantId: tenantId,
+            projectId: projectId,
             baggage: baggage,
             cancellation: httpContext.RequestAborted);
     }

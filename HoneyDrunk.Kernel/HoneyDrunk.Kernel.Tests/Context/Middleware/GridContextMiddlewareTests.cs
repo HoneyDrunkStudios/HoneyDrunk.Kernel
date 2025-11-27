@@ -302,6 +302,10 @@ public class GridContextMiddlewareTests
 
         public string? CausationId => GridContext.CausationId;
 
+        public string? TenantId => GridContext.TenantId;
+
+        public string? ProjectId => GridContext.ProjectId;
+
         public DateTimeOffset StartedAtUtc { get; } = DateTimeOffset.UtcNow;
 
         public DateTimeOffset? CompletedAtUtc { get; private set; }

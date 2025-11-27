@@ -44,6 +44,18 @@ public static class GridHeaderNames
     public const string Environment = "X-Environment";
 
     /// <summary>
+    /// Tenant identifier for multi-tenant isolation.
+    /// Identity attribute only - not interpreted or enforced by Kernel.
+    /// </summary>
+    public const string TenantId = "X-Tenant-Id";
+
+    /// <summary>
+    /// Project identifier for project-level organization within a tenant.
+    /// Identity attribute only - not interpreted or enforced by Kernel.
+    /// </summary>
+    public const string ProjectId = "X-Project-Id";
+
+    /// <summary>
     /// W3C traceparent header (for interoperability) used as secondary correlation source.
     /// Format: version-trace_id-span_id-trace_flags (e.g., "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01").
     /// </summary>

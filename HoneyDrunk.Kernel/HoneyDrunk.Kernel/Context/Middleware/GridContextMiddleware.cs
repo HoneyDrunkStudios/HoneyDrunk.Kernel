@@ -63,6 +63,18 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         {
             httpContext.Response.Headers[GridHeaderNames.CorrelationId] = gridContext.CorrelationId;
             httpContext.Response.Headers[GridHeaderNames.NodeId] = nodeContext.NodeId;
+
+            // Echo tenant/project identifiers if present (for traceability)
+            if (!string.IsNullOrWhiteSpace(gridContext.TenantId))
+            {
+                httpContext.Response.Headers[GridHeaderNames.TenantId] = gridContext.TenantId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(gridContext.ProjectId))
+            {
+                httpContext.Response.Headers[GridHeaderNames.ProjectId] = gridContext.ProjectId;
+            }
+
             return Task.CompletedTask;
         });
 
@@ -89,6 +101,7 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
     private static IGridContext SanitizeGridContext(IGridContext ctx)
     {
         static string Truncate(string value) => value.Length <= MaxHeaderLength ? value : value[..MaxHeaderLength];
+        static string? TruncateNullable(string? value) => value is not null && value.Length > MaxHeaderLength ? value[..MaxHeaderLength] : value;
 
         var corr = Truncate(ctx.CorrelationId);
         var op = Truncate(ctx.OperationId);
@@ -96,14 +109,17 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         var node = Truncate(ctx.NodeId);
         var studio = Truncate(ctx.StudioId);
         var env = Truncate(ctx.Environment);
+        var tenant = TruncateNullable(ctx.TenantId);
+        var project = TruncateNullable(ctx.ProjectId);
 
         // Preserve baggage as-is; high cardinality keys should be filtered upstream.
         if (corr == ctx.CorrelationId && op == ctx.OperationId && cause == ctx.CausationId &&
-            node == ctx.NodeId && studio == ctx.StudioId && env == ctx.Environment)
+            node == ctx.NodeId && studio == ctx.StudioId && env == ctx.Environment &&
+            tenant == ctx.TenantId && project == ctx.ProjectId)
         {
             return ctx; // No change.
         }
 
-        return new GridContext(corr, op, node, studio, env, cause, ctx.Baggage, ctx.CreatedAtUtc, ctx.Cancellation);
+        return new GridContext(corr, op, node, studio, env, cause, tenant, project, ctx.Baggage, ctx.CreatedAtUtc, ctx.Cancellation);
     }
 }

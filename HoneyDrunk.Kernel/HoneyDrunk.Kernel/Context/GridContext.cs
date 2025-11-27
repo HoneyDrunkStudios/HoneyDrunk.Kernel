@@ -18,6 +18,8 @@ public sealed class GridContext : IGridContext
     /// <param name="studioId">The Studio identifier.</param>
     /// <param name="environment">The environment name.</param>
     /// <param name="causationId">Optional causation identifier (parent-span-id).</param>
+    /// <param name="tenantId">Optional tenant identifier for multi-tenant scenarios.</param>
+    /// <param name="projectId">Optional project identifier within a tenant.</param>
     /// <param name="baggage">Optional baggage dictionary.</param>
     /// <param name="createdAtUtc">Optional creation timestamp; defaults to current UTC time.</param>
     /// <param name="cancellation">Optional cancellation token.</param>
@@ -28,6 +30,8 @@ public sealed class GridContext : IGridContext
         string studioId,
         string environment,
         string? causationId = null,
+        string? tenantId = null,
+        string? projectId = null,
         IReadOnlyDictionary<string, string>? baggage = null,
         DateTimeOffset? createdAtUtc = null,
         CancellationToken cancellation = default)
@@ -44,6 +48,8 @@ public sealed class GridContext : IGridContext
         NodeId = nodeId;
         StudioId = studioId;
         Environment = environment;
+        TenantId = tenantId;
+        ProjectId = projectId;
         Cancellation = cancellation;
         CreatedAtUtc = createdAtUtc ?? DateTimeOffset.UtcNow;
         _baggage = baggage != null ? new Dictionary<string, string>(baggage) : [];
@@ -66,6 +72,12 @@ public sealed class GridContext : IGridContext
 
     /// <inheritdoc />
     public string Environment { get; }
+
+    /// <inheritdoc />
+    public string? TenantId { get; }
+
+    /// <inheritdoc />
+    public string? ProjectId { get; }
 
     /// <inheritdoc />
     public CancellationToken Cancellation { get; }
@@ -91,6 +103,7 @@ public sealed class GridContext : IGridContext
         // - CorrelationId: Same (constant across trace)
         // - OperationId: New ULID (unique span)
         // - CausationId: Current OperationId (parent span)
+        // - TenantId/ProjectId: Preserved from parent
         return new GridContext(
             correlationId: CorrelationId,
             operationId: Ulid.NewUlid().ToString(),
@@ -98,6 +111,8 @@ public sealed class GridContext : IGridContext
             studioId: StudioId,
             environment: Environment,
             causationId: OperationId,
+            tenantId: TenantId,
+            projectId: ProjectId,
             baggage: _baggage,
             cancellation: Cancellation);
     }
@@ -120,6 +135,8 @@ public sealed class GridContext : IGridContext
             studioId: StudioId,
             environment: Environment,
             causationId: CausationId,
+            tenantId: TenantId,
+            projectId: ProjectId,
             baggage: newBaggage,
             cancellation: Cancellation,
             createdAtUtc: CreatedAtUtc);

@@ -45,6 +45,20 @@ public interface IOperationContext : IDisposable
     string? CausationId { get; }
 
     /// <summary>
+    /// Gets the tenant identifier for multi-tenant isolation.
+    /// This is an identity attribute ONLY - not interpreted or enforced by Kernel.
+    /// Convenience property that surfaces GridContext.TenantId.
+    /// </summary>
+    string? TenantId { get; }
+
+    /// <summary>
+    /// Gets the project identifier for project-level organization within a tenant.
+    /// This is an identity attribute ONLY - not interpreted or enforced by Kernel.
+    /// Convenience property that surfaces GridContext.ProjectId.
+    /// </summary>
+    string? ProjectId { get; }
+
+    /// <summary>
     /// Gets the UTC timestamp when this operation started.
     /// </summary>
     DateTimeOffset StartedAtUtc { get; }

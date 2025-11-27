@@ -59,6 +59,12 @@ public sealed class OperationContext : IOperationContext
     public string? CausationId => GridContext.CausationId;
 
     /// <inheritdoc />
+    public string? TenantId => GridContext.TenantId;
+
+    /// <inheritdoc />
+    public string? ProjectId => GridContext.ProjectId;
+
+    /// <inheritdoc />
     public DateTimeOffset StartedAtUtc { get; }
 
     /// <inheritdoc />

@@ -62,6 +62,22 @@ public interface IGridContext
     string Environment { get; }
 
     /// <summary>
+    /// Gets the tenant identifier for multi-tenant isolation.
+    /// This is an identity attribute ONLY - Kernel does not interpret, authorize, or enforce it.
+    /// Used for propagation across nodes, logs, telemetry, and tracing.
+    /// Null if the operation is not tenant-scoped.
+    /// </summary>
+    string? TenantId { get; }
+
+    /// <summary>
+    /// Gets the project identifier for project-level organization within a tenant.
+    /// This is an identity attribute ONLY - Kernel does not interpret, authorize, or enforce it.
+    /// Used for propagation across nodes, logs, telemetry, and tracing.
+    /// Null if the operation is not project-scoped.
+    /// </summary>
+    string? ProjectId { get; }
+
+    /// <summary>
     /// Gets the cancellation token for the current operation and all downstream operations.
     /// </summary>
     CancellationToken Cancellation { get; }
@@ -88,10 +104,12 @@ public interface IGridContext
     /// Creates a new child context for a downstream operation.
     /// - CorrelationId: Preserved (stays constant for the entire request tree)
     /// - OperationId: New ULID generated for this child operation
-    /// - CausationId: Set to current OperationId (forming parent-child chain).
+    /// - CausationId: Set to current OperationId (forming parent-child chain)
+    /// - TenantId: Preserved from parent (if present)
+    /// - ProjectId: Preserved from parent (if present).
     /// </summary>
     /// <param name="nodeId">Optional Node ID if crossing Node boundaries; if null, uses current NodeId.</param>
-    /// <returns>A new GridContext with the same CorrelationId and the current OperationId as CausationId.</returns>
+    /// <returns>A new GridContext with the same CorrelationId, TenantId, ProjectId, and the current OperationId as CausationId.</returns>
     IGridContext CreateChildContext(string? nodeId = null);
 
     /// <summary>

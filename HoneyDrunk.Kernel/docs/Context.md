@@ -128,7 +128,7 @@ services.AddSingleton<INodeContext>(sp =>
     return new NodeContext(
         nodeId: opts.NodeId!,  // Implicit string conversion
         version: opts.Version,
-        studioId: opts.StudioId!,  // Implicit string conversion
+        studioId: opts.SudioId!,  // Implicit string conversion
         environment: opts.EnvironmentId!,  // Implicit string conversion
         // ...
     );
@@ -188,9 +188,90 @@ Like a passport that travels with a person across borders, carrying identity and
 | `NodeId` | string | Which Node is currently executing |
 | `StudioId` | string | Which Studio owns this execution |
 | `Environment` | string | Which environment (production, staging, development, etc.) |
+| `TenantId` | string? | Tenant identifier for multi-tenant isolation (identity only) |
+| `ProjectId` | string? | Project identifier within a tenant (identity only) |
 | `Baggage` | IReadOnlyDictionary<string, string> | Key-value pairs propagated across boundaries |
 | `Cancellation` | CancellationToken | Cooperative cancellation |
 | `CreatedAtUtc` | DateTimeOffset | When this context was created |
+
+### Multi-Tenant Identity Rails
+
+**TenantId and ProjectId** are optional identity attributes that flow through the Grid for multi-tenant scenarios:
+
+```csharp
+// TenantId and ProjectId are passed through headers and propagated automatically
+public interface IGridContext
+{
+    string? TenantId { get; }   // Optional tenant identifier
+    string? ProjectId { get; }  // Optional project identifier within tenant
+}
+```
+
+**Important: Identity Only, Not Authorization**
+
+- ✅ **DO use for**: Correlation in logs, metrics, traces, and telemetry
+- ✅ **DO propagate**: Across Node boundaries via headers (`X-Tenant-Id`, `X-Project-Id`)
+- ✅ **DO surface**: In `IOperationContext` for convenience (`operation.TenantId`)
+- ❌ **DO NOT use for**: Access control, authorization decisions, or data filtering
+- ❌ **DO NOT enforce**: Kernel does not validate, interpret, or authorize based on these values
+- ❌ **DO NOT depend on**: For security boundaries (implement authorization in application layer)
+
+**Propagation Example:**
+
+```csharp
+// Incoming request headers:
+// X-Tenant-Id: tenant-abc
+// X-Project-Id: project-xyz
+
+// GridContext automatically includes these values
+public class OrderService(IGridContext gridContext, ILogger logger)
+{
+    public async Task ProcessOrderAsync(Order order)
+    {
+        logger.LogInformation(
+            "Processing order {OrderId} for tenant {TenantId} in project {ProjectId}",
+            order.Id,
+            gridContext.TenantId,    // "tenant-abc" (from header)
+            gridContext.ProjectId);  // "project-xyz" (from header)
+        
+        // Create child context - tenant/project propagate automatically
+        var childContext = gridContext.CreateChildContext("payment-node");
+        // childContext.TenantId == gridContext.TenantId (preserved)
+        // childContext.ProjectId == gridContext.ProjectId (preserved)
+        
+        await _paymentClient.ChargeAsync(order, childContext);
+    }
+}
+```
+
+**Headers:**
+```http
+# Request headers
+X-Tenant-Id: tenant-abc
+X-Project-Id: project-xyz
+X-Correlation-Id: 01HQXZ8K4TJ9X5B3N2YGF7WDCQ
+
+# Response headers (echoed back for traceability)
+X-Tenant-Id: tenant-abc
+X-Project-Id: project-xyz
+X-Correlation-Id: 01HQXZ8K4TJ9X5B3N2YGF7WDCQ
+X-Node-Id: kernel
+```
+
+**Use Cases:**
+- **Distributed Tracing**: Include tenant/project in trace tags for filtering
+- **Metrics**: Tag metrics by tenant for usage tracking and billing
+- **Logging**: Correlate logs across services for a specific tenant/project
+- **Debugging**: Filter logs/traces by tenant during incident investigation
+- **Billing**: Aggregate usage metrics per tenant
+
+**Not For:**
+- **Authorization**: "Can this tenant access this resource?" (use authorization middleware)
+- **Data Filtering**: "Show only records for this tenant" (use application-layer queries)
+- **Security Boundaries**: "Prevent cross-tenant data leakage" (use database-level isolation)
+
+**Design Rationale:**
+Kernel provides the **rails** (plumbing) for identity propagation so that downstream authorization and data isolation layers have the context they need. This separation of concerns keeps Kernel focused on distributed systems primitives while allowing applications to implement their own multi-tenancy strategies.
 
 ### Key Methods
 
@@ -323,6 +404,8 @@ Like a stopwatch and scorecard for a single task - it knows its own ID, when it 
 | `OperationId` | string | This operation's unique span-id (convenience for `GridContext.OperationId`) |
 | `CorrelationId` | string | The trace-id grouping all related operations (convenience for `GridContext.CorrelationId`) |
 | `CausationId` | string? | Parent operation's span-id (convenience for `GridContext.CausationId`) |
+| `TenantId` | string? | Tenant identifier (convenience for `GridContext.TenantId` - identity only) |
+| `ProjectId` | string? | Project identifier (convenience for `GridContext.ProjectId` - identity only) |
 | `StartedAtUtc` | DateTimeOffset | When operation started |
 | `CompletedAtUtc` | DateTimeOffset? | When operation completed (null if running) |
 | `IsSuccess` | bool? | Whether operation succeeded (null if running) |
@@ -559,6 +642,8 @@ Like well-known HTTP headers (`Content-Type`, `Authorization`) but for Grid cont
 | `X-Studio-Id` | Which Studio owns execution | `honeydrunk-studios` |
 | `X-Node-Id` | Which Node is executing | `kernel`, `payment-service` |
 | `X-Environment` | Which environment | `production`, `staging` |
+| `X-Tenant-Id` | Tenant identifier (identity only, optional) | `tenant-abc123` |
+| `X-Project-Id` | Project identifier (identity only, optional) | `project-xyz789` |
 | `traceparent` | W3C trace context (interop) | `00-{trace-id}-{span-id}-01` |
 | `baggage` | W3C baggage (comma-separated) | `tenant=abc,project=xyz` |
 | `X-Baggage-*` | Custom baggage prefix | `X-Baggage-TenantId: abc123` |

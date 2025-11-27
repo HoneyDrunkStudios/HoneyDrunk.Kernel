@@ -73,6 +73,28 @@ The configuration system has three layers working together:
 
 All three share `Environment` as a common identity dimension - ensure they stay aligned!
 
+### Environment Alignment
+
+The `Environment` value appears in three places and **must match** across all layers:
+
+- **HoneyDrunkGridOptions.Environment** → Grid identity (who am I in the Grid)
+- **INodeContext.Environment** → Runtime identity (string-based for performance)
+- **NodeRuntimeOptions.Environment** → Behavior knobs (telemetry, health, rotation)
+
+**Validation Pattern:**
+```csharp
+// At startup, validate alignment
+var grid = app.Services.GetRequiredService<HoneyDrunkGridOptions>();
+var runtime = app.Services.GetRequiredService<IOptions<NodeRuntimeOptions>>().Value;
+if (grid.Environment != runtime.Environment)
+{
+    throw new InvalidOperationException(
+        $"Environment mismatch: Grid={grid.Environment}, Runtime={runtime.Environment}");
+}
+```
+
+See the [Complete Bootstrap Example](#complete-bootstrap-example) for the full pattern.
+
 [↑ Back to top](#table-of-contents)
 
 ---
@@ -180,6 +202,19 @@ Console.WriteLine(path.FullPath);
 
 **Note:** This hierarchical scope model is foundational - v0.3 uses `StudioConfiguration` as the initial implementation, with full multi-tenant scoping planned for future versions.
 
+### Implementation Status (v0.3)
+
+**ConfigScope, ConfigKey, and ConfigPath are foundational building blocks only.** In v0.3:
+
+- ✅ **Types defined** - Interfaces and implementations exist in Abstractions
+- ❌ **Not yet wired** - StudioConfiguration still uses plain `IConfiguration` + `ISecretsSource`
+- 🔮 **Future use** - These will power a multi-tenant configuration provider
+
+Think of these as **identity primitives for configuration** (analogous to `NodeId`, `EnvironmentId` in Identity.md) - they define the grammar for hierarchical config, but aren't yet plugged into a concrete provider.
+
+**Current State:** StudioConfiguration provides Studio-scoped config with secrets fallback  
+**Future State:** Full hierarchy (Global → Studio → Node → Tenant → Project → Request) with automatic fallback
+
 [↑ Back to top](#table-of-contents)
 
 ---
@@ -253,6 +288,10 @@ public class TelemetryInitializer(
 - **HoneyDrunkNodeOptions** - Strongly-typed identity at bootstrap (uses `EnvironmentId` struct)
 - **INodeContext** - Runtime Node identity (string-based for performance)
 - **NodeRuntimeOptions** - Runtime behavior knobs (telemetry, health, secrets)
+
+**Recommended Values:**
+
+NodeRuntimeOptions.Environment should match values from the `Environments` registry (`production`, `staging`, `development`, etc.) to stay aligned with `EnvironmentId` rules. See [Identity.md](Identity.md) for well-known environment values and validation.
 
 See [Context.md](Context.md) for `INodeContext` details.
 
@@ -370,7 +409,7 @@ public interface IStudioConfiguration
 {
     /// <summary>
     /// Gets the Studio identifier.
-    /// Example: "honeydrunk-studios", "staging", "dev-alice".
+    /// Example: "honeydrunk-studios", "partner-acme-studio", "internal-tools-studio".
     /// </summary>
     string StudioId { get; }
 
@@ -544,6 +583,7 @@ public bool TryGetValue(string key, out string? value)
 - **Security** - Automatic fallback to secrets for sensitive data
 - **Feature management** - Built-in feature flags
 - **Service discovery** - Standard endpoints for Grid services
+- **Canonical source** - `HoneyDrunkGridOptions` is the only place you set `StudioId`/`Environment`; `StudioConfiguration` reflects those values
 
 [↑ Back to top](#table-of-contents)
 
@@ -645,6 +685,8 @@ builder.Services.AddHoneyDrunk()
 services.AddSingleton(options);                                    // Direct access
 services.AddSingleton<IOptions<HoneyDrunkGridOptions>>(/* ... */); // Options pattern
 ```
+
+**Important:** Once `AddHoneyDrunkGridConfiguration` is used, `HoneyDrunkGridOptions` should always be resolved from DI. Avoid manually constructing separate instances - this ensures a single source of truth for `StudioId` and `Environment`.
 
 ### Dependency Injection Usage
 
@@ -790,6 +832,10 @@ public class DatabaseConnector(ISecretsSource secrets)
 - **Security** - Enables integration with secure stores (Vault, Azure Key Vault)
 - **Flexibility** - Multiple sources with fallback logic
 - **Rotation-ready** - Sources can refresh secrets without code changes
+
+**Note on Secret Rotation:**
+
+Secret rotation is **opt-in per Node** and **pattern-based, not Kernel behavior**. Kernel provides the primitives (`ISecretsSource` and `NodeRuntimeOptions.EnableSecretRotation`), but does not run rotation itself. Nodes decide if/when to implement a rotation service.
 
 ### Secret Rotation
 
