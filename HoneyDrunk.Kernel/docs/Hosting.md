@@ -66,13 +66,26 @@ Multiple configuration types work together to define Node identity. **Ensure the
 | **HoneyDrunkNodeOptions.EnvironmentId** | `EnvironmentId` struct | Validated at bootstrap (strongly-typed) | `Environments.Production` |
 | **INodeContext.Environment** | `string` | Runtime identity (performance) | `"production"` |
 
-**These must describe the same environment.** We validate alignment at startup via `ValidateHoneyDrunkServices()`.
+**These must describe the same environment.** We recommend validating alignment at startup.
 
-**Recommended Pattern:**
-- Set `HoneyDrunkGridOptions.Environment` in configuration (appsettings.json)
-- Set `HoneyDrunkNodeOptions.EnvironmentId` in code (from static registry)
-- Kernel ensures both resolve to the same runtime string
+**Validation Pattern (if using both HoneyDrunkGridOptions and HoneyDrunkNodeOptions):**
 
+```csharp
+var app = builder.Build();
+
+// Optional: Validate environment alignment
+var nodeContext = app.Services.GetRequiredService<INodeContext>();
+var gridOptions = app.Services.GetService<IOptions<HoneyDrunkGridOptions>>()?.Value;
+
+if (gridOptions != null && nodeContext.Environment != gridOptions.Environment)
+{
+    throw new InvalidOperationException(
+        $"Environment mismatch: Node={nodeContext.Environment}, Grid={gridOptions.Environment}");
+}
+
+// Always: Validate core services
+app.Services.ValidateHoneyDrunkServices();
+```
 See [Configuration.md](Configuration.md) for `HoneyDrunkGridOptions` details and [Identity.md](Identity.md) for `EnvironmentId` validation rules.
 
 [↑ Back to top](#table-of-contents)
@@ -309,7 +322,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 **Design:** Kernel provides **identity rails only**. Downstream Nodes (Auth, Data, Transport) implement authorization, data isolation, and tenant resolution based on these identity attributes.
 
-See [Context.md](Context.md#multi-tenant-identity-rails) for detailed tenant/project propagation patterns.
+See [Context.md](Context.md) for detailed tenant/project propagation patterns.
 
 [↑ Back to top](#table-of-contents)
 
@@ -375,13 +388,12 @@ public static IHoneyDrunkBuilder AddHoneyDrunkNode(
 | `IOperationContextFactory` | Scoped | Factory for creating operation contexts |
 | `IGridContext` | Scoped | Per-request Grid context (default factory) |
 | `IErrorClassifier` | Singleton | Maps exceptions to HTTP status codes |
-| `ITransportEnvelopeBinder` (HTTP) | Singleton | HTTP response header binder |
+| `ITransportEnvelopeBinder` (HTTP) | Singleton | HTTP response header binder only |
 | `NodeLifecycleManager` | Singleton | Coordinates health/readiness/lifecycle |
 | `NodeLifecycleHost` | Hosted Service | Executes startup/shutdown hooks |
 | `GridActivitySource` | Singleton | OpenTelemetry ActivitySource for tracing |
-| `IServiceProviderValidation` | Singleton | Startup service validation |
 
-**Note:** Messaging and job transport binders belong in **HoneyDrunk.Transport** and **HoneyDrunk.Jobs** packages, not Kernel. Only HTTP binders are registered here since ASP.NET Core integration is part of Kernel's hosting story.
+**Transport Boundary:** HTTP envelope binding is part of Kernel Hosting (ASP.NET Core integration). Message and job envelope binding live in **HoneyDrunk.Transport** and **HoneyDrunk.Jobs** packages respectively. This maintains clean separation between Kernel (OS primitives) and downstream transport layers.
 
 #### Validation Flow
 
@@ -661,16 +673,32 @@ Kernel's three-ID model (CorrelationId, OperationId, CausationId) maps directly 
 
 #### How It Works
 
-When `IOperationContextFactory` creates an operation:
+Kernel's three-ID model maps conceptually to OpenTelemetry/W3C Trace Context:
+
+- **CorrelationId → `Activity.TraceId`** (constant across entire trace)
+- **OperationId → `Activity.SpanId`** (unique per operation/span)
+- **CausationId → `Activity.ParentSpanId`** (points to parent operation)
+
+The actual wiring is handled inside `IOperationContextFactory` and the telemetry integration layer. **Callers just use `IOperationContext` - Kernel handles the Activity plumbing automatically.**
+
+**Example (conceptual):**
 
 ```csharp
-using var activity = GridActivitySource.Instance.StartActivity(operationName);
+// When you create an operation context:
+using var operation = operationFactory.Create("ProcessOrder");
 
-// Kernel automatically sets:
-activity.TraceId = grid.CorrelationId;  // Trace-level ID (constant)
-activity.SpanId = grid.OperationId;     // Span-level ID (unique per operation)
-activity.ParentSpanId = grid.CausationId; // Parent span linkage
+// Kernel internally creates an Activity with:
+// - activity.TraceId = grid.CorrelationId (from parent context)
+// - activity.SpanId = grid.OperationId (newly generated)
+// - activity.ParentSpanId = grid.CausationId (parent's OperationId)
+
+await ProcessOrderAsync(order);
+operation.Complete();
+
+// Activity is automatically stopped and telemetry emitted
 ```
+
+**Important:** You don't manually assign `Activity.TraceId` or `Activity.SpanId`. OpenTelemetry handles this when you call `StartActivity()`. The mapping above describes the **conceptual relationship**, not literal code you write.
 
 #### OpenTelemetry Registration
 
@@ -927,10 +955,11 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
 
-// 5. Validate all services registered correctly (fail fast)
-app.Services.ValidateHoneyDrunkServices();
+// For production Nodes, also call:
+// app.Services.ValidateHoneyDrunkServices();
+// This fails fast if hosting is misconfigured.
 
-// 6. Add Grid context middleware (early in pipeline)
+// Add Grid context middleware
 app.UseGridContext();
 
 // 7. Add application middleware
