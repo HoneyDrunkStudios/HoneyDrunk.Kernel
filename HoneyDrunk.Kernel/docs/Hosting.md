@@ -7,6 +7,8 @@
 ## Table of Contents
 
 - [Overview](#overview)
+  - [Identity Alignment](#identity-alignment)
+  - [Minimal Node Example](#minimal-node-example)
 - **Bootstrap Configuration**
   - [HoneyDrunkNodeOptions.cs](#honeydrunknodeoptionscs)
   - [HoneyDrunkTelemetryOptions.cs](#honeydrunktelemetryoptionscs)
@@ -18,7 +20,10 @@
   - [UseGridContext()](#usegridcontext)
   - [ValidateHoneyDrunkServices()](#validatehoneydrunkservices)
 - **Lifecycle Management**
+  - [Lifecycle Abstractions](#lifecycle-abstractions)
   - [NodeLifecycleHost.cs](#nodelifecyclehostcs)
+- **Telemetry Integration**
+  - [GridActivitySource](#gridactivitysource)
 - **Service Discovery (Future)**
   - [INodeManifest.cs](#inodemanifestcs)
   - [INodeDescriptor.cs](#inodedescriptorcs)
@@ -50,6 +55,73 @@ Hosting in HoneyDrunk.Kernel is about **transforming a plain .NET application in
 - 🔮 Service discovery (INodeManifest/Descriptor exist but not yet wired)
 
 **Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/` (contracts), `HoneyDrunk.Kernel/Hosting/` (implementations)
+
+### Identity Alignment
+
+Multiple configuration types work together to define Node identity. **Ensure they stay aligned:**
+
+| Configuration | Type | Purpose | Example Value |
+|---------------|------|---------|---------------|
+| **HoneyDrunkGridOptions.Environment** | `string` | Single source of truth (raw string) | `"production"` |
+| **HoneyDrunkNodeOptions.EnvironmentId** | `EnvironmentId` struct | Validated at bootstrap (strongly-typed) | `Environments.Production` |
+| **INodeContext.Environment** | `string` | Runtime identity (performance) | `"production"` |
+
+**These must describe the same environment.** We validate alignment at startup via `ValidateHoneyDrunkServices()`.
+
+**Recommended Pattern:**
+- Set `HoneyDrunkGridOptions.Environment` in configuration (appsettings.json)
+- Set `HoneyDrunkNodeOptions.EnvironmentId` in code (from static registry)
+- Kernel ensures both resolve to the same runtime string
+
+See [Configuration.md](Configuration.md) for `HoneyDrunkGridOptions` details and [Identity.md](Identity.md) for `EnvironmentId` validation rules.
+
+[↑ Back to top](#table-of-contents)
+
+---
+
+## Minimal Node Example
+
+Here's the simplest possible Grid Node:
+
+```csharp
+using HoneyDrunk.Kernel.Abstractions;
+using HoneyDrunk.Kernel.Hosting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register Node with Grid
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = Nodes.Core.Kernel;
+    options.SectorId = Sectors.Core;
+    options.EnvironmentId = Environments.Development;
+    options.StudioId = "honeydrunk-studios";
+});
+
+var app = builder.Build();
+
+// Add Grid context middleware
+app.UseGridContext();
+
+// Simple endpoint showing Grid context
+app.MapGet("/whoami", (INodeContext node, IGridContext grid) => new
+{
+    node.NodeId,
+    node.Environment,
+    grid.CorrelationId,
+    grid.OperationId
+});
+
+app.Run();
+```
+
+**That's it!** Your application is now a Grid Node with:
+- ✅ Strongly-typed identity
+- ✅ Context propagation from HTTP headers
+- ✅ Distributed tracing support
+- ✅ Lifecycle coordination
+
+Everything else in this document shows how to evolve from minimal to production-grade.
 
 [↑ Back to top](#table-of-contents)
 
@@ -219,6 +291,26 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 **Note:** In v0.3, this is primarily **informational**. Kernel provides the identity rails (TenantId/ProjectId propagation) but does not enforce isolation. Applications implement their own multi-tenancy logic.
 
+**Multi-Tenancy in Kernel (v0.3):**
+
+✅ **What Kernel DOES:**
+- Parses `X-Tenant-Id` and `X-Project-Id` headers from HTTP requests
+- Surfaces values on `IGridContext.TenantId` and `IGridContext.ProjectId`
+- Propagates tenant/project through child contexts (CreateChildContext)
+- Echoes headers back in HTTP responses for traceability
+- Tags telemetry/logs with tenant/project for filtering
+
+❌ **What Kernel DOES NOT DO:**
+- Enforce tenant isolation (no authorization)
+- Validate tenant access rights
+- Filter data by tenant
+- Resolve tenant from tokens/claims
+- Implement multi-tenant data stores
+
+**Design:** Kernel provides **identity rails only**. Downstream Nodes (Auth, Data, Transport) implement authorization, data isolation, and tenant resolution based on these identity attributes.
+
+See [Context.md](Context.md#multi-tenant-identity-rails) for detailed tenant/project propagation patterns.
+
 [↑ Back to top](#table-of-contents)
 
 ---
@@ -277,16 +369,19 @@ public static IHoneyDrunkBuilder AddHoneyDrunkNode(
 |---------|----------|-------------|
 | `HoneyDrunkNodeOptions` | Singleton | Bootstrap options (validated) |
 | `INodeContext` | Singleton | Process-scoped Node identity |
-| `INodeDescriptor` | Singleton | Runtime Node metadata |
+| `INodeDescriptor` | Singleton | Runtime Node metadata (minimal in v0.3) |
 | `IGridContextAccessor` | Singleton | Ambient GridContext accessor |
 | `IOperationContextAccessor` | Singleton | Ambient OperationContext accessor |
 | `IOperationContextFactory` | Scoped | Factory for creating operation contexts |
 | `IGridContext` | Scoped | Per-request Grid context (default factory) |
 | `IErrorClassifier` | Singleton | Maps exceptions to HTTP status codes |
-| `ITransportEnvelopeBinder` | Singleton (3x) | HTTP, messaging, job context binders |
+| `ITransportEnvelopeBinder` (HTTP) | Singleton | HTTP response header binder |
 | `NodeLifecycleManager` | Singleton | Coordinates health/readiness/lifecycle |
 | `NodeLifecycleHost` | Hosted Service | Executes startup/shutdown hooks |
 | `GridActivitySource` | Singleton | OpenTelemetry ActivitySource for tracing |
+| `IServiceProviderValidation` | Singleton | Startup service validation |
+
+**Note:** Messaging and job transport binders belong in **HoneyDrunk.Transport** and **HoneyDrunk.Jobs** packages, not Kernel. Only HTTP binders are registered here since ASP.NET Core integration is part of Kernel's hosting story.
 
 #### Validation Flow
 
@@ -447,6 +542,22 @@ app.Run();
 
 ## Lifecycle Management
 
+### Lifecycle Abstractions
+
+The following interfaces participate in Node lifecycle. All are documented in detail in [Lifecycle.md](Lifecycle.md):
+
+| Interface | Purpose | Registration |
+|-----------|---------|--------------|
+| **IStartupHook** | Execute initialization tasks at Node startup | `services.AddSingleton<IStartupHook, T>()` |
+| **IShutdownHook** | Execute cleanup tasks at Node shutdown | `services.AddSingleton<IShutdownHook, T>()` |
+| **INodeLifecycle** | Participate in startup/stop lifecycle | `services.AddSingleton<INodeLifecycle, T>()` |
+| **IHealthContributor** | Contribute to overall health status | `services.AddSingleton<IHealthContributor, T>()` |
+| **IReadinessContributor** | Contribute to readiness status | `services.AddSingleton<IReadinessContributor, T>()` |
+
+**Coordination:** `NodeLifecycleHost` (documented below) orchestrates all of these during application startup and shutdown.
+
+---
+
 ### NodeLifecycleHost.cs
 
 **What it is:** IHostedService implementation that coordinates Node lifecycle and executes startup/shutdown hooks.
@@ -528,6 +639,111 @@ See [Lifecycle.md](Lifecycle.md) for detailed lifecycle hook patterns.
 
 ---
 
+## Telemetry Integration
+
+### GridActivitySource
+
+**What it is:** OpenTelemetry `ActivitySource` that enables distributed tracing across the Grid.
+
+**Name:** `"HoneyDrunk.Grid"`
+
+**Location:** `HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
+
+#### Three-ID Model Mapping
+
+Kernel's three-ID model (CorrelationId, OperationId, CausationId) maps directly to W3C Trace Context / OpenTelemetry:
+
+| Kernel Property | OpenTelemetry | W3C Trace Context | Description |
+|-----------------|---------------|-------------------|-------------|
+| `CorrelationId` | `Activity.TraceId` | `traceparent.trace-id` | Groups all operations in request tree |
+| `OperationId` | `Activity.SpanId` | `traceparent.span-id` | Uniquely identifies this operation/span |
+| `CausationId` | `Activity.ParentSpanId` | `traceparent.parent-id` | Points to parent operation |
+
+#### How It Works
+
+When `IOperationContextFactory` creates an operation:
+
+```csharp
+using var activity = GridActivitySource.Instance.StartActivity(operationName);
+
+// Kernel automatically sets:
+activity.TraceId = grid.CorrelationId;  // Trace-level ID (constant)
+activity.SpanId = grid.OperationId;     // Span-level ID (unique per operation)
+activity.ParentSpanId = grid.CausationId; // Parent span linkage
+```
+
+#### OpenTelemetry Registration
+
+```csharp
+using HoneyDrunk.Kernel.Telemetry;
+using OpenTelemetry.Trace;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register Node
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = Nodes.Core.Kernel;
+    // ... other options
+    
+    options.Telemetry.EnableTracing = true;
+    options.Telemetry.TraceSamplingRatio = 0.1; // 10% sampling
+});
+
+// Wire OpenTelemetry to Kernel's ActivitySource
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddSource(GridActivitySource.Name)  // "HoneyDrunk.Grid"
+            .AddAspNetCoreInstrumentation()      // HTTP instrumentation
+            .AddHttpClientInstrumentation()      // Outbound HTTP calls
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("https://otel-collector.example.com:4317");
+            });
+    });
+
+var app = builder.Build();
+app.Run();
+```
+
+#### What Gets Traced
+
+All `IOperationContext` instances create Activities automatically:
+
+```csharp
+// HTTP requests (via GridContextMiddleware)
+app.UseGridContext(); // Creates Activity for each request
+
+// Manual operations
+using var operation = operationFactory.Create("ProcessOrder");
+// Activity started automatically with TraceId/SpanId/ParentSpanId
+await ProcessOrderAsync(order);
+operation.Complete();
+// Activity stopped, duration recorded
+```
+
+#### Trace Visualization
+
+```
+TraceId: 01HQXZ8K4TJ9X5B3N2YGF7WDCQ (CorrelationId - constant across trace)
+├─ SpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCR (OperationId - API Gateway)
+│  ParentSpanId: null (root span)
+│  └─ SpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCS (OperationId - Order Service)
+│     ParentSpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCR (parent = gateway span)
+│     └─ SpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCT (OperationId - Payment Service)
+│        ParentSpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCS (parent = order span)
+```
+
+**Design:** Kernel's three-ID model is **OpenTelemetry-native** by design. No translation layer needed - IDs map 1:1.
+
+See [Context.md](Context.md) for detailed context propagation and [Telemetry.md](Telemetry.md) for enrichment patterns.
+
+[↑ Back to top](#table-of-contents)
+
+---
+
 ## Service Discovery (Future)
 
 The following abstractions exist in v0.3 but are **not yet wired** into the bootstrap process. They are building blocks for future dynamic service discovery.
@@ -560,7 +776,55 @@ See interface definition in the code - similar to `package.json` or `pom.xml` fo
 
 **Current v0.3 Implementation:** Created by `AddHoneyDrunkNode()` with basic identity (NodeId, Version, Sector, Studio, Environment) but no capabilities or manifest binding.
 
-**Future:** Will include rich capability metadata, dependency tracking, and runtime state.
+**What's Actually Included Today:**
+
+```csharp
+// Created by AddHoneyDrunkNode() - minimal descriptor
+INodeDescriptor descriptor = new NodeDescriptor
+{
+    NodeId = "arcadia",               // ✅ From HoneyDrunkNodeOptions.NodeId
+    Version = "1.0.0",                // ✅ From options or assembly version
+    Name = "arcadia",                 // ✅ Same as NodeId
+    Description = "arcadia",          // ✅ Same as NodeId
+    Sector = "market",                // ✅ From HoneyDrunkNodeOptions.SectorId
+    StudioId = "honeydrunk-studios",  // ✅ From HoneyDrunkNodeOptions.StudioId
+    Environment = "production",       // ✅ From HoneyDrunkNodeOptions.EnvironmentId
+    Tags = { ... },                   // ✅ From HoneyDrunkNodeOptions.Tags
+    
+    // NOT included in v0.3:
+    Capabilities = [],                // ❌ Empty (future)
+    Dependencies = [],                // ❌ Empty (future)
+    Slots = [],                       // ❌ Empty (future)
+    Cluster = null,                   // ❌ Not set (future)
+    Manifest = null                   // ❌ Not bound (future)
+};
+```
+
+**Usage Today:**
+
+```csharp
+// Inject INodeDescriptor to get Node identity
+public class MyService(INodeDescriptor descriptor)
+{
+    public void LogIdentity()
+    {
+        _logger.LogInformation(
+            "Running on Node {NodeId} v{Version} in Sector {Sector}",
+            descriptor.NodeId,
+            descriptor.Version,
+            descriptor.Sector);
+        
+        // Don't rely on Capabilities, Dependencies, or Manifest in v0.3
+        // Use INodeContext for runtime identity instead
+    }
+}
+```
+
+**Future:** Will include rich capability metadata, dependency tracking, cluster assignment, and manifest binding.
+
+**Recommendation:** For v0.3, prefer `INodeContext` for most identity needs. `INodeDescriptor` is primarily for future service discovery scenarios.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -768,7 +1032,7 @@ public void AddHoneyDrunkNode_WithValidOptions_RegistersAllServices()
     var nodeContext = provider.GetService<INodeContext>();
     Assert.NotNull(nodeContext);
     Assert.Equal("kernel", nodeContext.NodeId);
-    Assert.Equal("core", nodeContext.Environment);
+    Assert.Equal("development", nodeContext.Environment); // Matches Environments.Development
     
     var gridContextAccessor = provider.GetService<IGridContextAccessor>();
     Assert.NotNull(gridContextAccessor);
