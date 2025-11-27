@@ -933,5 +933,9 @@ private class TestStartupHook(int priority, Action callback) : IStartupHook
 - **Bootstrap (config-time)**: Strongly-typed structs (`NodeId`, `SectorId`, `EnvironmentId`)
 - **Runtime (hot-path)**: Strings for performance (`INodeContext.NodeId`, `IGridContext.NodeId`)
 
+[↑ Back to top](#table-of-contents)
+
 ---
+
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 
