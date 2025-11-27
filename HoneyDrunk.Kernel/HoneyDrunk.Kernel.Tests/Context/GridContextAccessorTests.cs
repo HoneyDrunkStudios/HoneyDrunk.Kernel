@@ -140,7 +140,6 @@ public class GridContextAccessorTests
         };
         var context = new GridContext(
             correlationId: "test-correlation",
-            operationId: Ulid.NewUlid().ToString(),
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env",

@@ -55,7 +55,6 @@ public sealed class HttpContextMapper
         ArgumentNullException.ThrowIfNull(httpContext, nameof(httpContext));
 
         var correlationId = ExtractCorrelationId(httpContext);
-        var operationId = Ulid.NewUlid().ToString(); // New span for this HTTP request
         var causationId = ExtractHeader(httpContext, CausationIdHeader);
         var studioId = ExtractHeader(httpContext, StudioIdHeader) ?? _defaultStudioId;
         var tenantId = ExtractHeader(httpContext, TenantIdHeader);
@@ -65,7 +64,6 @@ public sealed class HttpContextMapper
 
         return new GridContext(
             correlationId: correlationId,
-            operationId: operationId,
             nodeId: _nodeId,
             studioId: studioId,
             environment: _environment,

@@ -282,13 +282,18 @@ public class GridContextMiddlewareTests
         {
             LastCreatedOperationName = operationName;
             LastCreatedMetadata = metadata;
-            var gridContext = new GridContext("test-corr", "test-op", "test-node", "test-studio", "test-env");
-            LastCreatedOperation = new TestOperationContext(gridContext, operationName, metadata);
+
+            // GridContext no longer takes operationId parameter
+            var gridContext = new GridContext("test-corr", "test-node", "test-studio", "test-env");
+
+            // Generate operationId for OperationContext (which now owns it)
+            var operationId = Ulid.NewUlid().ToString();
+            LastCreatedOperation = new TestOperationContext(gridContext, operationName, operationId, metadata);
             return LastCreatedOperation;
         }
     }
 
-    private sealed class TestOperationContext(IGridContext gridContext, string operationName, IReadOnlyDictionary<string, object?>? metadata) : IOperationContext
+    private sealed class TestOperationContext(IGridContext gridContext, string operationName, string operationId, IReadOnlyDictionary<string, object?>? metadata) : IOperationContext
     {
         private readonly Dictionary<string, object?> _metadata = metadata != null ? new Dictionary<string, object?>(metadata) : [];
 
@@ -296,8 +301,10 @@ public class GridContextMiddlewareTests
 
         public string OperationName { get; } = operationName;
 
-        public string OperationId => GridContext.OperationId;
+        // OperationId is now stored directly on OperationContext (v0.3.0)
+        public string OperationId { get; } = operationId; // Now owned by OperationContext, not GridContext
 
+        // Convenience properties that pass through to GridContext
         public string CorrelationId => GridContext.CorrelationId;
 
         public string? CausationId => GridContext.CausationId;

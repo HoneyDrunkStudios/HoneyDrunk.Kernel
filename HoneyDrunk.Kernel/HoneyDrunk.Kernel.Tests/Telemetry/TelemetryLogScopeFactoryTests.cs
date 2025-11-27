@@ -165,7 +165,6 @@ public class TelemetryLogScopeFactoryTests
         var factory = new TelemetryLogScopeFactory(testLogger);
         var gridContext = new GridContext(
             "corr-123",
-            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "test",

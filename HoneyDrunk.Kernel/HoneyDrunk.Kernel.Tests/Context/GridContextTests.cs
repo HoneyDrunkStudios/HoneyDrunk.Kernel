@@ -11,7 +11,6 @@ public class GridContextTests
         // Arrange & Act
         var context = new GridContext(
             correlationId: "corr-123",
-            operationId: Ulid.NewUlid().ToString(),
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env");
@@ -38,7 +37,6 @@ public class GridContextTests
         // Act
         var context = new GridContext(
             correlationId: "corr-123",
-            operationId: Ulid.NewUlid().ToString(),
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env",
@@ -68,7 +66,6 @@ public class GridContextTests
         // Act
         var context = new GridContext(
             correlationId: "corr-123",
-            operationId: Ulid.NewUlid().ToString(),
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env",
@@ -87,7 +84,6 @@ public class GridContextTests
         // Act
         var context = new GridContext(
             correlationId: "corr-123",
-            operationId: Ulid.NewUlid().ToString(),
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env",
@@ -110,7 +106,7 @@ public class GridContextTests
         string environment)
     {
         // Act
-        var act = () => new GridContext(correlationId, Ulid.NewUlid().ToString(), nodeId, studioId, environment);
+        var act = () => new GridContext(correlationId, nodeId, studioId, environment);
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -128,7 +124,7 @@ public class GridContextTests
         string? environment)
     {
         // Act
-        var act = () => new GridContext(correlationId!, Ulid.NewUlid().ToString(), nodeId!, studioId!, environment!);
+        var act = () => new GridContext(correlationId!, nodeId!, studioId!, environment!);
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -138,7 +134,7 @@ public class GridContextTests
     public void BeginScope_ReturnsDisposable()
     {
         // Arrange
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
 
         // Act
         var scope = context.BeginScope();
@@ -155,7 +151,7 @@ public class GridContextTests
     public void BeginScope_CanBeCalledMultipleTimes()
     {
         // Arrange
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
 
         // Act
         var scope1 = context.BeginScope();
@@ -177,7 +173,7 @@ public class GridContextTests
     public void BeginScope_DisposeCanBeCalledMultipleTimes()
     {
         // Arrange
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
         var scope = context.BeginScope();
 
         // Act & Assert - should not throw
@@ -187,127 +183,10 @@ public class GridContextTests
     }
 
     [Fact]
-    public void CreateChildContext_CreatesNewContextWithCausation()
-    {
-        // Arrange
-        var parent = new GridContext(
-            correlationId: "parent-corr",
-            operationId: Ulid.NewUlid().ToString(),
-            nodeId: "parent-node",
-            studioId: "studio",
-            environment: "env",
-            baggage: new Dictionary<string, string> { ["key"] = "value" });
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        child.CorrelationId.Should().NotBe(parent.CorrelationId);
-        child.CausationId.Should().Be(parent.CorrelationId);
-        child.NodeId.Should().Be(parent.NodeId);
-        child.StudioId.Should().Be(parent.StudioId);
-        child.Environment.Should().Be(parent.Environment);
-        child.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("value");
-    }
-
-    [Fact]
-    public void CreateChildContext_WithDifferentNodeId_CreatesContextWithNewNodeId()
-    {
-        // Arrange
-        var parent = new GridContext("corr", Ulid.NewUlid().ToString(), "parent-node", "studio", "env");
-
-        // Act
-        var child = parent.CreateChildContext("child-node");
-
-        // Assert
-        child.NodeId.Should().Be("child-node");
-        child.CausationId.Should().Be(parent.CorrelationId);
-    }
-
-    [Fact]
-    public void CreateChildContext_PropagatesCancellationToken()
-    {
-        // Arrange
-        using var cts = new CancellationTokenSource();
-        var parent = new GridContext(
-            correlationId: "corr",
-            operationId: Ulid.NewUlid().ToString(),
-            nodeId: "node",
-            studioId: "studio",
-            environment: "env",
-            cancellation: cts.Token);
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        child.Cancellation.Should().Be(cts.Token);
-    }
-
-    [Fact]
-    public void CreateChildContext_WhenParentHasCausationId_ChildCausationIsParentCorrelation()
-    {
-        // Arrange
-        var grandparent = new GridContext("grandparent-corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var parent = grandparent.CreateChildContext();
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        parent.CausationId.Should().Be("grandparent-corr");
-        child.CausationId.Should().Be(parent.CorrelationId);
-        child.CausationId.Should().NotBe(grandparent.CorrelationId);
-    }
-
-    [Fact]
-    public void CreateChildContext_PreservesAllBaggageItems()
-    {
-        // Arrange
-        var parent = new GridContext(
-            correlationId: "corr",
-            operationId: Ulid.NewUlid().ToString(),
-            nodeId: "node",
-            studioId: "studio",
-            environment: "env",
-            baggage: new Dictionary<string, string>
-            {
-                ["key1"] = "value1",
-                ["key2"] = "value2",
-                ["key3"] = "value3"
-            });
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        child.Baggage.Should().HaveCount(3);
-        child.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
-        child.Baggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
-        child.Baggage.Should().ContainKey("key3").WhoseValue.Should().Be("value3");
-    }
-
-    [Fact]
-    public void CreateChildContext_CreatesNewUlidForCorrelationId()
-    {
-        // Arrange
-        var parent = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-
-        // Act
-        var child1 = parent.CreateChildContext();
-        var child2 = parent.CreateChildContext();
-
-        // Assert
-        child1.CorrelationId.Should().NotBe(child2.CorrelationId);
-        child1.CorrelationId.Should().NotBeNullOrWhiteSpace();
-        child2.CorrelationId.Should().NotBeNullOrWhiteSpace();
-    }
-
-    [Fact]
     public void WithBaggage_AddsNewBaggage()
     {
         // Arrange
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
 
         // Act
         var newContext = context.WithBaggage("new-key", "new-value");
@@ -324,7 +203,6 @@ public class GridContextTests
         // Arrange
         var context = new GridContext(
             "corr",
-            Ulid.NewUlid().ToString(),
             "node",
             "studio",
             "env",
@@ -346,7 +224,6 @@ public class GridContextTests
         var createdAt = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var context = new GridContext(
             correlationId: "corr-123",
-            operationId: Ulid.NewUlid().ToString(),
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env",
@@ -377,7 +254,6 @@ public class GridContextTests
         // Arrange
         var context = new GridContext(
             "corr",
-            Ulid.NewUlid().ToString(),
             "node",
             "studio",
             "env",
@@ -404,7 +280,6 @@ public class GridContextTests
         var originalBaggage = new Dictionary<string, string> { ["key1"] = "value1" };
         var context = new GridContext(
             "corr",
-            Ulid.NewUlid().ToString(),
             "node",
             "studio",
             "env",
@@ -426,7 +301,7 @@ public class GridContextTests
     public void WithBaggage_NullOrWhitespaceParameters_ThrowsArgumentException(string key, string value)
     {
         // Arrange
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
 
         // Act
         var act = () => context.WithBaggage(key, value);
@@ -441,7 +316,7 @@ public class GridContextTests
     public void WithBaggage_NullParameters_ThrowsArgumentException(string? key, string? value)
     {
         // Arrange
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
 
         // Act
         var act = () => context.WithBaggage(key!, value!);
@@ -457,7 +332,6 @@ public class GridContextTests
         var baggageDict = new Dictionary<string, string> { ["key"] = "value" };
         var context = new GridContext(
             "corr",
-            Ulid.NewUlid().ToString(),
             "node",
             "studio",
             "env",

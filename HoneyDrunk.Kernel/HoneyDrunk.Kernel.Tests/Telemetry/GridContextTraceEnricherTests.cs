@@ -66,7 +66,6 @@ public class GridContextTraceEnricherTests
         var enricher = new GridContextTraceEnricher();
         var gridContext = new GridContext(
             "corr-123",
-            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",

@@ -49,8 +49,6 @@ public sealed class MessagingContextMapper
             ?? GetMetadata(metadata, "X-Correlation-Id")
             ?? Ulid.NewUlid().ToString();
 
-        var operationId = Ulid.NewUlid().ToString(); // New span for this message handler
-
         var causationId = GetMetadata(metadata, "CausationId")
             ?? GetMetadata(metadata, "causation-id")
             ?? GetMetadata(metadata, "X-Causation-Id");
@@ -71,7 +69,6 @@ public sealed class MessagingContextMapper
 
         return new GridContext(
             correlationId: correlationId,
-            operationId: operationId,
             nodeId: _nodeId,
             studioId: studioId,
             environment: _environment,

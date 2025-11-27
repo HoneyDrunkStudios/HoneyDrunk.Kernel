@@ -51,7 +51,6 @@ public sealed class JobContextMapper
 
         // Use job ID as correlation ID for tracking all work related to this job
         var correlationId = jobId;
-        var operationId = Ulid.NewUlid().ToString(); // New span for this job execution
 
         var baggage = new Dictionary<string, string>
         {
@@ -70,7 +69,6 @@ public sealed class JobContextMapper
 
         return new GridContext(
             correlationId: correlationId,
-            operationId: operationId,
             nodeId: _nodeId,
             studioId: _studioId,
             environment: _environment,
@@ -95,7 +93,6 @@ public sealed class JobContextMapper
 
         // Generate unique correlation ID for each execution
         var correlationId = Ulid.NewUlid().ToString();
-        var operationId = Ulid.NewUlid().ToString(); // New span for this scheduled job execution
 
         var baggage = new Dictionary<string, string>
         {
@@ -106,7 +103,6 @@ public sealed class JobContextMapper
 
         return new GridContext(
             correlationId: correlationId,
-            operationId: operationId,
             nodeId: _nodeId,
             studioId: _studioId,
             environment: _environment,

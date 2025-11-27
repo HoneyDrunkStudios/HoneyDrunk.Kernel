@@ -104,7 +104,6 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         static string? TruncateNullable(string? value) => value is not null && value.Length > MaxHeaderLength ? value[..MaxHeaderLength] : value;
 
         var corr = Truncate(ctx.CorrelationId);
-        var op = Truncate(ctx.OperationId);
         var cause = ctx.CausationId is not null ? Truncate(ctx.CausationId) : null;
         var node = Truncate(ctx.NodeId);
         var studio = Truncate(ctx.StudioId);
@@ -113,13 +112,13 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         var project = TruncateNullable(ctx.ProjectId);
 
         // Preserve baggage as-is; high cardinality keys should be filtered upstream.
-        if (corr == ctx.CorrelationId && op == ctx.OperationId && cause == ctx.CausationId &&
+        if (corr == ctx.CorrelationId && cause == ctx.CausationId &&
             node == ctx.NodeId && studio == ctx.StudioId && env == ctx.Environment &&
             tenant == ctx.TenantId && project == ctx.ProjectId)
         {
             return ctx; // No change.
         }
 
-        return new GridContext(corr, op, node, studio, env, cause, tenant, project, ctx.Baggage, ctx.CreatedAtUtc, ctx.Cancellation);
+        return new GridContext(corr, node, studio, env, cause, tenant, project, ctx.Baggage, ctx.CreatedAtUtc, ctx.Cancellation);
     }
 }

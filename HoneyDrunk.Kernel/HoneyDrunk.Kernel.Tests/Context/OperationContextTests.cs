@@ -12,7 +12,7 @@ public class OperationContextTests
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
 
         // Act
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Assert
         opContext.GridContext.Should().BeSameAs(gridContext);
@@ -36,7 +36,7 @@ public class OperationContextTests
         };
 
         // Act
-        var opContext = new OperationContext(gridContext, "TestOperation", metadata: metadata);
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString(), metadata: metadata);
 
         // Assert
         opContext.Metadata.Should().HaveCount(2);
@@ -48,7 +48,7 @@ public class OperationContextTests
     public void Constructor_NullGridContext_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new OperationContext(null!, "TestOperation");
+        var act = () => new OperationContext(null!, "TestOperation", Ulid.NewUlid().ToString());
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -64,7 +64,7 @@ public class OperationContextTests
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
 
         // Act
-        var act = () => new OperationContext(gridContext, operationName!);
+        var act = () => new OperationContext(gridContext, operationName!, Ulid.NewUlid().ToString());
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -75,7 +75,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         opContext.Complete();
@@ -92,7 +92,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         opContext.Complete();
@@ -109,7 +109,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         opContext.Fail("Something went wrong");
@@ -125,7 +125,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
         var exception = new InvalidOperationException("Test exception");
 
         // Act
@@ -143,7 +143,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         var act = () => opContext.Fail(errorMessage);
@@ -157,7 +157,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         opContext.Fail("First error");
@@ -176,7 +176,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         opContext.AddMetadata("key1", "value1");
@@ -193,7 +193,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
         opContext.AddMetadata("key", "old-value");
 
         // Act
@@ -210,7 +210,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         var act = () => opContext.AddMetadata(key, "value");
@@ -224,7 +224,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act
         opContext.Dispose();
@@ -239,7 +239,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
         opContext.Complete();
         var completedAt = opContext.CompletedAtUtc;
 
@@ -255,7 +255,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var opContext = new OperationContext(gridContext, "TestOperation");
+        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act & Assert - Should not throw
         opContext.Dispose();
@@ -271,7 +271,7 @@ public class OperationContextTests
         OperationContext? opContext;
 
         // Act
-        using (opContext = new OperationContext(gridContext, "TestOperation"))
+        using (opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString()))
         {
             opContext.AddMetadata("processed", true);
         }

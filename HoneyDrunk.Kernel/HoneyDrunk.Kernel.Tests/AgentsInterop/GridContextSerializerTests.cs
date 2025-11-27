@@ -46,7 +46,6 @@ public class GridContextSerializerTests
     {
         var context = new GridContext(
             "corr-123",
-            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",
@@ -290,7 +289,6 @@ public class GridContextSerializerTests
     {
         var original = new GridContext(
             "corr-123",
-            Ulid.NewUlid().ToString(),
             "test-node",
             "test-studio",
             "production",

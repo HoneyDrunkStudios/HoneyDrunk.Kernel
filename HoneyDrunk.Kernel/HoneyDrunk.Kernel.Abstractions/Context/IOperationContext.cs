@@ -25,7 +25,7 @@ public interface IOperationContext : IDisposable
     /// <summary>
     /// Gets the operation identifier (span-id) that uniquely identifies this unit of work.
     /// Maps to W3C traceparent span-id and OpenTelemetry span_id.
-    /// Convenience property that surfaces GridContext.OperationId.
+    /// This is the canonical owner of OperationId - it is NOT a pass-through from GridContext.
     /// </summary>
     string OperationId { get; }
 

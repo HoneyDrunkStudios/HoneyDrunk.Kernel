@@ -17,7 +17,8 @@ internal sealed class OperationContextFactory(IOperationContextAccessor accessor
     public IOperationContext Create(string operationName, IReadOnlyDictionary<string, object?>? metadata = null)
     {
         var logger = _loggerFactory.CreateLogger<OperationContext>();
-        var ctx = new OperationContext(_gridContext, operationName, logger, metadata);
+        var operationId = Ulid.NewUlid().ToString();
+        var ctx = new OperationContext(_gridContext, operationName, operationId, logger, metadata);
         _accessor.Current = ctx;
         return ctx;
     }

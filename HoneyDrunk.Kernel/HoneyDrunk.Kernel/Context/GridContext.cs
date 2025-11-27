@@ -13,7 +13,6 @@ public sealed class GridContext : IGridContext
     /// Initializes a new instance of the <see cref="GridContext"/> class.
     /// </summary>
     /// <param name="correlationId">The correlation identifier (trace-id).</param>
-    /// <param name="operationId">The operation identifier (span-id).</param>
     /// <param name="nodeId">The Node identifier.</param>
     /// <param name="studioId">The Studio identifier.</param>
     /// <param name="environment">The environment name.</param>
@@ -25,7 +24,6 @@ public sealed class GridContext : IGridContext
     /// <param name="cancellation">Optional cancellation token.</param>
     public GridContext(
         string correlationId,
-        string operationId,
         string nodeId,
         string studioId,
         string environment,
@@ -37,13 +35,11 @@ public sealed class GridContext : IGridContext
         CancellationToken cancellation = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
         ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
         ArgumentException.ThrowIfNullOrWhiteSpace(studioId);
         ArgumentException.ThrowIfNullOrWhiteSpace(environment);
 
         CorrelationId = correlationId;
-        OperationId = operationId;
         CausationId = causationId;
         NodeId = nodeId;
         StudioId = studioId;
@@ -57,9 +53,6 @@ public sealed class GridContext : IGridContext
 
     /// <inheritdoc />
     public string CorrelationId { get; }
-
-    /// <inheritdoc />
-    public string OperationId { get; }
 
     /// <inheritdoc />
     public string? CausationId { get; }
@@ -97,27 +90,6 @@ public sealed class GridContext : IGridContext
     }
 
     /// <inheritdoc />
-    public IGridContext CreateChildContext(string? nodeId = null)
-    {
-        // Three-ID Model:
-        // - CorrelationId: Same (constant across trace)
-        // - OperationId: New ULID (unique span)
-        // - CausationId: Current OperationId (parent span)
-        // - TenantId/ProjectId: Preserved from parent
-        return new GridContext(
-            correlationId: CorrelationId,
-            operationId: Ulid.NewUlid().ToString(),
-            nodeId: nodeId ?? NodeId,
-            studioId: StudioId,
-            environment: Environment,
-            causationId: OperationId,
-            tenantId: TenantId,
-            projectId: ProjectId,
-            baggage: _baggage,
-            cancellation: Cancellation);
-    }
-
-    /// <inheritdoc />
     public IGridContext WithBaggage(string key, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -130,7 +102,6 @@ public sealed class GridContext : IGridContext
 
         return new GridContext(
             correlationId: CorrelationId,
-            operationId: OperationId,
             nodeId: NodeId,
             studioId: StudioId,
             environment: Environment,

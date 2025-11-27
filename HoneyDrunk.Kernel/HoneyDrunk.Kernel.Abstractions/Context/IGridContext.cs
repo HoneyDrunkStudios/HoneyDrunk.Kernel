@@ -8,15 +8,14 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// GridContext is the fundamental OS-level primitive that flows through every operation
 /// in the HoneyDrunk ecosystem. It carries:
 /// - Correlation ID (Trace ID): Groups related operations across Nodes (constant per request)
-/// - Operation ID (Span ID): Uniquely identifies this unit of work within the trace
 /// - Causation ID (Parent Span ID): Tracks which operation triggered this one
 /// - Node Identity: Which Node is executing this operation
 /// - Studio Context: Which Studio owns this execution
 /// - Environment: Which environment (production, staging, development, etc.)
 /// - Baggage: User-defined metadata that propagates with the context
 /// - Cancellation: Cooperative cancellation for the entire operation chain.
-/// This three-ID model (CorrelationId, OperationId, CausationId) aligns with W3C Trace Context
-/// and OpenTelemetry standards for distributed tracing.
+/// The CorrelationId and CausationId align with W3C Trace Context and OpenTelemetry standards.
+/// OperationId (Span ID) is owned by IOperationContext, not GridContext.
 /// </remarks>
 public interface IGridContext
 {
@@ -29,16 +28,8 @@ public interface IGridContext
     string CorrelationId { get; }
 
     /// <summary>
-    /// Gets the operation identifier (span ID) that uniquely identifies this unit of work.
-    /// Created fresh for each operation (HTTP request, message handler, job step, etc.).
-    /// Maps to W3C traceparent span-id and OpenTelemetry span_id.
-    /// </summary>
-    string OperationId { get; }
-
-    /// <summary>
     /// Gets the causation identifier (parent span ID) indicating which operation triggered this one.
-    /// Points to the parent operation's OperationId (not CorrelationId).
-    /// Null for root operations (no parent).
+    /// Points to the parent operation's OperationId. Null for root operations.
     /// Maps to W3C traceparent parent-id and OpenTelemetry parent_span_id.
     /// </summary>
     string? CausationId { get; }
@@ -99,18 +90,6 @@ public interface IGridContext
     /// </summary>
     /// <returns>A disposable object that ends the scope when disposed.</returns>
     IDisposable BeginScope();
-
-    /// <summary>
-    /// Creates a new child context for a downstream operation.
-    /// - CorrelationId: Preserved (stays constant for the entire request tree)
-    /// - OperationId: New ULID generated for this child operation
-    /// - CausationId: Set to current OperationId (forming parent-child chain)
-    /// - TenantId: Preserved from parent (if present)
-    /// - ProjectId: Preserved from parent (if present).
-    /// </summary>
-    /// <param name="nodeId">Optional Node ID if crossing Node boundaries; if null, uses current NodeId.</param>
-    /// <returns>A new GridContext with the same CorrelationId, TenantId, ProjectId, and the current OperationId as CausationId.</returns>
-    IGridContext CreateChildContext(string? nodeId = null);
 
     /// <summary>
     /// Adds or updates baggage that will propagate to downstream operations.

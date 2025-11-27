@@ -31,11 +31,12 @@ public sealed class GridContextSerializer
         var data = new
         {
             correlationId = context.CorrelationId,
-            operationId = context.OperationId,
             causationId = context.CausationId,
             nodeId = context.NodeId,
             studioId = context.StudioId,
             environment = context.Environment,
+            tenantId = context.TenantId,
+            projectId = context.ProjectId,
             createdAtUtc = context.CreatedAtUtc,
             baggage = includeFullBaggage ? context.Baggage : FilterSafeBaggage(context.Baggage),
         };
@@ -59,7 +60,6 @@ public sealed class GridContextSerializer
 
             // Safely try to get required properties
             if (!root.TryGetProperty("correlationId", out var correlationIdElement) ||
-                !root.TryGetProperty("operationId", out var operationIdElement) ||
                 !root.TryGetProperty("nodeId", out var nodeIdElement) ||
                 !root.TryGetProperty("studioId", out var studioIdElement) ||
                 !root.TryGetProperty("environment", out var environmentElement))
@@ -68,12 +68,11 @@ public sealed class GridContextSerializer
             }
 
             var correlationId = correlationIdElement.GetString();
-            var operationId = operationIdElement.GetString();
             var nodeId = nodeIdElement.GetString();
             var studioId = studioIdElement.GetString();
             var environment = environmentElement.GetString();
 
-            if (string.IsNullOrEmpty(correlationId) || string.IsNullOrEmpty(operationId) ||
+            if (string.IsNullOrEmpty(correlationId) ||
                 string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(studioId) ||
                 string.IsNullOrEmpty(environment))
             {
@@ -84,6 +83,18 @@ public sealed class GridContextSerializer
             if (root.TryGetProperty("causationId", out var causationElement))
             {
                 causationId = causationElement.GetString();
+            }
+
+            string? tenantId = null;
+            if (root.TryGetProperty("tenantId", out var tenantElement))
+            {
+                tenantId = tenantElement.GetString();
+            }
+
+            string? projectId = null;
+            if (root.TryGetProperty("projectId", out var projectElement))
+            {
+                projectId = projectElement.GetString();
             }
 
             var baggage = new Dictionary<string, string>();
@@ -107,11 +118,12 @@ public sealed class GridContextSerializer
 
             return new Context.GridContext(
                 correlationId: correlationId,
-                operationId: operationId,
                 nodeId: nodeId,
                 studioId: studioId,
                 environment: environment,
                 causationId: causationId,
+                tenantId: tenantId,
+                projectId: projectId,
                 baggage: baggage,
                 createdAtUtc: createdAtUtc);
         }

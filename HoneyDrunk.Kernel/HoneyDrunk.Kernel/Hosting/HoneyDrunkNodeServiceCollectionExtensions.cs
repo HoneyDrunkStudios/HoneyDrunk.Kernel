@@ -1,9 +1,11 @@
+using HoneyDrunk.Kernel.Abstractions.Agents;
 using HoneyDrunk.Kernel.Abstractions.Configuration;
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Errors;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
 using HoneyDrunk.Kernel.Abstractions.Lifecycle;
 using HoneyDrunk.Kernel.Abstractions.Transport;
+using HoneyDrunk.Kernel.AgentsInterop;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.DependencyInjection;
 using HoneyDrunk.Kernel.Errors;
@@ -80,7 +82,11 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
         // Ambient accessors + factories.
         services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
         services.AddSingleton<IOperationContextAccessor, OperationContextAccessor>();
+        services.AddSingleton<IGridContextFactory, GridContextFactory>();
         services.AddScoped<IOperationContextFactory, OperationContextFactory>();
+
+        // Agent execution context factory.
+        services.AddScoped<IAgentExecutionContextFactory, AgentExecutionContextFactory>();
 
         // Error handling.
         services.AddSingleton<IErrorClassifier, DefaultErrorClassifier>();
@@ -97,9 +103,8 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
         services.AddScoped<IGridContext>(sp =>
         {
             var nc = sp.GetRequiredService<INodeContext>();
-            return new GridContext(
-                correlationId: Ulid.NewUlid().ToString(),
-                operationId: Ulid.NewUlid().ToString(),
+            var factory = sp.GetRequiredService<IGridContextFactory>();
+            return factory.CreateRoot(
                 nodeId: nc.NodeId,
                 studioId: nc.StudioId,
                 environment: nc.Environment);

@@ -161,7 +161,6 @@ public class AgentContextProjectionTests
     {
         return new GridContext(
             correlationId: "corr-123",
-            operationId: "op-456",
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test");
@@ -172,7 +171,7 @@ public class AgentContextProjectionTests
         return new OperationContext(
             gridContext,
             "TestOperation",
-            null);
+            Ulid.NewUlid().ToString());
     }
 
     private static TestAgentDescriptor CreateTestAgentDescriptor()

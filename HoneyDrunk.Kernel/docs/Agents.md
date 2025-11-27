@@ -8,6 +8,7 @@
 
 - [Overview](#overview)
 - [IAgentDescriptor.cs](#iagentdescriptorcs)
+- [IAgentExecutionContextFactory.cs](#iagentexecutioncontextfactorycs)
 - [IAgentExecutionContext.cs](#iagentexecutioncontextcs)
 - [IAgentCapability.cs](#iagentcapabilitycs)
 - [AgentContextScope.cs](#agentcontextscopecs)
@@ -35,6 +36,59 @@ Agent abstractions enable AI assistants, automation scripts, and service account
 - **Agent Execution Context** - Scoped context and metadata tracking
 - **Agent Capability** - Declarative permissions for actions
 - **Agent Context Scope** - Fine-grained access control to Grid context
+
+### Kernel vs AgentKit: Scope Boundary
+
+**What lives in Kernel (this document):**
+- ✅ **IAgentDescriptor** - Agent identity and capability declarations
+- ✅ **IAgentExecutionContext** - Scoped execution context composition
+- ✅ **IAgentExecutionContextFactory** - Context creation factory
+- ✅ **AgentContextScope** - Security scoping for context visibility
+- ✅ **Serializers** - Cross-process context and result marshaling (AgentResultSerializer, GridContextSerializer)
+- ✅ **AgentContextProjection** - Internal primitive for context composition
+
+**What lives in HoneyDrunk.AgentKit (future/external):**
+- 🔮 **Scheduling** - Agent invocation timing and triggers
+- 🔮 **Orchestration** - Multi-step workflows and coordination
+- 🔮 **Memory** - Persistent conversation history and state
+- 🔮 **Retry Logic** - Failure handling and exponential backoff
+- 🔮 **Agent Runtime** - LLM integration, tool execution, planning
+
+**Kernel's Role:** Provide the **execution primitives** that AgentKit and other Nodes build on. Kernel does not run agents - it defines how agents integrate with the Grid's context propagation, telemetry, and security model.
+
+### Identity, Tenancy, and Security
+
+Agent execution contexts inherit identity from Kernel's context primitives:
+
+**Identity Sources:**
+- **IGridContext** provides: `CorrelationId`, `OperationId`, `CausationId`, `NodeId`, `StudioId`, `Environment`, `TenantId`, `ProjectId`, `Baggage`
+- **IOperationContext** provides: Operation timing, outcome tracking, metadata
+- **INodeContext** provides: Node identity, version, lifecycle stage
+
+**Security Model (Two Layers):**
+
+1. **AgentContextScope** - Controls which Grid context fields the agent can see
+   - `None` → Fully isolated
+   - `CorrelationOnly` → Tracing IDs only
+   - `NodeAndCorrelation` → Node identity + tracing
+   - `StudioAndNode` → Environment info + Node identity
+   - `Standard` → All context except sensitive baggage
+   - `Full` → Complete access (trusted agents only)
+
+2. **GridContextSerializer** - Filters sensitive baggage keys during serialization
+   - Automatically removes keys containing: `"secret"`, `"password"`, `"token"`, `"key"`, `"credential"`
+   - Use `includeFullBaggage: false` for untrusted agents (default recommended)
+   - Use `includeFullBaggage: true` only for fully trusted internal agents
+
+**What Kernel Does NOT Handle:**
+- ❌ Vault integration (API keys, secrets) - handled by Auth/Configuration Nodes
+- ❌ Token validation (JWT, OAuth) - handled by Auth Node
+- ❌ Multi-tenant authorization policies - applications implement based on `TenantId`/`ProjectId`
+- ❌ Row-level security - applications filter queries based on Grid context
+
+**Design:** Kernel provides **identity rails** (TenantId, ProjectId, etc.) but does not enforce authorization. Downstream Nodes implement policies based on these identity attributes.
+
+See [Identity.md](Identity.md) for strongly-typed ID primitives and [Context.md](Context.md) for context propagation patterns.
 
 ---
 
@@ -100,6 +154,167 @@ public class OrderProcessingAgent : IAgentDescriptor
 
 ---
 
+## IAgentExecutionContextFactory.cs
+
+### What it is
+Primary entry point for creating scoped agent execution contexts with unified execution semantics across the Grid.
+
+### Real-world analogy
+Like a session factory in database ORM - creates a properly configured execution environment with automatic resource management.
+
+### Location
+**Interface:** `HoneyDrunk.Kernel.Abstractions/Agents/IAgentExecutionContextFactory.cs`  
+**Implementation:** `HoneyDrunk.Kernel/AgentsInterop/AgentExecutionContextFactory.cs`
+
+### Method
+
+```csharp
+public interface IAgentExecutionContextFactory
+{
+    IAgentExecutionContext Create(
+        IAgentDescriptor agent,
+        IGridContext gridContext,
+        IOperationContext? operationContext = null,
+        IReadOnlyDictionary<string, object?>? executionMetadata = null);
+}
+```
+
+### What It Does
+
+1. **Composes Context** - Unifies GridContext + OperationContext + AgentDescriptor
+2. **Creates OperationContext** - Automatically creates one if not provided (uses IOperationContextFactory)
+3. **Scoped Lifecycle** - Returned context tracks execution lifecycle (use with `using` pattern via OperationContext)
+4. **Consistent Semantics** - Ensures all Nodes create agent contexts the same way
+
+### Usage Example
+
+```csharp
+public class AgentExecutor(IAgentExecutionContextFactory contextFactory)
+{
+    public async Task<Result> ExecuteAgentAsync(
+        IAgentDescriptor agent,
+        IGridContext gridContext)
+    {
+        // Factory creates scoped execution context
+        using var execContext = contextFactory.Create(
+            agent: agent,
+            gridContext: gridContext);
+        
+        try
+        {
+            // Track LLM usage
+            execContext.AddMetadata("model", "gpt-4");
+            execContext.AddMetadata("tokens_prompt", 150);
+            
+            // Check permissions before accessing resources
+            if (!execContext.CanAccess("database", "orders"))
+            {
+                throw new UnauthorizedAccessException("Agent cannot access orders database");
+            }
+            
+            var orders = await FetchOrdersAsync(execContext);
+            
+            // Track completion
+            execContext.AddMetadata("orders_processed", orders.Count);
+            execContext.AddMetadata("tokens_completion", 300);
+            execContext.OperationContext.Complete();
+            
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            execContext.OperationContext.Fail($"Agent execution failed: {ex.Message}", ex);
+            throw;
+        }
+    } // execContext disposed automatically
+}
+```
+
+### When to Use
+
+- ✅ **Always** - Use this factory to create agent execution contexts
+- ✅ **Node implementations** - Consistent context creation across all Nodes
+- ✅ **Testing** - Mock the factory for controlled test scenarios
+- ✅ **Production** - Automatic operation tracking and telemetry
+
+### Advanced Usage (Manual OperationContext)
+
+```csharp
+public class AdvancedAgentExecutor(
+    IAgentExecutionContextFactory contextFactory,
+    IOperationContextFactory operationFactory)
+{
+    public async Task ExecuteWithCustomOperationAsync(
+        IAgentDescriptor agent,
+        IGridContext gridContext)
+    {
+        // Create custom operation context with specific metadata
+        using var operation = operationFactory.Create(
+            operationName: $"CustomAgent:{agent.AgentId}",
+            metadata: new Dictionary<string, object?>
+            {
+                ["priority"] = "high",
+                ["source"] = "webhook"
+            });
+        
+        // Pass custom operation to factory
+        using var execContext = contextFactory.Create(
+            agent: agent,
+            gridContext: gridContext,
+            operationContext: operation,
+            executionMetadata: new Dictionary<string, object?>
+            {
+                ["temperature"] = 0.7,
+                ["maxTokens"] = 2000
+            });
+        
+        await ExecuteAgentLogicAsync(execContext);
+    }
+}
+```
+
+### Why It Matters
+
+**Before (without factory):**
+```csharp
+// Every Node implements its own context creation
+var context = new AgentExecutionContext(...); // Different patterns everywhere
+```
+
+**After (with factory):**
+```csharp
+// Consistent across entire Grid
+using var context = contextFactory.Create(agent, grid);
+```
+
+**Benefits:**
+- ✅ **Unified execution model** - Same semantics across all Nodes
+- ✅ **Automatic tracking** - OperationContext created if not provided
+- ✅ **Resource management** - Proper disposal via using pattern
+- ✅ **Testable** - Easy to mock for unit tests
+- ✅ **Maintainable** - Single place to update context composition logic
+
+**Note on executionMetadata:** This parameter is intended for execution-level properties (temperature, max tokens, sampling settings), not the entire input payload. Input data should be passed separately to your agent execution logic.
+
+### Registration
+
+Registered by `AddHoneyDrunkNode()` during Node bootstrap:
+
+```csharp
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = Nodes.Core.Kernel;
+    options.SectorId = Sectors.Core;
+    options.EnvironmentId = Environments.Development;
+    options.StudioId = "test-studio";
+});
+// IAgentExecutionContextFactory is now available via DI (scoped)
+```
+
+[↑ Back to top](#table-of-contents)
+
+---
+
 ## IAgentExecutionContext.cs
 
 ### What it is
@@ -121,6 +336,32 @@ public interface IAgentExecutionContext
     
     void AddMetadata(string key, object? value);
     bool CanAccess(string resourceType, string resourceId);
+}
+```
+
+### Authorization Model
+
+The `CanAccess` method provides a lightweight pre-flight check before accessing resources:
+
+**What It Does:**
+- Evaluates agent's capabilities (`IAgentCapability`)
+- Optionally integrates with policy providers registered in DI
+- Provides a guardrail for resource access attempts
+
+**What It Is NOT:**
+- ❌ Not a full authorization system replacement
+- ❌ Not application-level permission enforcement
+- ❌ Not row-level security
+
+**Design:** `CanAccess` is a lightweight capability check. Applications should still enforce their own authorization policies based on Grid context (`TenantId`, `ProjectId`, user identity) when accessing actual resources.
+
+**Typical Implementation:**
+```csharp
+public bool CanAccess(string resourceType, string resourceId)
+{
+    // Check if agent has capability for this resource type
+    var capabilityName = $"access:{resourceType}";
+    return Agent.HasCapability(capabilityName);
 }
 ```
 
@@ -399,7 +640,7 @@ public class CustomerSupportAgent : IAgentDescriptor
         Capabilities.Any(c => c.Name == capabilityName);
 }
 
-// 2. Execute Agent with Context
+// 2. Execute Agent with Factory
 public class AgentExecutionService(
     IAgentExecutionContextFactory contextFactory,
     ILogger<AgentExecutionService> logger)
@@ -409,7 +650,11 @@ public class AgentExecutionService(
         IGridContext gridContext,
         Dictionary<string, object?> parameters)
     {
-        using var execContext = contextFactory.Create(agent, gridContext);
+        // Use factory to create scoped execution context
+        using var execContext = contextFactory.Create(
+            agent: agent,
+            gridContext: gridContext,
+            executionMetadata: parameters);
         
         logger.LogInformation(
             "Starting agent {AgentId} execution with correlation {CorrelationId}",
@@ -444,7 +689,7 @@ public class AgentExecutionService(
             execContext.OperationContext.Fail($"Agent failed: {ex.Message}", ex);
             throw;
         }
-    }
+    } // execContext disposed automatically
 }
 ```
 
@@ -657,10 +902,10 @@ The serializer **automatically filters sensitive baggage keys** by default:
 ```csharp
 public class AgentContextProvider
 {
-    public string CreateAgentContext(IGridContext gridContext, bool trustLevel)
+    public string CreateAgentContext(IGridContext gridContext, bool isTrustedAgent)
     {
         // For untrusted agents: filter sensitive baggage
-        if (!trustLevel)
+        if (!isTrustedAgent)
         {
             return GridContextSerializer.Serialize(gridContext, includeFullBaggage: false);
         }
@@ -701,7 +946,9 @@ public class AgentContextProvider
 ### AgentContextProjection.cs
 
 #### What it is
-Projects GridContext + OperationContext + AgentDescriptor into a complete `IAgentExecutionContext`.
+**Internal primitive** that projects GridContext + OperationContext + AgentDescriptor into a complete `IAgentExecutionContext`.
+
+**Note:** In most cases, use `IAgentExecutionContextFactory` instead. This projection is the underlying primitive used by the factory and is available for advanced scenarios and testing.
 
 #### Method
 
@@ -716,119 +963,133 @@ public static class AgentContextProjection
 }
 ```
 
+#### When to Use
+
+- ✅ **Testing** - Direct context creation without DI
+- ✅ **Advanced scenarios** - When you need full control over context composition
+- ⚠️ **Not recommended for production** - Use `IAgentExecutionContextFactory` instead
+
 #### Usage Example
 
 ```csharp
-public class AgentOrchestrator(
-    IGridContext gridContext,
-    IOperationContext operationContext)
+// Testing scenario - direct projection without DI
+public class AgentTests
 {
-    public IAgentExecutionContext CreateAgentContext(
-        IAgentDescriptor agent,
-        Dictionary<string, object?> metadata)
+    [Fact]
+    public void TestAgentExecution()
     {
-        // Project Grid and Operation contexts into Agent context
-        return AgentContextProjection.ProjectToAgentContext(
-            gridContext: gridContext,
-            operationContext: operationContext,
-            agentDescriptor: agent,
-            executionMetadata: metadata
-        );
-    }
-}
-```
-
-[↑ Back to top](#table-of-contents)
-
----
-
-### Complete AgentsInterop Example
-
-```csharp
-public class RemoteAgentExecutor(
-    IGridContext gridContext,
-    IOperationContext operationContext,
-    IHttpClientFactory httpClientFactory,
-    ILogger<RemoteAgentExecutor> logger)
-{
-    public async Task<AgentExecutionResult?> ExecuteRemoteAsync(
-        IAgentDescriptor agent,
-        object input)
-    {
-        // 1. Project context for agent
+        // Arrange
+        var gridContext = new GridContext(...);
+        var operationContext = new OperationContext(...);
+        var agent = new TestAgentDescriptor();
+        
+        // Act - direct projection
         var agentContext = AgentContextProjection.ProjectToAgentContext(
             gridContext: gridContext,
             operationContext: operationContext,
-            agentDescriptor: agent,
-            executionMetadata: new Dictionary<string, object?>
-            {
-                ["input"] = input,
-                ["startTime"] = DateTimeOffset.UtcNow
-            }
+            agentDescriptor: agent
         );
         
-        // 2. Serialize GridContext for agent (filtered)
-        var contextJson = GridContextSerializer.Serialize(
-            context: gridContext,
-            includeFullBaggage: false
-        );
-        
-        // 3. Call remote agent endpoint
-        var client = httpClientFactory.CreateClient();
-        var requestBody = new
-        {
-            agentId = agent.AgentId,
-            context = contextJson,
-            input = input
-        };
-        
-        var response = await client.PostAsJsonAsync(
-            "https://agent-runner.grid/execute",
-            requestBody
-        );
-        
-        response.EnsureSuccessStatusCode();
-        
-        // 4. Deserialize result
-        var resultJson = await response.Content.ReadAsStringAsync();
-        var result = AgentResultSerializer.DeserializeResult(resultJson);
-        
-        // 5. Track execution metadata
-        if (result is not null)
-        {
-            agentContext.AddMetadata("executionDurationMs", 
-                (result.CompletedAtUtc - result.StartedAtUtc).TotalMilliseconds);
-            agentContext.AddMetadata("success", result.Success);
-            
-            if (result.Success)
-            {
-                operationContext.Complete();
-            }
-            else
-            {
-                operationContext.Fail($"Agent failed: {result.ErrorMessage}");
-            }
-        }
-        
-        logger.LogInformation(
-            "Agent {AgentId} executed with correlation {CorrelationId}: {Success}",
-            agent.AgentId,
-            gridContext.CorrelationId,
-            result?.Success ?? false
-        );
-        
-        return result;
+        // Assert
+        Assert.Equal(agent.AgentId, agentContext.Agent.AgentId);
+        Assert.Equal(gridContext.CorrelationId, agentContext.GridContext.CorrelationId);
+    }
+}
+
+// Production scenario - use factory instead
+public class AgentExecutor(IAgentExecutionContextFactory factory)
+{
+    public async Task ExecuteAsync(IAgentDescriptor agent, IGridContext grid)
+    {
+        // Preferred: Use factory
+        using var context = factory.Create(agent, grid);
+        await ExecuteAgentLogicAsync(context);
     }
 }
 ```
+
+### Testing Fixtures and Helpers
+
+The examples above show unit-style testing with manual context creation. For more comprehensive testing scenarios, consider using **HoneyDrunk.Testing** fixtures:
+
+**Recommended for Integration Tests:**
+- **Fake IGridContext** - Pre-configured with consistent test data
+- **Fake IOperationContext** - Deterministic timing and tracking
+- **In-Memory Agent Runners** - Stub implementations for agent execution
+- **Test Descriptors** - Reusable agent descriptors with known capabilities
+
+**Example with Testing Package (Future):**
+```csharp
+[Fact]
+public async Task ExecuteAgent_WithTestFixture()
+{
+    // Arrange
+    using var fixture = new HoneyDrunkTestFixture();
+    var agent = fixture.CreateTestAgent(
+        capabilities: ["read-database", "invoke-api"]);
+    var gridContext = fixture.CreateTestGridContext(
+        nodeId: "test-node",
+        environment: "test");
+    
+    // Act
+    var result = await fixture.ExecuteAgentAsync(agent, gridContext);
+    
+    // Assert
+    Assert.True(result.Success);
+}
+```
+
+See **HoneyDrunk.Testing** documentation for available fixtures, builders, and test helpers.
 
 [↑ Back to top](#table-of-contents)
 
 ---
 
-### Cross-Process Agent Flow
+## Summary
 
-```
+| Component | Purpose | Entry Point |
+|-----------|---------|-------------|
+| **IAgentDescriptor** | Agent identity & capabilities | Declarative permissions |
+| **IAgentExecutionContextFactory** | Context composition | **Primary entry point** |
+| **IAgentExecutionContext** | Execution tracking | Scoped Grid context |
+| **IAgentCapability** | Fine-grained permissions | Parameter validation |
+| **AgentContextScope** | Context visibility | Filtered baggage |
+| **AgentExecutionResult** | Serializable outcome | JSON-safe |
+| **AgentResultSerializer** | Result marshaling | Structured JSON |
+| **GridContextSerializer** | Context marshaling | Automatic secret filtering |
+| **AgentContextProjection** | Context composition (internal) | Testing/advanced scenarios only |
+
+**Key Benefits:**
+- ✅ **Unified execution model** - `IAgentExecutionContextFactory` ensures consistent context creation
+- ✅ Agents operate with scoped permissions and context
+- ✅ Grid context automatically filtered for security
+- ✅ Structured serialization for cross-process communication
+- ✅ Execution results traceable via CorrelationId
+- ✅ Metadata tracking for LLM token usage, timing, etc.
+- ✅ Type-safe projection from Grid primitives to Agent context
+
+**Architecture:**
+- **Factory Pattern:** `IAgentExecutionContextFactory` is the primary entry point (registered in DI)
+- **Internal Primitive:** `AgentContextProjection` handles the actual projection logic
+- **Composition:** Factory composes GridContext + OperationContext + AgentDescriptor + metadata
+- **Resource Management:** Scoped contexts with automatic disposal
+
+**Security Guidelines:**
+- Use `GridContextSerializer` with `includeFullBaggage: false` for untrusted agents
+- Always validate agent capabilities before execution
+- Filter sensitive baggage keys (automatic in serializer)
+- Use `AgentContextScope` to limit context visibility
+- Track execution metadata for audit and billing
+
+---
+
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
+
+---
+
+## Cross-Process Agent Flow
+
+```plaintext
 ┌─────────────────────────────────────────────────────────────┐
 │                    Orchestrator Node                         │
 │  ┌─────────────────────────────────────────────────┐        │
@@ -891,120 +1152,25 @@ public class RemoteAgentExecutor(
 └──────────────────────────────────────────────────────────────┘
 ```
 
-[↑ Back to top](#table-of-contents)
+**Transport Adapters:** This diagram shows an HTTP-based agent runner for clarity. The same pattern applies to other transport mechanisms:
 
----
+- **HTTP/REST** - Shown above (synchronous request/response)
+- **Service Bus / Message Queues** - Context serialized into message properties via **HoneyDrunk.Transport**
+- **Background Jobs** - Context serialized into job metadata via **HoneyDrunk.Jobs**  
+- **gRPC** - Context in gRPC metadata headers
 
-## Testing Patterns
+**Kernel Primitives Used Across All Transports:**
+- `GridContextSerializer` - Serialize/deserialize context for transport
+- `AgentResultSerializer` - Serialize/deserialize results
+- `IAgentExecutionContextFactory` - Reconstruct execution context on orchestrator side
 
-```csharp
-[Fact]
-public void GridContextSerializer_FiltersSecrets()
-{
-    // Arrange
-    var context = new GridContext(
-        correlationId: "corr-123",
-        nodeId: "test-node",
-        studioId: "test-studio",
-        environment: "test",
-        baggage: new Dictionary<string, string>
-        {
-            ["TenantId"] = "tenant-123",         // Safe
-            ["ApiToken"] = "secret-token-abc",   // Filtered
-            ["SecretKey"] = "key-xyz"            // Filtered
-        }
-    );
-    
-    // Act
-    var json = GridContextSerializer.Serialize(context, includeFullBaggage: false);
-    var restored = GridContextSerializer.Deserialize(json);
-    
-    // Assert
-    Assert.NotNull(restored);
-    Assert.True(restored.Baggage.ContainsKey("TenantId"));
-    Assert.False(restored.Baggage.ContainsKey("ApiToken"));   // Filtered out
-    Assert.False(restored.Baggage.ContainsKey("SecretKey")); // Filtered out
-}
+All transport adapters follow the same flow:
+1. Serialize GridContext (filtered for security)
+2. Execute remotely with appropriate transport
+3. Return AgentExecutionResult
+4. Track execution in OperationContext
 
-[Fact]
-public void AgentResultSerializer_RoundTrip()
-{
-    // Arrange
-    var agent = new TestAgentDescriptor();
-    var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
-    var operationContext = new OperationContext(gridContext, new NodeContext());
-    var execContext = AgentContextProjection.ProjectToAgentContext(
-        gridContext, operationContext, agent);
-    
-    // Act
-    var json = AgentResultSerializer.SerializeResult(
-        context: execContext,
-        success: true,
-        result: new { ordersProcessed = 10 }
-    );
-    
-    var result = AgentResultSerializer.DeserializeResult(json);
-    
-    // Assert
-    Assert.NotNull(result);
-    Assert.True(result.Success);
-    Assert.Equal("corr-123", result.CorrelationId);
-    Assert.Equal(10, result.Result?.GetProperty("ordersProcessed").GetInt32());
-}
-
-[Fact]
-public void AgentContextProjection_CreatesExecutionContext()
-{
-    // Arrange
-    var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
-    var operationContext = new OperationContext(gridContext, new NodeContext());
-    var agent = new TestAgentDescriptor();
-    
-    // Act
-    var execContext = AgentContextProjection.ProjectToAgentContext(
-        gridContext, operationContext, agent);
-    
-    // Assert
-    Assert.NotNull(execContext);
-    Assert.Equal("test-agent", execContext.Agent.AgentId);
-    Assert.Equal("corr-123", execContext.GridContext.CorrelationId);
-    Assert.NotNull(execContext.OperationContext);
-}
-```
+See [Transport.md](Transport.md) for message-based agent invocation patterns and [Jobs.md](Jobs.md) for background agent execution.
 
 [↑ Back to top](#table-of-contents)
-
----
-
-## Summary
-
-| Component | Purpose | Security |
-|-----------|---------|----------|
-| **IAgentDescriptor** | Agent identity & capabilities | Declarative permissions |
-| **IAgentExecutionContext** | Execution tracking | Scoped Grid context |
-| **IAgentCapability** | Fine-grained permissions | Parameter validation |
-| **AgentContextScope** | Context visibility | Filtered baggage |
-| **AgentExecutionResult** | Serializable outcome | JSON-safe |
-| **AgentResultSerializer** | Result marshaling | Structured JSON |
-| **GridContextSerializer** | Context marshaling | Automatic secret filtering |
-| **AgentContextProjection** | Context composition | Combines Grid+Operation+Agent |
-
-**Key Benefits:**
-- ✅ Agents operate with scoped permissions and context
-- ✅ Grid context automatically filtered for security
-- ✅ Structured serialization for cross-process communication
-- ✅ Execution results traceable via CorrelationId
-- ✅ Metadata tracking for LLM token usage, timing, etc.
-- ✅ Type-safe projection from Grid primitives to Agent context
-
-**Security Guidelines:**
-- Use `GridContextSerializer` with `includeFullBaggage: false` for untrusted agents
-- Always validate agent capabilities before execution
-- Filter sensitive baggage keys (automatic in serializer)
-- Use `AgentContextScope` to limit context visibility
-- Track execution metadata for audit and billing
-
----
-
-[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 
