@@ -46,13 +46,13 @@ public class NodeLifecycleHealthContributorTests
     public async Task CheckHealthAsync_RunningStage_ReturnsHealthy()
     {
         var nodeContext = CreateTestNodeContext();
-        nodeContext.SetLifecycleStage(NodeLifecycleStage.Running);
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
         var contributor = new NodeLifecycleHealthContributor(nodeContext);
 
         var (status, message) = await contributor.CheckHealthAsync();
 
         status.Should().Be(HealthStatus.Healthy);
-        message.Should().Be("Node is running");
+        message.Should().Be("Node is ready");
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class NodeLifecycleHealthContributorTests
     public async Task CheckHealthAsync_WithCancellationToken_DoesNotThrow()
     {
         var nodeContext = CreateTestNodeContext();
-        nodeContext.SetLifecycleStage(NodeLifecycleStage.Running);
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
         var contributor = new NodeLifecycleHealthContributor(nodeContext);
         using var cts = new CancellationTokenSource();
 

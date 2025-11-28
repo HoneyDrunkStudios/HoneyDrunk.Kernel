@@ -17,19 +17,23 @@ public sealed class OperationContext : IOperationContext
     /// </summary>
     /// <param name="gridContext">The Grid context for this operation.</param>
     /// <param name="operationName">The name/type of this operation.</param>
+    /// <param name="operationId">The operation identifier (span-id) for this operation.</param>
     /// <param name="logger">Optional logger for operation telemetry.</param>
     /// <param name="metadata">Optional initial metadata.</param>
     public OperationContext(
         IGridContext gridContext,
         string operationName,
+        string operationId,
         ILogger? logger = null,
         IReadOnlyDictionary<string, object?>? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(gridContext);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
 
         GridContext = gridContext;
         OperationName = operationName;
+        OperationId = operationId;
         _logger = logger;
         StartedAtUtc = DateTimeOffset.UtcNow;
         _metadata = metadata != null
@@ -37,9 +41,10 @@ public sealed class OperationContext : IOperationContext
             : [];
 
         _logger?.LogInformation(
-            "Operation {OperationName} started with CorrelationId {CorrelationId} on Node {NodeId}",
+            "Operation {OperationName} started with CorrelationId {CorrelationId} and OperationId {OperationId} on Node {NodeId}",
             OperationName,
             GridContext.CorrelationId,
+            OperationId,
             GridContext.NodeId);
     }
 
@@ -48,6 +53,21 @@ public sealed class OperationContext : IOperationContext
 
     /// <inheritdoc />
     public string OperationName { get; }
+
+    /// <inheritdoc />
+    public string OperationId { get; }
+
+    /// <inheritdoc />
+    public string CorrelationId => GridContext.CorrelationId;
+
+    /// <inheritdoc />
+    public string? CausationId => GridContext.CausationId;
+
+    /// <inheritdoc />
+    public string? TenantId => GridContext.TenantId;
+
+    /// <inheritdoc />
+    public string? ProjectId => GridContext.ProjectId;
 
     /// <inheritdoc />
     public DateTimeOffset StartedAtUtc { get; }
@@ -77,10 +97,11 @@ public sealed class OperationContext : IOperationContext
 
         var duration = CompletedAtUtc.Value - StartedAtUtc;
         _logger?.LogInformation(
-            "Operation {OperationName} completed successfully in {DurationMs}ms (CorrelationId: {CorrelationId})",
+            "Operation {OperationName} completed successfully in {DurationMs}ms (CorrelationId: {CorrelationId}, OperationId: {OperationId})",
             OperationName,
             duration.TotalMilliseconds,
-            GridContext.CorrelationId);
+            GridContext.CorrelationId,
+            OperationId);
     }
 
     /// <inheritdoc />
@@ -100,11 +121,12 @@ public sealed class OperationContext : IOperationContext
         var duration = CompletedAtUtc.Value - StartedAtUtc;
         _logger?.LogError(
             exception,
-            "Operation {OperationName} failed after {DurationMs}ms: {ErrorMessage} (CorrelationId: {CorrelationId})",
+            "Operation {OperationName} failed after {DurationMs}ms: {ErrorMessage} (CorrelationId: {CorrelationId}, OperationId: {OperationId})",
             OperationName,
             duration.TotalMilliseconds,
             errorMessage,
-            GridContext.CorrelationId);
+            GridContext.CorrelationId,
+            OperationId);
     }
 
     /// <inheritdoc />

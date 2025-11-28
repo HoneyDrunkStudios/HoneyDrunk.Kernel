@@ -24,22 +24,26 @@ This guide is organized into focused documents by domain:
 | Domain | Document | Description |
 |--------|----------|-------------|
 | 🆔 **Identity** | [Identity.md](Identity.md) | Strongly-typed identifiers (NodeId, CorrelationId, TenantId, ProjectId, RunId) |
+| 🏷️ **Identity Registries** | [IdentityRegistries.md](IdentityRegistries.md) | Static well-known values (Nodes, Sectors, Environments, ErrorCodes) |
 | 🌐 **Context** | [Context.md](Context.md) | Distributed context propagation (IGridContext, INodeContext, IOperationContext) |
-| ⚙️ **Configuration** | [Configuration.md](Configuration.md) | Hierarchical configuration (IConfigScope, ConfigKey, NodeRuntimeOptions) |
+| ⚙️ **Configuration** | [Configuration.md](Configuration.md) | Studio-level configuration access (IStudioConfiguration) |
 | 🏢 **Hosting** | [Hosting.md](Hosting.md) | Node hosting and discovery (INodeDescriptor, INodeManifest, IStudioConfiguration) |
-| 🤖 **Agents** | [Agents.md](Agents.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext) |
+| 🤖 **Agents** | [Agents.md](Agents.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext, AgentsInterop) |
 | 🔄 **Lifecycle** | [Lifecycle.md](Lifecycle.md) | Node lifecycle management (INodeLifecycle, IStartupHook, IShutdownHook, Health/Readiness) |
-| 📡 **Telemetry** | [Telemetry.md](Telemetry.md) | Observability primitives (ITelemetryContext, ITraceEnricher, ILogScopeFactory) |
-| 🔐 **Secrets** | [Secrets.md](Secrets.md) | Secure secrets management (ISecretsSource) |
+| 📡 **Telemetry** | [Telemetry.md](Telemetry.md) | Observability primitives (ITelemetryContext, ITraceEnricher, ILogScopeFactory) for application and infrastructure |
 | ❤️ **Health** | [Health.md](Health.md) | Service health monitoring (IHealthCheck, HealthStatus) |
 | 📈 **Diagnostics** | [Diagnostics.md](Diagnostics.md) | Metrics and diagnostics (IMetricsCollector) |
 | 🔌 **DI** | [DependencyInjection.md](DependencyInjection.md) | Modular service registration (IModule) |
+| 🚚 **Transport** | [Transport.md](Transport.md) | Context propagation across boundaries (ITransportEnvelopeBinder, HTTP/Message/Job binders) |
+| ⚠️ **Errors** | [Errors.md](Errors.md) | Exception hierarchy and error handling (HoneyDrunkException, ErrorCode, IErrorClassifier) |
 
 ### 🔸 HoneyDrunk.Kernel (Implementations)
 
 | Document | Description |
 |----------|-------------|
 | [Implementations.md](Implementations.md) | Runtime implementations of all abstractions |
+| [Bootstrapping.md](Bootstrapping.md) | Unified Node initialization with AddHoneyDrunkGrid() |
+| [OpenTelemetry.md](OpenTelemetry.md) | Distributed tracing with GridActivitySource and Activity API (infrastructure-facing) |
 
 ### 🧪 HoneyDrunk.Kernel.Tests
 
@@ -78,12 +82,6 @@ NodeContext (per-process, static Node identity)
 OperationContext (per-unit-of-work, timing & outcome)
 ```
 
-**Configuration Hierarchy:**
-```
-Global → Studio → Node → Tenant → Project → Request
-(Broadest)                               (Narrowest)
-```
-
 ### Installation
 
 ```bash
@@ -98,17 +96,32 @@ dotnet add package HoneyDrunk.Kernel
 
 ```csharp
 // Program.cs
+using HoneyDrunk.Kernel.Hosting;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Register Kernel services
-builder.Services.AddHoneyDrunkCore(options =>
+// Register Grid services for this Node
+builder.Services.AddHoneyDrunkGrid(options =>
 {
     options.NodeId = "my-node";
     options.StudioId = "my-studio";
     options.Environment = "production";
+    options.Version = "1.0.0";
 });
 
+// Register additional Kernel services
+builder.Services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+builder.Services.AddScoped<IOperationContextFactory, OperationContextFactory>();
+
 var app = builder.Build();
+
+// Grid context middleware (early in pipeline)
+app.UseGridContext();
+
+// Optional: Fail fast if services are misconfigured
+app.Services.ValidateHoneyDrunkServices();
+
+app.MapControllers();
 app.Run();
 ```
 
@@ -124,7 +137,7 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
             gridContext.CorrelationId);
         
         // Create child context for downstream call
-        var childContext = gridContext.CreateChildContext("payment-node");
+        var childContext = gridContext.CreateChildContext("payment-service");
         await _paymentService.ChargeAsync(order, childContext);
     }
 }
@@ -144,10 +157,10 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
 
 ### Why These Abstractions?
 
-**Strongly-typed Identity (NodeId, CorrelationId, etc.):**
-- Compile-time validation
-- Prevents typos and invalid formats
-- Efficient value semantics with record structs
+**Runtime Uses Plain Strings:**
+- GridContext, NodeContext, OperationContext use `string` properties for performance
+- No value object overhead in hot paths
+- Direct serialization to HTTP headers, message properties, logs
 
 **Context Hierarchy (Grid/Node/Operation):**
 - Clear separation of concerns
@@ -155,15 +168,10 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
 - Per-process context provides static identity
 - Per-operation wrapper tracks timing/outcome
 
-**Hierarchical Configuration:**
-- Environment-specific overrides (Global → Studio → Node)
-- Tenant/Project isolation for multi-tenancy
-- Request-level overrides for experimentation
-
-**Explicit Secrets Management:**
-- Separation from regular config
-- Composite fallback (env vars → Vault → Key Vault)
-- Rotation-ready design
+**Studio-Level Configuration:**
+- Studio identity (`IStudioConfiguration`)
+- Environment-aware settings
+- Integration with external configuration providers
 
 ---
 
@@ -173,33 +181,37 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
 HoneyDrunk.Kernel/
 ├── HoneyDrunk.Kernel.Abstractions/    # Contracts (zero dependencies)
 │   ├── Agents/                         # Agent execution abstractions
-│   ├── Configuration/                  # Hierarchical config
+│   ├── Configuration/                  # Studio configuration
 │   ├── Context/                        # Grid/Node/Operation context
 │   ├── Diagnostics/                    # Metrics abstractions
-│   ├── DI/                            # Module registration
+│   ├── DI/                             # Module registration
+│   ├── Errors/                         # Exception hierarchy
 │   ├── Health/                         # Health check contracts
 │   ├── Hosting/                        # Node hosting & discovery
 │   ├── Identity/                       # Strongly-typed IDs
+│   ├── IdentityRegistries/             # Static well-known values
 │   ├── Lifecycle/                      # Startup/shutdown hooks
-│   ├── Config/                         # Secrets management
-│   └── Telemetry/                      # Observability primitives
+│   ├── Telemetry/                      # Observability primitives
+│   └── Transport/                      # Context propagation
 │
 ├── HoneyDrunk.Kernel/                  # Runtime implementations
 │   ├── AgentsInterop/                  # Agent serialization
 │   ├── Configuration/                  # Studio configuration
 │   ├── Context/                        # Context implementations
 │   │   └── Mappers/                    # HTTP/Job/Messaging mappers
-│   ├── DependencyInjection/           # Service registration
+│   ├── DependencyInjection/            # Service registration
 │   ├── Diagnostics/                    # Health/readiness/metrics
+│   ├── Errors/                         # Error classification
 │   ├── Health/                         # Composite health checks
 │   ├── Hosting/                        # Node lifecycle host
 │   ├── Lifecycle/                      # Lifecycle manager
-│   ├── Config/                         # Composite secrets source
-│   └── Telemetry/                      # Trace enrichment
+│   └── Telemetry/                      # Trace enrichment, GridActivitySource
 │
-└── HoneyDrunk.Kernel.Tests/           # Unit & integration tests
+└── HoneyDrunk.Kernel.Tests/            # Unit & integration tests
     ├── Context/                        # Context tests
-    └── Identity/                       # Identity validation tests
+    ├── Diagnostics/                    # Diagnostics tests
+    ├── Identity/                       # Identity validation tests
+    └── Lifecycle/                      # Lifecycle tests
 ```
 
 ---
@@ -211,10 +223,11 @@ HoneyDrunk.Kernel/
 - **HoneyDrunk.Standards** - Analyzers and coding conventions (buildTransitive)
 - **Microsoft.Extensions.*** - DI, Logging, Configuration abstractions
 - **System.Text.Json** - Serialization
+- **Ulid** - ULID generation for IDs
 
 ### Downstream Consumers
 
-All other HoneyDrunk libraries depend on Kernel:
+**Intended downstream consumers** include:
 
 - **HoneyDrunk.Data** - Database abstractions
 - **HoneyDrunk.Transport** - Messaging infrastructure
@@ -222,13 +235,15 @@ All other HoneyDrunk libraries depend on Kernel:
 - **HoneyDrunk.Auth** - Authentication/authorization
 - **HoneyDrunk.Vault** - Secrets management
 
+**Design Note:** Not all consumers exist yet. As the Grid evolves, new Nodes and libraries will depend on Kernel for Grid primitives.
+
 ---
 
 ## 📖 Additional Resources
 
 ### Official Documentation
-- [README.md](../../README.md) - Quick start and overview
-- [.github/copilot-instructions.md](../../.github/copilot-instructions.md) - Coding standards
+- [README.md](../README.md) - Quick start and overview
+- [.github/copilot-instructions.md](../.github/copilot-instructions.md) - Coding standards
 
 ### Related Projects
 - [HoneyDrunk.Standards](https://github.com/HoneyDrunkStudios/HoneyDrunk.Standards) - Analyzers and conventions
@@ -237,6 +252,7 @@ All other HoneyDrunk libraries depend on Kernel:
 - [ULID Spec](https://github.com/ulid/spec) - Universally Unique Lexicographically Sortable Identifier
 - [Microsoft.Extensions.DependencyInjection](https://docs.microsoft.com/aspnet/core/fundamentals/dependency-injection)
 - [OpenTelemetry .NET](https://github.com/open-telemetry/opentelemetry-dotnet)
+- [System.Diagnostics.Activity](https://docs.microsoft.com/dotnet/api/system.diagnostics.activity) - .NET distributed tracing
 
 ---
 
@@ -246,7 +262,7 @@ All other HoneyDrunk libraries depend on Kernel:
 
 ---
 
-*Last Updated: 2025-11-20*  
-*Version: 0.2.1*  
+*Last Updated: 2025-11-28*  
+*Version: 0.3.0*  
 *Target Framework: .NET 10.0*
 

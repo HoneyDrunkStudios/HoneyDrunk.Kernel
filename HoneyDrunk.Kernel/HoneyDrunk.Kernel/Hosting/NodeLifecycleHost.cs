@@ -51,8 +51,8 @@ internal sealed class NodeLifecycleHost(
                 await lifecycle.StartAsync(cancellationToken);
             }
 
-            _nodeContext.SetLifecycleStage(NodeLifecycleStage.Running);
-            _logger.LogInformation("Node {NodeId} is now running", _nodeContext.NodeId);
+            _nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
+            _logger.LogInformation("Node {NodeId} is now ready", _nodeContext.NodeId);
         }
         catch (Exception ex)
         {

@@ -226,6 +226,119 @@ public class AgentResultSerializerTests
         deserialized.Success.Should().BeTrue();
     }
 
+    [Fact]
+    public void SerializeResult_NullResult_SerializesNullResult()
+    {
+        var context = CreateTestAgentExecutionContext();
+
+        var json = AgentResultSerializer.SerializeResult(context, success: true, result: null);
+
+        json.Should().Contain("\"result\":null");
+    }
+
+    [Fact]
+    public void SerializeResult_NullErrorMessage_SerializesNullError()
+    {
+        var context = CreateTestAgentExecutionContext();
+
+        var json = AgentResultSerializer.SerializeResult(context, success: false, errorMessage: null);
+
+        json.Should().Contain("\"errorMessage\":null");
+    }
+
+    [Fact]
+    public void SerializeResult_ComplexNestedObject_SerializesCorrectly()
+    {
+        var context = CreateTestAgentExecutionContext();
+        var complexResult = new
+        {
+            user = new { id = "user-123", name = "Test User" },
+            items = new[] { 1, 2, 3 },
+            metadata = new Dictionary<string, object> { ["key"] = "value" }
+        };
+
+        var json = AgentResultSerializer.SerializeResult(context, success: true, result: complexResult);
+        var deserialized = AgentResultSerializer.DeserializeResult(json);
+
+        deserialized.Should().NotBeNull();
+        deserialized!.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DeserializeResult_MissingRequiredField_ReturnsPartialResult()
+    {
+        var json = @"{
+            ""agentId"": ""agent-123"",
+            ""success"": true
+        }";
+
+        var result = AgentResultSerializer.DeserializeResult(json);
+
+        result.Should().NotBeNull();
+        result!.AgentId.Should().Be("agent-123");
+    }
+
+    [Fact]
+    public void DeserializeResult_WithExtraFields_IgnoresExtraFields()
+    {
+        var json = @"{
+            ""agentId"": ""agent-123"",
+            ""correlationId"": ""corr-456"",
+            ""success"": true,
+            ""extraField"": ""should-be-ignored"",
+            ""anotherExtra"": 12345,
+            ""startedAtUtc"": ""2025-01-01T00:00:00Z"",
+            ""completedAtUtc"": ""2025-01-01T00:01:00Z""
+        }";
+
+        var result = AgentResultSerializer.DeserializeResult(json);
+
+        result.Should().NotBeNull();
+        result!.AgentId.Should().Be("agent-123");
+    }
+
+    [Fact]
+    public void SerializeResult_EmptyErrorMessage_SerializesEmpty()
+    {
+        var context = CreateTestAgentExecutionContext();
+
+        var json = AgentResultSerializer.SerializeResult(context, success: false, errorMessage: string.Empty);
+
+        json.Should().Contain("\"errorMessage\":\"\"");
+    }
+
+    [Fact]
+    public void SerializeResult_WithSpecialCharacters_EscapesCorrectly()
+    {
+        var context = CreateTestAgentExecutionContext();
+        var resultWithSpecialChars = new
+        {
+            message = "Error with \"quotes\" and \nnewlines",
+            path = "C:\\Users\\test\\file.txt"
+        };
+
+        var json = AgentResultSerializer.SerializeResult(context, success: true, result: resultWithSpecialChars);
+        var deserialized = AgentResultSerializer.DeserializeResult(json);
+
+        deserialized.Should().NotBeNull();
+        deserialized!.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SerializeResult_LargeResult_HandlesCorrectly()
+    {
+        var context = CreateTestAgentExecutionContext();
+        var largeResult = new
+        {
+            items = Enumerable.Range(0, 1000).Select(i => new { id = i, name = $"Item-{i}" })
+        };
+
+        var json = AgentResultSerializer.SerializeResult(context, success: true, result: largeResult);
+
+        json.Should().NotBeNullOrWhiteSpace();
+        json.Should().Contain("Item-999");
+    }
+
     private static TestAgentExecutionContext CreateTestAgentExecutionContext()
     {
         return new TestAgentExecutionContext

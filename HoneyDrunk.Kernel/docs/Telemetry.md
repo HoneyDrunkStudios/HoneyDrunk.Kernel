@@ -4,29 +4,69 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- **Abstractions**
+  - [ITelemetryContext.cs](#itelemetrycontextcs)
+  - [ITelemetryActivityFactory.cs](#itelemetryactivityfactorycs)
+  - [ITraceEnricher.cs](#itraceenrichercs)
+  - [ILogScopeFactory.cs](#ilogscopefactorycs)
+  - [TelemetryTags.cs](#telemetrytagscs)
+- **Implementations**
+  - [GridActivitySource.cs](#gridactivitysourcecs)
+  - [HoneyDrunkTelemetry.cs](#honeydrunktelemetrycs)
+  - [TelemetryActivityFactory.cs](#telemetryactivityfactorycs)
+  - [TelemetryContext.cs](#telemetrycontextcs)
+  - [GridContextTraceEnricher.cs](#gridcontexttraceenrichercs)
+  - [TelemetryLogScopeFactory.cs](#telemetrylogscopefactorycs)
+- [Complete Observability Example](#complete-observability-example)
+- [Testing Patterns](#testing-patterns)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 Telemetry abstractions provide OpenTelemetry-ready tracing, enrichment, and log correlation for distributed observability. These abstractions enable unified querying, filtering, and correlation across the entire Grid without coupling to specific telemetry backends.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/`
+**What Telemetry Does:** Gives every Node a standard way to produce OpenTelemetry traces and structured logs that are pre-tagged with Grid context, so you can follow a **single correlation ID** across **HTTP, messaging, database, and logs** anywhere in the Grid.
+
+**Location:** 
+- Abstractions: `HoneyDrunk.Kernel.Abstractions/Telemetry/`
+- Implementations: `HoneyDrunk.Kernel/Telemetry/`
 
 **Key Concepts:**
 - **Telemetry Context** - W3C Trace Context compatible view for observability
+- **Activity Factory** - Creates enriched OpenTelemetry Activities with ambient context
 - **Trace Enrichment** - Automatic tag injection with Grid/Node context
 - **Log Scopes** - Structured logging with automatic context propagation
 - **Standard Tags** - Semantic naming conventions for unified observability
+- **Grid Activity Source** - Centralized `ActivitySource` for Grid operations
+
+**Architecture:**
+- **GridContext** - "Who am I" (Node, Studio, Environment, correlation, baggage)
+- **Activity** - "What am I doing right now" (span with timing and outcome)
+- **TelemetryContext** - "Observability snapshot" (GridContext + trace/span IDs)
+- **HoneyDrunkTelemetry + ITelemetryActivityFactory** - Main entry points for starting spans
+- **ITraceEnricher + ILogScopeFactory** - Standard way to attach context to traces and logs
+- **TelemetryTags** - Shared vocabulary for Grid-wide observability
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
-## ITelemetryContext.cs
+## Abstractions
 
-### What it is
-Readonly view of telemetry-relevant context for tracing and logging.
+### ITelemetryContext.cs
 
-### Real-world analogy
-Like a flight data recorder - captures everything needed for post-flight analysis.
+**What it is:** Readonly view of telemetry-relevant context for tracing and logging.
 
-### Properties
+**Real-world analogy:** Like a flight data recorder - captures everything needed for post-flight analysis.
+
+**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ITelemetryContext.cs`
+
+#### Properties
 
 ```csharp
 public interface ITelemetryContext
@@ -36,34 +76,11 @@ public interface ITelemetryContext
     string SpanId { get; }                      // Current span identifier
     string? ParentSpanId { get; }               // Parent span (if child)
     bool IsSampled { get; }                     // Whether trace is collected
-    IReadOnlyDictionary<string, string> TelemetryBaggage { get; } // Vendor-specific metadata
+    IReadOnlyDictionary<string, string> TelemetryBaggage { get; } // Vendor-specific metadata (reserved for future)
 }
 ```
 
-### Usage Example
-
-```csharp
-public class TelemetryMiddleware(ITelemetryContext telemetryContext, ILogger logger)
-{
-    public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
-    {
-        // Automatic trace propagation
-        logger.LogInformation(
-            "Request started - TraceId: {TraceId}, SpanId: {SpanId}, CorrelationId: {CorrelationId}",
-            telemetryContext.TraceId,
-            telemetryContext.SpanId,
-            telemetryContext.GridContext.CorrelationId);
-        
-        // Add trace headers to response
-        httpContext.Response.Headers["X-Trace-Id"] = telemetryContext.TraceId;
-        httpContext.Response.Headers["X-Span-Id"] = telemetryContext.SpanId;
-        
-        await next(httpContext);
-    }
-}
-```
-
-### W3C Trace Context Mapping
+#### W3C Trace Context Mapping
 
 | Property | W3C Trace Context | OpenTelemetry |
 |----------|-------------------|---------------|
@@ -72,17 +89,98 @@ public class TelemetryMiddleware(ITelemetryContext telemetryContext, ILogger log
 | `ParentSpanId` | Previous span in chain | `ParentSpanId` |
 | `IsSampled` | `traceparent` sampled flag | `Sampled` |
 
+#### Baggage Semantics
+
+**GridContext.Baggage vs TelemetryBaggage:**
+- **GridContext.Baggage** - Grid-specific metadata propagated across Node boundaries (tenant hints, feature flags, custom routing)
+- **TelemetryBaggage** - Reserved for backend-specific telemetry metadata (vendor hints, sampling decisions). Currently unused in v0.3.0, may be used for APM-specific tagging in future versions.
+
+**Current Behavior:** `TelemetryBaggage` is typically empty. All application-level baggage flows through `GridContext.Baggage`.
+
+[↑ Back to top](#table-of-contents)
+
 ---
 
-## ITraceEnricher.cs
+### ITelemetryActivityFactory.cs
 
-### What it is
-Enriches distributed traces with Grid-wide context and metadata.
+**What it is:** Factory abstraction for creating enriched `Activity` instances using ambient Grid/Operation context.
 
-### Real-world analogy
-Like adding stamps to a passport - automatically annotates traces with relevant context.
+**Real-world analogy:** Like a form generator that auto-fills your personal info - starts activities with context already attached.
 
-### Methods
+**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ITelemetryActivityFactory.cs`
+
+**Intended Audience:** **Recommended for application services** that want automatic context wiring, enricher integration, and consistent tagging without manual plumbing.
+
+#### Methods
+
+```csharp
+public interface ITelemetryActivityFactory
+{
+    // Uses ambient IGridContextAccessor / IOperationContextAccessor
+    Activity? Start(string name, IReadOnlyDictionary<string, object?>? additionalTags = null);
+    
+    // Uses explicit contexts (bypasses ambient)
+    Activity? StartExplicit(
+        string name,
+        IGridContext gridContext,
+        IOperationContext? operationContext = null,
+        IReadOnlyDictionary<string, object?>? additionalTags = null);
+}
+```
+
+#### When to Use
+
+| Use Case | Recommended API |
+|----------|-----------------|
+| **Application service logic** | `ITelemetryActivityFactory.Start()` |
+| **Infrastructure (HTTP/messaging/database)** | `GridActivitySource.StartActivity()` or domain helpers |
+| **Kernel internal instrumentation** | `HoneyDrunkTelemetry.StartActivity()` |
+
+#### Usage Example
+
+```csharp
+public class PaymentService(ITelemetryActivityFactory activityFactory)
+{
+    public async Task<PaymentResult> ProcessAsync(PaymentRequest request)
+    {
+        // Uses ambient GridContext from IGridContextAccessor
+        using var activity = activityFactory.Start("ProcessPayment", new Dictionary<string, object?>
+        {
+            ["PaymentId"] = request.PaymentId,
+            ["Amount"] = request.Amount
+        });
+        
+        try
+        {
+            var result = await _gateway.ChargeAsync(request);
+            activity?.SetTag(TelemetryTags.Outcome, "success");
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetTag(TelemetryTags.Outcome, "failure");
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.RecordException(ex); // OpenTelemetry standard exception recording
+            throw;
+        }
+    }
+}
+```
+
+[↑ Back to top](#table-of-contents)
+
+---
+
+### ITraceEnricher.cs
+
+**What it is:** Enriches distributed traces with Grid-wide context and metadata.
+
+**Real-world analogy:** Like adding stamps to a passport - automatically annotates traces with relevant context.
+
+**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ITraceEnricher.cs`
+
+#### Methods
 
 ```csharp
 public interface ITraceEnricher
@@ -91,67 +189,25 @@ public interface ITraceEnricher
 }
 ```
 
-### Usage Example
-
-```csharp
-public class GridContextTraceEnricher : ITraceEnricher
-{
-    public void Enrich(ITelemetryContext context, IDictionary<string, object?> tags)
-    {
-        // Automatically add Grid context to all traces
-        tags[TelemetryTags.CorrelationId] = context.GridContext.CorrelationId;
-        tags[TelemetryTags.CausationId] = context.GridContext.CausationId;
-        tags[TelemetryTags.NodeId] = context.GridContext.NodeId;
-        tags[TelemetryTags.StudioId] = context.GridContext.StudioId;
-        tags[TelemetryTags.Environment] = context.GridContext.Environment;
-        
-        // Add baggage as tags
-        foreach (var (key, value) in context.GridContext.Baggage)
-        {
-            tags[$"hd.baggage.{key}"] = value;
-        }
-    }
-}
-
-public class NodeContextTraceEnricher(INodeContext nodeContext) : ITraceEnricher
-{
-    public void Enrich(ITelemetryContext context, IDictionary<string, object?> tags)
-    {
-        // Add Node-specific metadata
-        tags[TelemetryTags.NodeVersion] = nodeContext.Version;
-        tags[TelemetryTags.LifecycleStage] = nodeContext.LifecycleStage.ToString();
-        tags[TelemetryTags.MachineName] = nodeContext.MachineName;
-        tags[TelemetryTags.ProcessId] = nodeContext.ProcessId;
-    }
-}
-```
-
-### Enricher Registration
-
-```csharp
-// Register multiple enrichers (executed in order)
-builder.Services.AddSingleton<ITraceEnricher, GridContextTraceEnricher>();
-builder.Services.AddSingleton<ITraceEnricher, NodeContextTraceEnricher>();
-builder.Services.AddSingleton<ITraceEnricher, CustomBusinessEnricher>();
-```
-
-### When to use
+#### When to use
 - Automatic context propagation across all traces
 - Consistent tagging without manual instrumentation
 - Adding custom business metadata to traces
 - Environment-specific enrichment logic
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
-## ILogScopeFactory.cs
+### ILogScopeFactory.cs
 
-### What it is
-Creates logging scopes enriched with Grid context for structured logging.
+**What it is:** Creates logging scopes enriched with Grid context for structured logging.
 
-### Real-world analogy
-Like a meeting room that automatically records who's present - context is captured automatically.
+**Real-world analogy:** Like a meeting room that automatically records who's present - context is captured automatically.
 
-### Methods
+**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ILogScopeFactory.cs`
+
+#### Methods
 
 ```csharp
 public interface ILogScopeFactory
@@ -161,11 +217,27 @@ public interface ILogScopeFactory
 }
 ```
 
-### Usage Example
+#### DI Registration and Lifetime
+
+**ITelemetryContext Requirement:** `ILogScopeFactory` expects `ITelemetryContext` to be registered as **scoped** in DI. This is automatically handled by Node bootstrap when you call `AddHoneyDrunkGrid()` or `AddHoneyDrunkNode()`.
+
+**Typical Registration:**
+```csharp
+// ITelemetryContext registered as scoped (automatically resolved from Activity + GridContext)
+builder.Services.AddScoped<ITelemetryContext>(/* factory from previous section */);
+
+// ILogScopeFactory registered as singleton
+builder.Services.AddSingleton<ILogScopeFactory>(sp =>
+    new TelemetryLogScopeFactory(sp.GetRequiredService<ILogger<TelemetryLogScopeFactory>>()));
+```
+
+**Note:** `TelemetryLogScopeFactory` takes a non-generic `ILogger` in its constructor but is typically registered with `ILogger<TelemetryLogScopeFactory>`. This means log scopes are keyed to that logger category. For truly Node-wide scoping independent of category, consider using a logger provider integration instead.
+
+#### Usage Example
 
 ```csharp
 public class OrderProcessor(
-    ITelemetryContext telemetryContext,
+    ITelemetryContext telemetryContext,  // Scoped, resolved from Activity + GridContext
     ILogScopeFactory logScopeFactory,
     ILogger<OrderProcessor> logger)
 {
@@ -180,15 +252,10 @@ public class OrderProcessor(
         }))
         {
             logger.LogInformation("Processing order");
-            
             await ValidateOrderAsync(order);
             logger.LogInformation("Order validated");
-            
             await ChargePaymentAsync(order);
             logger.LogInformation("Payment charged");
-            
-            await FulfillOrderAsync(order);
-            logger.LogInformation("Order fulfilled");
         }
         
         // All logs above automatically include:
@@ -199,36 +266,19 @@ public class OrderProcessor(
 }
 ```
 
-### Structured Logging Output
-
-```json
-{
-  "timestamp": "2025-01-11T10:30:00Z",
-  "level": "Information",
-  "message": "Processing order",
-  "hd.trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "hd.span_id": "00f067aa0ba902b7",
-  "hd.correlation_id": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
-  "hd.node_id": "order-processor",
-  "hd.studio_id": "honeycomb",
-  "hd.environment": "production",
-  "OrderId": "ORD-12345",
-  "CustomerId": "CUST-67890",
-  "Amount": 99.99
-}
-```
+[↑ Back to top](#table-of-contents)
 
 ---
 
-## TelemetryTags.cs
+### TelemetryTags.cs
 
-### What it is
-Standard telemetry tag names for Grid-wide observability.
+**What it is:** Standard telemetry tag names for Grid-wide observability.
 
-### Real-world analogy
-Like a data dictionary - ensures everyone speaks the same language.
+**Real-world analogy:** Like a data dictionary - ensures everyone speaks the same language.
 
-### Standard Tags
+**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/TelemetryTags.cs`
+
+#### Standard Tags
 
 | Category | Tag | Description | Example |
 |----------|-----|-------------|---------|
@@ -247,125 +297,475 @@ Like a data dictionary - ensures everyone speaks the same language.
 | | `hd.source` | Request source | `http` |
 | | `hd.target` | Target system | `database` |
 | | `hd.duration_ms` | Duration (ms) | `125.4` |
-| **Lifecycle** | `hd.lifecycle_stage` | Node stage | `running` |
+| **Lifecycle** | `hd.lifecycle_stage` | Node stage | `ready` |
 | **Error** | `hd.error_type` | Error category | `validation` |
 | | `hd.error_message` | Error description | `Invalid input` |
 | **Caller** | `hd.caller_id` | Who made request | `user-123` |
 | | `hd.caller_type` | Caller type | `user` |
 
-### Usage Example
+[↑ Back to top](#table-of-contents)
+
+---
+
+## Implementations
+
+### GridActivitySource.cs
+
+**What it is:** Provides the central `ActivitySource` for HoneyDrunk Grid operations with helper methods for creating enriched activities.
+
+**Real-world analogy:** Like a stamping station - automatically marks every activity with Grid identity.
+
+**Location:** `HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
+
+**Intended Audience:** Primarily for **infrastructure-level operations** (HTTP pipelines, messaging adapters, database adapters). **Application services should prefer `ITelemetryActivityFactory`** for automatic context wiring and enricher integration.
+
+#### Key Properties
 
 ```csharp
-public class MetricsReporter(IMetricsCollector metrics, ITelemetryContext context)
+public static class GridActivitySource
 {
-    public void ReportPaymentProcessed(decimal amount, bool success)
+    public const string SourceName = "HoneyDrunk.Grid";
+    public const string Version = "0.3.0";
+    public static ActivitySource Instance { get; }
+}
+```
+
+#### Methods
+
+##### StartActivity
+
+Creates a new activity with Grid context enrichment.
+
+```csharp
+public static Activity? StartActivity(
+    string operationName,
+    IGridContext gridContext,
+    ActivityKind kind = ActivityKind.Internal,
+    IEnumerable<KeyValuePair<string, object?>>? tags = null)
+```
+
+**Automatic Tags:**
+- `hd.correlation_id`, `hd.node_id`, `hd.studio_id`, `hd.environment`
+- `hd.causation_id` (if present)
+- `hd.baggage.*` (all baggage items)
+
+##### Domain-Specific Helpers
+
+```csharp
+// HTTP operations
+Activity? StartHttpActivity(string method, string path, IGridContext gridContext);
+
+// Database operations
+Activity? StartDatabaseActivity(string operationType, string tableName, IGridContext gridContext);
+
+// Messaging operations
+Activity? StartMessageActivity(string messageType, string destination, IGridContext gridContext, ActivityKind kind);
+```
+
+##### Source-Agnostic Helper Methods
+
+These helpers work with **any** `Activity` regardless of source:
+
+```csharp
+// Record exception with standard tags
+void RecordException(Activity? activity, Exception exception);
+
+// Mark activity as successful
+void SetSuccess(Activity? activity);
+```
+
+**Design Note:** `RecordException()` and `SetSuccess()` are safe to use with activities created from `ITelemetryActivityFactory`, `HoneyDrunkTelemetry`, or any other `ActivitySource`.
+
+#### Usage Example
+
+```csharp
+// Infrastructure usage (HTTP middleware)
+public class GridHttpMiddleware(IGridContext gridContext)
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        metrics.RecordCounter("payments.processed", 1,
-            new KeyValuePair<string, object?>(TelemetryTags.NodeId, context.GridContext.NodeId),
-            new KeyValuePair<string, object?>(TelemetryTags.Environment, context.GridContext.Environment),
-            new KeyValuePair<string, object?>(TelemetryTags.Outcome, success ? "success" : "failure"));
+        using var activity = GridActivitySource.StartHttpActivity(
+            context.Request.Method,
+            context.Request.Path,
+            gridContext);
         
-        metrics.RecordHistogram("payments.amount", (double)amount,
-            new KeyValuePair<string, object?>(TelemetryTags.StudioId, context.GridContext.StudioId));
+        try
+        {
+            await next(context);
+            GridActivitySource.SetSuccess(activity);
+        }
+        catch (Exception ex)
+        {
+            GridActivitySource.RecordException(activity, ex);
+            throw;
+        }
     }
 }
 ```
 
-### Query Examples (Prometheus/Grafana)
+#### OpenTelemetry Registration
 
-```promql
-# Payments by Node
-sum by (hd_node_id) (payments_processed_total{hd_environment="production"})
-
-# Error rate by operation
-rate(operations_total{hd_outcome="failure"}[5m]) / rate(operations_total[5m])
-
-# P95 latency by Studio
-histogram_quantile(0.95, sum by (hd_studio_id, le) (operation_duration_ms_bucket))
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing.AddSource(GridActivitySource.SourceName);
+        tracing.AddOtlpExporter();
+    });
 ```
+
+[↑ Back to top](#table-of-contents)
+
+---
+
+### HoneyDrunkTelemetry.cs
+
+**What it is:** Central telemetry facade providing a single `ActivitySource` and helpers for starting activities enriched with Grid/Operation context and trace enrichers.
+
+**Real-world analogy:** Like a dispatch center - coordinates all telemetry with consistent standards.
+
+**Location:** `HoneyDrunk.Kernel/Telemetry/HoneyDrunkTelemetry.cs`
+
+#### Key Members
+
+```csharp
+public static class HoneyDrunkTelemetry
+{
+    public static readonly ActivitySource ActivitySource = new("HoneyDrunk.Kernel");
+    
+    public static Activity? StartActivity(
+        string name,
+        IGridContext grid,
+        IOperationContext? operation = null,
+        IEnumerable<ITraceEnricher>? enrichers = null,
+        IReadOnlyDictionary<string, object?>? additionalTags = null);
+}
+```
+
+#### What It Does
+
+1. **Creates baseline tags** from `IGridContext` (correlation, node, studio, environment)
+2. **Adds operation tags** from `IOperationContext` (operation name, outcome)
+3. **Runs trace enrichers** to add custom tags
+4. **Applies additional tags** from caller
+5. **Starts and returns** the enriched `Activity`
+
+#### Usage Example
+
+```csharp
+public class PaymentProcessor(
+    IGridContext gridContext,
+    IOperationContext operationContext,
+    IEnumerable<ITraceEnricher> enrichers)
+{
+    public async Task ProcessAsync(Payment payment)
+    {
+        using var activity = HoneyDrunkTelemetry.StartActivity(
+            "ProcessPayment",
+            gridContext,
+            operationContext,
+            enrichers,
+            new Dictionary<string, object?>
+            {
+                ["payment.id"] = payment.Id,
+                ["payment.amount"] = payment.Amount
+            });
+        
+        // Activity automatically includes:
+        // - Grid tags (correlation, node, studio)
+        // - Operation tags (operation name, outcome)
+        // - Enricher tags (custom business context)
+        // - Payment-specific tags
+        
+        await ChargePaymentAsync(payment);
+    }
+}
+```
+
+[↑ Back to top](#table-of-contents)
+
+---
+
+### TelemetryActivityFactory.cs
+
+**What it is:** Implementation of `ITelemetryActivityFactory` that uses ambient context accessors and trace enrichers.
+
+**Location:** `HoneyDrunk.Kernel/Telemetry/TelemetryActivityFactory.cs`
+
+#### How It Works
+
+```csharp
+internal sealed class TelemetryActivityFactory(
+    IGridContextAccessor gridAccessor,
+    IOperationContextAccessor opAccessor,
+    IEnumerable<ITraceEnricher> enrichers) : ITelemetryActivityFactory
+{
+    public Activity? Start(string name, IReadOnlyDictionary<string, object?>? additionalTags = null)
+    {
+        var grid = _gridAccessor.GridContext;
+        if (grid is null) return null; // No ambient context
+        
+        var op = _opAccessor.Current;
+        return HoneyDrunkTelemetry.StartActivity(name, grid, op, _enrichers, additionalTags);
+    }
+    
+    public Activity? StartExplicit(string name, IGridContext gridContext, IOperationContext? operationContext = null, IReadOnlyDictionary<string, object?>? additionalTags = null)
+    {
+        return HoneyDrunkTelemetry.StartActivity(name, gridContext, operationContext, _enrichers, additionalTags);
+    }
+}
+```
+
+**Design:** Registered via DI as `ITelemetryActivityFactory`. Uses ambient accessors for `Start()` and explicit contexts for `StartExplicit()`.
+
+[↑ Back to top](#table-of-contents)
+
+---
+
+### TelemetryContext.cs
+
+**What it is:** Default implementation of `ITelemetryContext`.
+
+**Location:** `HoneyDrunk.Kernel/Telemetry/TelemetryContext.cs`
+
+#### Constructor
+
+```csharp
+public sealed class TelemetryContext(
+    IGridContext gridContext,
+    string traceId,
+    string spanId,
+    string? parentSpanId = null,
+    bool isSampled = true,
+    IReadOnlyDictionary<string, string>? telemetryBaggage = null) : ITelemetryContext
+```
+
+**Design:** Immutable wrapper around `IGridContext` with additional OpenTelemetry-specific metadata.
+
+[↑ Back to top](#table-of-contents)
+
+---
+
+### TelemetryContext Creation and Lifetime
+
+**What it is:** How `ITelemetryContext` instances are created and made available via DI.
+
+#### How It Works
+
+**In standard Nodes**, `ITelemetryContext` is registered as **scoped** when you call `AddHoneyDrunkGrid()` or `AddHoneyDrunkNode()`. The factory below illustrates how it is constructed from the current `Activity` and `IGridContext`.
+
+`ITelemetryContext` is automatically created for each request/operation by Node middleware or message handlers:
+
+1. **HTTP Requests** - `GridContextMiddleware` creates `ITelemetryContext` from:
+   - Current `Activity.TraceId` / `Activity.SpanId` / `Activity.ParentSpanId`
+   - Current `IGridContext` (from headers or ambient accessor)
+   - `Activity.Recorded` for `IsSampled`
+
+2. **Message Processing** - Message handler creates `ITelemetryContext` from:
+   - Message properties (trace headers)
+   - `IGridContext` extracted from message metadata
+   - Current `Activity` if available
+
+3. **Background Jobs** - Job infrastructure creates `ITelemetryContext` from:
+   - Job metadata (correlation ID, trace context)
+   - `IGridContext` from job parameters
+   - New `Activity` started for job execution
+
+#### Illustrative Factory (Custom Host Scenarios)
+
+If you are hosting outside the standard Node bootstrap, here's how to manually register `ITelemetryContext`:
+
+```csharp
+// Example factory for custom hosting scenarios (not needed with AddHoneyDrunkGrid)
+builder.Services.AddScoped<ITelemetryContext>(sp =>
+{
+    var gridContext = sp.GetRequiredService<IGridContextAccessor>().GridContext
+        ?? throw new InvalidOperationException("No ambient GridContext");
+    
+    var activity = Activity.Current;
+    if (activity is null)
+    {
+        // Fallback: create minimal context (not sampled)
+        return new TelemetryContext(
+            gridContext,
+            traceId: gridContext.CorrelationId,
+            spanId: gridContext.CorrelationId, // Reuse correlation ID for simplicity
+            isSampled: false);
+    }
+    
+    return new TelemetryContext(
+        gridContext,
+        traceId: activity.TraceId.ToString(),
+        spanId: activity.SpanId.ToString(),
+        parentSpanId: activity.ParentSpanId?.ToString(), // Nullable for root spans
+        isSampled: activity.Recorded);
+});
+```
+
+#### Usage in Services
+
+```csharp
+// ITelemetryContext automatically available in scoped services
+public class OrderService(ITelemetryContext telemetryContext, ILogger<OrderService> logger)
+{
+    public async Task ProcessOrderAsync(Order order)
+    {
+        // Use telemetryContext for logging scopes, enrichers, etc.
+        logger.LogInformation(
+            "Processing order {OrderId} in trace {TraceId}",
+            order.Id,
+            telemetryContext.TraceId);
+    }
+}
+```
+
+**Lifetime:** Scoped to the current request/message/job. Created once per scope, shared across all services in that scope.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
 ## Complete Observability Example
 
-```csharp
-// 1. Register telemetry services
-builder.Services.AddSingleton<ITraceEnricher, GridContextTraceEnricher>();
-builder.Services.AddSingleton<ITraceEnricher, NodeContextTraceEnricher>();
-builder.Services.AddSingleton<ILogScopeFactory, TelemetryLogScopeFactory>();
+**Context:** This example shows Node-level bootstrap configuration and application service usage following recommended patterns.
 
-// 2. Configure OpenTelemetry
+```csharp
+// ===== 1. Node Bootstrap (Program.cs) =====
+var builder = WebApplication.CreateBuilder(args);
+
+// Register Node with Grid (includes ITelemetryContext as scoped)
+builder.Services.AddHoneyDrunkGrid(options =>
+{
+    options.NodeId = "payment-node";
+    options.StudioId = "demo-studio";
+    options.Version = "1.0.0";
+    options.Environment = "production";
+});
+
+// Register telemetry services
+builder.Services.AddSingleton<ITraceEnricher, GridContextTraceEnricher>();
+builder.Services.AddSingleton<ITelemetryActivityFactory, TelemetryActivityFactory>();
+builder.Services.AddSingleton<ILogScopeFactory>(sp =>
+    new TelemetryLogScopeFactory(sp.GetRequiredService<ILogger<TelemetryLogScopeFactory>>()));
+
+// Configure OpenTelemetry (Node hosting layer, not app code)
 builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource =>
+    {
+        // Resource attributes should align with Grid concepts:
+        // - service.name = NodeId
+        // - service.version = NodeVersion
+        // - TelemetryTags.StudioId, TelemetryTags.Environment as custom attributes
+        
+        resource.AddService(
+            serviceName: "payment-node",     // In real Nodes, resolved from INodeContext.NodeId
+            serviceVersion: "1.0.0");        // In real Nodes, resolved from INodeContext.Version
+        
+        resource.AddAttributes(new Dictionary<string, object>
+        {
+            [TelemetryTags.StudioId] = "demo-studio",      // From INodeContext.StudioId
+            [TelemetryTags.Environment] = "production"     // From INodeContext.Environment
+        });
+    })
     .WithTracing(tracing =>
     {
-        tracing.AddSource("HoneyDrunk.*");
-        tracing.SetResourceBuilder(ResourceBuilder.CreateDefault()
-            .AddService(nodeContext.NodeId, nodeContext.Version)
-            .AddAttributes(new Dictionary<string, object>
-            {
-                [TelemetryTags.StudioId] = studioConfig.StudioId,
-                [TelemetryTags.Environment] = studioConfig.Environment
-            }));
+        // Register both ActivitySources
+        tracing.AddSource(GridActivitySource.SourceName);           // "HoneyDrunk.Grid"
+        tracing.AddSource(HoneyDrunkTelemetry.ActivitySource.Name); // "HoneyDrunk.Kernel"
+        
+        // Add instrumentation
+        tracing.AddAspNetCoreInstrumentation();
+        tracing.AddHttpClientInstrumentation();
+        
+        // Export to OTLP collector
         tracing.AddOtlpExporter(options =>
         {
-            options.Endpoint = new Uri(studioConfig.ObservabilityEndpoint);
+            options.Endpoint = new Uri(builder.Configuration["Observability:OtlpEndpoint"]!);
         });
     });
 
-// 3. Use in application
+var app = builder.Build();
+app.UseGridContext(); // Middleware creates ITelemetryContext per request
+app.MapControllers();
+await app.RunAsync();
+
+// ===== 2. Application Service (Recommended Pattern) =====
 public class PaymentService(
-    ITelemetryContext telemetryContext,
+    ITelemetryActivityFactory activityFactory,  // Ambient context-based
     ILogScopeFactory logScopeFactory,
-    ITraceEnricher[] enrichers,
+    ITelemetryContext telemetryContext,         // Scoped, from Activity + GridContext
     ILogger<PaymentService> logger)
 {
     public async Task<PaymentResult> ProcessAsync(PaymentRequest request)
     {
-        // Create enriched scope
-        using var scope = logScopeFactory.CreateScope(telemetryContext, new Dictionary<string, object?>
+        // Create enriched logging scope
+        using var logScope = logScopeFactory.CreateScope(telemetryContext, new Dictionary<string, object?>
         {
             ["PaymentId"] = request.PaymentId,
             ["Amount"] = request.Amount,
             ["Currency"] = request.Currency
         });
         
-        // Enrich trace
-        var tags = new Dictionary<string, object?>
+        // Start activity with ambient context (uses HoneyDrunkTelemetry.ActivitySource internally)
+        using var activity = activityFactory.Start("ProcessPayment", new Dictionary<string, object?>
         {
-            [TelemetryTags.Operation] = "ProcessPayment",
             [TelemetryTags.Source] = "http",
             [TelemetryTags.Target] = "payment_gateway"
-        };
-        
-        foreach (var enricher in enrichers)
-        {
-            enricher.Enrich(telemetryContext, tags);
-        }
-        
-        using var activity = ActivitySource.StartActivity("ProcessPayment", ActivityKind.Internal, tags);
+        });
         
         try
         {
             logger.LogInformation("Processing payment");
             var result = await _gateway.ChargeAsync(request);
             
+            // Use OpenTelemetry standard methods
             activity?.SetTag(TelemetryTags.Outcome, "success");
+            activity?.SetStatus(ActivityStatusCode.Ok);
             logger.LogInformation("Payment successful");
             
             return result;
         }
         catch (Exception ex)
         {
+            // Use OpenTelemetry standard exception recording
             activity?.SetTag(TelemetryTags.Outcome, "failure");
-            activity?.SetTag(TelemetryTags.ErrorType, ex.GetType().Name);
-            activity?.SetTag(TelemetryTags.ErrorMessage, ex.Message);
-            
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.RecordException(ex);
             logger.LogError(ex, "Payment failed");
             throw;
         }
     }
 }
+
+// ===== 3. Infrastructure Middleware (GridActivitySource pattern) =====
+public class DatabaseTracingMiddleware(IGridContext gridContext)
+{
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, string operationType, string tableName)
+    {
+        using var activity = GridActivitySource.StartDatabaseActivity(operationType, tableName, gridContext);
+        
+        try
+        {
+            var result = await operation();
+            GridActivitySource.SetSuccess(activity);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            GridActivitySource.RecordException(activity, ex);
+            throw;
+        }
+    }
+}
 ```
+
+**Key Patterns:**
+- **Node Bootstrap** - Configure OpenTelemetry at hosting layer with Grid-aligned resource attributes
+- **Application Services** - Use `ITelemetryActivityFactory` + `ILogScopeFactory` for automatic context wiring
+- **Infrastructure** - Use `GridActivitySource` for HTTP/database/messaging adapters
+- **Helper Methods** - `SetSuccess()` / `RecordException()` are source-agnostic and safe with any Activity
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -373,69 +773,106 @@ public class PaymentService(
 
 ```csharp
 [Fact]
+public void GridActivitySource_StartActivity_EnrichesWithGridContext()
+{
+    // Arrange
+    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    
+    // Act
+    using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
+    
+    // Assert
+    activity.Should().NotBeNull();
+    activity!.GetTagItem("hd.correlation_id").Should().Be("corr-123");
+    activity.GetTagItem("hd.node_id").Should().Be("test-node");
+    activity.GetTagItem("hd.studio_id").Should().Be("test-studio");
+}
+
+[Fact]
 public void TraceEnricher_AddsGridContext()
 {
     // Arrange
-    var context = new TestTelemetryContext
-    {
-        GridContext = new GridContext
-        {
-            CorrelationId = "test-123",
-            NodeId = "test-node",
-            StudioId = "test-studio"
-        }
-    };
+    var gridContext = new GridContext("test-123", "test-node", "test-studio", "test");
+    var telemetryContext = new TelemetryContext(gridContext, "trace-id", "span-id");
     var enricher = new GridContextTraceEnricher();
     var tags = new Dictionary<string, object?>();
     
     // Act
-    enricher.Enrich(context, tags);
+    enricher.Enrich(telemetryContext, tags);
     
     // Assert
-    Assert.Equal("test-123", tags[TelemetryTags.CorrelationId]);
-    Assert.Equal("test-node", tags[TelemetryTags.NodeId]);
-    Assert.Equal("test-studio", tags[TelemetryTags.StudioId]);
+    tags[TelemetryTags.CorrelationId].Should().Be("test-123");
+    tags[TelemetryTags.NodeId].Should().Be("test-node");
+    tags[TelemetryTags.StudioId].Should().Be("test-studio");
 }
 
 [Fact]
 public void LogScopeFactory_CreatesScope()
 {
     // Arrange
-    var factory = new TelemetryLogScopeFactory();
-    var context = new TestTelemetryContext { TraceId = "trace-123" };
+    var factory = new TelemetryLogScopeFactory(NullLogger.Instance);
+    var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+    var telemetryContext = new TelemetryContext(gridContext, "trace-123", "span-456");
     
     // Act
-    using var scope = factory.CreateScope(context);
+    using var scope = factory.CreateScope(telemetryContext);
     
-    // Assert - scope should be active
-    Assert.NotNull(scope);
+    // Assert
+    scope.Should().NotBeNull();
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
 ## Summary
 
-| Component | Purpose | Integration Point |
-|-----------|---------|-------------------|
-| **ITelemetryContext** | W3C Trace Context view | OpenTelemetry, App Insights |
-| **ITraceEnricher** | Automatic tag injection | Trace creation pipeline |
-| **ILogScopeFactory** | Structured logging scopes | Logger configuration |
-| **TelemetryTags** | Standard tag names | All metrics/traces/logs |
+| Component | Purpose | Location | Type | Audience |
+|-----------|---------|----------|------|----------|
+| **ITelemetryContext** | W3C Trace Context view | Abstractions | Interface | All |
+| **ITelemetryActivityFactory** | Ambient activity creation | Abstractions | Interface | **Application Services** |
+| **ITraceEnricher** | Automatic tag injection | Abstractions | Interface | All |
+| **ILogScopeFactory** | Structured logging scopes | Abstractions | Interface | All |
+| **TelemetryTags** | Standard tag names | Abstractions | Static class | All |
+| **GridActivitySource** | Central ActivitySource + helpers | Implementation | Static class | **Infrastructure** |
+| **HoneyDrunkTelemetry** | Telemetry facade | Implementation | Static class | **Kernel Internals** |
+| **TelemetryActivityFactory** | Factory implementation | Implementation | Class (internal) | DI |
+| **TelemetryContext** | Context implementation | Implementation | Class | DI |
+| **GridContextTraceEnricher** | Built-in enricher | Implementation | Class | DI |
+| **TelemetryLogScopeFactory** | Scope factory implementation | Implementation | Class | DI |
 
 **Key Patterns:**
-- Use enrichers for automatic context propagation
-- Use log scopes for structured logging
-- Use standard tags for unified querying
-- Map to W3C Trace Context for interoperability
+
+**For Application Services (Recommended):**
+- Use `ITelemetryActivityFactory.Start()` for automatic context wiring and enricher integration
+- Use `ILogScopeFactory.CreateScope()` for structured logging with automatic Grid context
+- Use OpenTelemetry standard methods: `Activity.SetStatus()`, `Activity.RecordException()`
+- Helper methods `GridActivitySource.SetSuccess()` / `RecordException()` are safe with any Activity
+
+**For Infrastructure (HTTP/Messaging/Database Adapters):**
+- Use `GridActivitySource.StartActivity()` or domain-specific helpers (`StartHttpActivity`, `StartDatabaseActivity`, `StartMessageActivity`)
+- Directly tag activities with Grid context for protocol-level tracing
+
+**For Kernel Internals:**
+- Use `HoneyDrunkTelemetry.StartActivity()` for Kernel-internal instrumentation
 
 **OpenTelemetry Integration:**
-- ITelemetryContext maps to Activity/Span
-- TelemetryTags align with semantic conventions
-- Enrichers inject tags at trace creation
-- Compatible with OTLP exporters
+- Register both `GridActivitySource.SourceName` ("HoneyDrunk.Grid") and `HoneyDrunkTelemetry.ActivitySource.Name` ("HoneyDrunk.Kernel")
+- Configure resource attributes to align with Grid concepts: `service.name = NodeId`, `service.version = NodeVersion`
+- Activities automatically enriched with Grid context via `ITraceEnricher`
+- Compatible with OTLP exporters, Jaeger, Zipkin, Application Insights
 
----
+**Context Flow:**
+1. `GridContext` provides Node/Studio/Environment identity
+2. `Activity.Current` provides W3C trace/span IDs
+3. `ITelemetryContext` bridges both for observability
+4. Middleware creates `ITelemetryContext` per request/message (scoped DI)
+5. Services inject `ITelemetryContext` for logging scopes and enrichers
 
-[← Back to File Guide](FILE_GUIDE.md)
+**Two Activity Sources:**
+- **GridActivitySource** ("HoneyDrunk.Grid") - Grid-level operations (HTTP, messaging, database)
+- **HoneyDrunkTelemetry.ActivitySource** ("HoneyDrunk.Kernel") - Kernel-internal instrumentation
+
+[← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

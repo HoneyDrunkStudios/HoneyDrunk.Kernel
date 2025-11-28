@@ -1,4 +1,4 @@
-namespace HoneyDrunk.Kernel.Abstractions.Config;
+namespace HoneyDrunk.Kernel.Abstractions.Configuration;
 
 /// <summary>
 /// Provides access to secrets from a secure store.

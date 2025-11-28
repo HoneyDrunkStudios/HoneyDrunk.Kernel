@@ -339,4 +339,123 @@ public class GridContextSerializerTests
         context.Baggage.Should().ContainKey("key1");
         context.Baggage.Should().NotContainKey("key2");
     }
+
+    [Fact]
+    public void Serialize_WithTenantAndProjectIds_IncludesIdentifiers()
+    {
+        var context = new GridContext(
+            "corr-123",
+            "test-node",
+            "test-studio",
+            "production",
+            tenantId: "tenant-789",
+            projectId: "project-012");
+
+        var json = GridContextSerializer.Serialize(context);
+
+        json.Should().Contain("\"tenantId\":\"tenant-789\"");
+        json.Should().Contain("\"projectId\":\"project-012\"");
+    }
+
+    [Fact]
+    public void Deserialize_WithTenantAndProjectIds_DeserializesIdentifiers()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production"",
+            ""tenantId"": ""tenant-789"",
+            ""projectId"": ""project-012""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.TenantId.Should().Be("tenant-789");
+        context.ProjectId.Should().Be("project-012");
+    }
+
+    [Fact]
+    public void Serialize_WithSpecialCharactersInBaggage_EscapesCorrectly()
+    {
+        var baggage = new Dictionary<string, string>
+        {
+            ["key-with-quotes"] = "value with \"quotes\"",
+            ["key-with-newline"] = "value\nwith\nnewlines",
+            ["key-with-backslash"] = "value\\with\\backslash"
+        };
+        var context = new GridContext(
+            "corr-123",
+            "test-node",
+            "test-studio",
+            "production",
+            baggage: baggage);
+
+        var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);
+        var deserialized = GridContextSerializer.Deserialize(json);
+
+        deserialized.Should().NotBeNull();
+        deserialized!.Baggage["key-with-quotes"].Should().Be("value with \"quotes\"");
+        deserialized.Baggage["key-with-newline"].Should().Be("value\nwith\nnewlines");
+        deserialized.Baggage["key-with-backslash"].Should().Be("value\\with\\backslash");
+    }
+
+    [Fact]
+    public void Deserialize_JsonWithExtraFields_IgnoresExtraFields()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production"",
+            ""extraField"": ""should-be-ignored"",
+            ""anotherExtra"": 12345
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.CorrelationId.Should().Be("corr-123");
+    }
+
+    [Fact]
+    public void Serialize_VeryLargeBaggage_HandlesCorrectly()
+    {
+        var largeBaggage = Enumerable.Range(0, 100)
+            .ToDictionary(i => $"key-{i}", i => $"value-{i}");
+        var context = new GridContext(
+            "corr-123",
+            "test-node",
+            "test-studio",
+            "production",
+            baggage: largeBaggage);
+
+        var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);
+        var deserialized = GridContextSerializer.Deserialize(json);
+
+        deserialized.Should().NotBeNull();
+        deserialized!.Baggage.Should().HaveCount(100);
+    }
+
+    [Fact]
+    public void Serialize_CaseInsensitiveKeys_PreservesCase()
+    {
+        var baggage = new Dictionary<string, string>
+        {
+            ["UserId"] = "user-123",
+            ["SESSION_ID"] = "session-456"
+        };
+        var context = new GridContext(
+            "corr-123",
+            "test-node",
+            "test-studio",
+            "production",
+            baggage: baggage);
+
+        var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);
+
+        json.Should().Contain("UserId");
+        json.Should().Contain("SESSION_ID");
+    }
 }

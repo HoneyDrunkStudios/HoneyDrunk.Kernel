@@ -1,4 +1,4 @@
-using HoneyDrunk.Kernel.Abstractions.Config;
+using HoneyDrunk.Kernel.Abstractions.Configuration;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
 using Microsoft.Extensions.Configuration;
 

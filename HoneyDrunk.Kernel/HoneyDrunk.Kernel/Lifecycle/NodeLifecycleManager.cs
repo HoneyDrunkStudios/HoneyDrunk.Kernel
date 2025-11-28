@@ -1,7 +1,9 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Health;
 using HoneyDrunk.Kernel.Abstractions.Lifecycle;
+using HoneyDrunk.Kernel.Telemetry;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Lifecycle;
 
@@ -25,6 +27,7 @@ public sealed class NodeLifecycleManager(
     private readonly IEnumerable<IHealthContributor> _healthContributors = healthContributors ?? throw new ArgumentNullException(nameof(healthContributors));
     private readonly IEnumerable<IReadinessContributor> _readinessContributors = readinessContributors ?? throw new ArgumentNullException(nameof(readinessContributors));
     private readonly ILogger<NodeLifecycleManager> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly ActivitySource _activitySource = GridActivitySource.Instance;
 
     /// <summary>
     /// Performs comprehensive health check across all contributors.
@@ -34,12 +37,20 @@ public sealed class NodeLifecycleManager(
     public async Task<(HealthStatus status, IReadOnlyDictionary<string, (HealthStatus status, string? message)> details)>
         CheckHealthAsync(CancellationToken cancellationToken = default)
     {
+        using var activity = _activitySource.StartActivity("HealthCheck", ActivityKind.Internal);
+        activity?.SetTag("node.id", _nodeContext.NodeId);
+        activity?.SetTag("node.lifecycle_stage", _nodeContext.LifecycleStage.ToString());
+
         var contributors = _healthContributors.OrderBy(c => c.Priority).ToList();
 
         if (contributors.Count == 0)
         {
+            activity?.SetTag("health.contributors.count", 0);
+            GridActivitySource.SetSuccess(activity);
             return (status: HealthStatus.Healthy, new Dictionary<string, (HealthStatus, string?)>());
         }
+
+        activity?.SetTag("health.contributors.count", contributors.Count);
 
         var details = new Dictionary<string, (HealthStatus status, string? message)>();
         var worstStatus = HealthStatus.Healthy;
@@ -65,6 +76,9 @@ public sealed class NodeLifecycleManager(
                         contributor.Name,
                         message);
 
+                    activity?.SetTag("health.status", "Unhealthy");
+                    activity?.SetTag("health.failed_contributor", contributor.Name);
+                    GridActivitySource.SetSuccess(activity);
                     return (status: HealthStatus.Unhealthy, details);
                 }
             }
@@ -75,6 +89,9 @@ public sealed class NodeLifecycleManager(
 
                 if (contributor.IsCritical)
                 {
+                    activity?.SetTag("health.status", "Unhealthy");
+                    activity?.SetTag("health.failed_contributor", contributor.Name);
+                    GridActivitySource.RecordException(activity, ex);
                     return (status: HealthStatus.Unhealthy, details);
                 }
 
@@ -82,6 +99,8 @@ public sealed class NodeLifecycleManager(
             }
         }
 
+        activity?.SetTag("health.status", worstStatus.ToString());
+        GridActivitySource.SetSuccess(activity);
         return (worstStatus, details);
     }
 
@@ -93,12 +112,20 @@ public sealed class NodeLifecycleManager(
     public async Task<(bool isReady, IReadOnlyDictionary<string, (bool isReady, string? reason)> details)>
         CheckReadinessAsync(CancellationToken cancellationToken = default)
     {
+        using var activity = _activitySource.StartActivity("ReadinessCheck", ActivityKind.Internal);
+        activity?.SetTag("node.id", _nodeContext.NodeId);
+        activity?.SetTag("node.lifecycle_stage", _nodeContext.LifecycleStage.ToString());
+
         var contributors = _readinessContributors.OrderBy(c => c.Priority).ToList();
 
         if (contributors.Count == 0)
         {
+            activity?.SetTag("readiness.contributors.count", 0);
+            GridActivitySource.SetSuccess(activity);
             return (true, new Dictionary<string, (bool, string?)>());
         }
+
+        activity?.SetTag("readiness.contributors.count", contributors.Count);
 
         var details = new Dictionary<string, (bool isReady, string? reason)>();
         var allReady = true;
@@ -141,6 +168,8 @@ public sealed class NodeLifecycleManager(
             }
         }
 
+        activity?.SetTag("readiness.status", allReady ? "Ready" : "NotReady");
+        GridActivitySource.SetSuccess(activity);
         return (allReady, details);
     }
 
@@ -157,6 +186,11 @@ public sealed class NodeLifecycleManager(
             return;
         }
 
+        using var activity = _activitySource.StartActivity("LifecycleTransition", ActivityKind.Internal);
+        activity?.SetTag("node.id", _nodeContext.NodeId);
+        activity?.SetTag("lifecycle.from", currentStage.ToString());
+        activity?.SetTag("lifecycle.to", newStage.ToString());
+
         _logger.LogInformation(
             "Node {NodeId} transitioning from {CurrentStage} to {NewStage}",
             _nodeContext.NodeId,
@@ -164,5 +198,6 @@ public sealed class NodeLifecycleManager(
             newStage);
 
         _nodeContext.SetLifecycleStage(newStage);
+        GridActivitySource.SetSuccess(activity);
     }
 }

@@ -45,7 +45,7 @@ public class NodeContextReadinessContributorTests
     public async Task CheckReadinessAsync_ValidContextAndRunningStage_ReturnsReady()
     {
         var nodeContext = CreateValidNodeContext();
-        nodeContext.SetLifecycleStage(NodeLifecycleStage.Running);
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
         var contributor = new NodeContextReadinessContributor(nodeContext);
 
         var (isReady, reason) = await contributor.CheckReadinessAsync();
@@ -208,7 +208,7 @@ public class NodeContextReadinessContributorTests
     public async Task CheckReadinessAsync_WithCancellationToken_DoesNotThrow()
     {
         var nodeContext = CreateValidNodeContext();
-        nodeContext.SetLifecycleStage(NodeLifecycleStage.Running);
+        nodeContext.SetLifecycleStage(NodeLifecycleStage.Ready);
         var contributor = new NodeContextReadinessContributor(nodeContext);
         using var cts = new CancellationTokenSource();
 

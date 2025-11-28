@@ -183,120 +183,6 @@ public class GridContextTests
     }
 
     [Fact]
-    public void CreateChildContext_CreatesNewContextWithCausation()
-    {
-        // Arrange
-        var parent = new GridContext(
-            correlationId: "parent-corr",
-            nodeId: "parent-node",
-            studioId: "studio",
-            environment: "env",
-            baggage: new Dictionary<string, string> { ["key"] = "value" });
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        child.CorrelationId.Should().NotBe(parent.CorrelationId);
-        child.CausationId.Should().Be(parent.CorrelationId);
-        child.NodeId.Should().Be(parent.NodeId);
-        child.StudioId.Should().Be(parent.StudioId);
-        child.Environment.Should().Be(parent.Environment);
-        child.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("value");
-    }
-
-    [Fact]
-    public void CreateChildContext_WithDifferentNodeId_CreatesContextWithNewNodeId()
-    {
-        // Arrange
-        var parent = new GridContext("corr", "parent-node", "studio", "env");
-
-        // Act
-        var child = parent.CreateChildContext("child-node");
-
-        // Assert
-        child.NodeId.Should().Be("child-node");
-        child.CausationId.Should().Be(parent.CorrelationId);
-    }
-
-    [Fact]
-    public void CreateChildContext_PropagatesCancellationToken()
-    {
-        // Arrange
-        using var cts = new CancellationTokenSource();
-        var parent = new GridContext(
-            correlationId: "corr",
-            nodeId: "node",
-            studioId: "studio",
-            environment: "env",
-            cancellation: cts.Token);
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        child.Cancellation.Should().Be(cts.Token);
-    }
-
-    [Fact]
-    public void CreateChildContext_WhenParentHasCausationId_ChildCausationIsParentCorrelation()
-    {
-        // Arrange
-        var grandparent = new GridContext("grandparent-corr", "node", "studio", "env");
-        var parent = grandparent.CreateChildContext();
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        parent.CausationId.Should().Be("grandparent-corr");
-        child.CausationId.Should().Be(parent.CorrelationId);
-        child.CausationId.Should().NotBe(grandparent.CorrelationId);
-    }
-
-    [Fact]
-    public void CreateChildContext_PreservesAllBaggageItems()
-    {
-        // Arrange
-        var parent = new GridContext(
-            correlationId: "corr",
-            nodeId: "node",
-            studioId: "studio",
-            environment: "env",
-            baggage: new Dictionary<string, string>
-            {
-                ["key1"] = "value1",
-                ["key2"] = "value2",
-                ["key3"] = "value3"
-            });
-
-        // Act
-        var child = parent.CreateChildContext();
-
-        // Assert
-        child.Baggage.Should().HaveCount(3);
-        child.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
-        child.Baggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
-        child.Baggage.Should().ContainKey("key3").WhoseValue.Should().Be("value3");
-    }
-
-    [Fact]
-    public void CreateChildContext_CreatesNewUlidForCorrelationId()
-    {
-        // Arrange
-        var parent = new GridContext("corr", "node", "studio", "env");
-
-        // Act
-        var child1 = parent.CreateChildContext();
-        var child2 = parent.CreateChildContext();
-
-        // Assert
-        child1.CorrelationId.Should().NotBe(child2.CorrelationId);
-        child1.CorrelationId.Should().NotBeNullOrWhiteSpace();
-        child2.CorrelationId.Should().NotBeNullOrWhiteSpace();
-    }
-
-    [Fact]
     public void WithBaggage_AddsNewBaggage()
     {
         // Arrange
@@ -459,5 +345,91 @@ public class GridContextTests
         context.Baggage.Should().HaveCount(1);
         context.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("value");
         context.Baggage.Should().NotContainKey("new-key");
+    }
+
+    [Fact]
+    public void Constructor_WithTenantId_StoresTenantId()
+    {
+        // Act
+        var context = new GridContext(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            tenantId: "tenant-456");
+
+        // Assert
+        context.TenantId.Should().Be("tenant-456");
+    }
+
+    [Fact]
+    public void Constructor_WithProjectId_StoresProjectId()
+    {
+        // Act
+        var context = new GridContext(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            projectId: "project-789");
+
+        // Assert
+        context.ProjectId.Should().Be("project-789");
+    }
+
+    [Fact]
+    public void Constructor_WithTenantAndProject_StoresBoth()
+    {
+        // Act
+        var context = new GridContext(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            tenantId: "tenant-456",
+            projectId: "project-789");
+
+        // Assert
+        context.TenantId.Should().Be("tenant-456");
+        context.ProjectId.Should().Be("project-789");
+    }
+
+    [Fact]
+    public void WithBaggage_PreservesTenantAndProjectIds()
+    {
+        // Arrange
+        var context = new GridContext(
+            "corr",
+            "node",
+            "studio",
+            "env",
+            tenantId: "tenant-123",
+            projectId: "project-456");
+
+        // Act
+        var newContext = context.WithBaggage("key", "value");
+
+        // Assert
+        newContext.TenantId.Should().Be("tenant-123");
+        newContext.ProjectId.Should().Be("project-456");
+    }
+
+    [Fact]
+    public void Constructor_WithCancelledToken_StoresCancellation()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        var context = new GridContext(
+            "corr",
+            "node",
+            "studio",
+            "env",
+            cancellation: cts.Token);
+
+        // Assert
+        context.Cancellation.IsCancellationRequested.Should().BeTrue();
     }
 }

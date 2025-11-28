@@ -1,5 +1,5 @@
-using System.Text.Json;
 using HoneyDrunk.Kernel.Abstractions.Context;
+using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
 
@@ -35,6 +35,8 @@ public sealed class GridContextSerializer
             nodeId = context.NodeId,
             studioId = context.StudioId,
             environment = context.Environment,
+            tenantId = context.TenantId,
+            projectId = context.ProjectId,
             createdAtUtc = context.CreatedAtUtc,
             baggage = includeFullBaggage ? context.Baggage : FilterSafeBaggage(context.Baggage),
         };
@@ -70,8 +72,9 @@ public sealed class GridContextSerializer
             var studioId = studioIdElement.GetString();
             var environment = environmentElement.GetString();
 
-            if (string.IsNullOrEmpty(correlationId) || string.IsNullOrEmpty(nodeId) ||
-                string.IsNullOrEmpty(studioId) || string.IsNullOrEmpty(environment))
+            if (string.IsNullOrEmpty(correlationId) ||
+                string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(studioId) ||
+                string.IsNullOrEmpty(environment))
             {
                 return null;
             }
@@ -80,6 +83,18 @@ public sealed class GridContextSerializer
             if (root.TryGetProperty("causationId", out var causationElement))
             {
                 causationId = causationElement.GetString();
+            }
+
+            string? tenantId = null;
+            if (root.TryGetProperty("tenantId", out var tenantElement))
+            {
+                tenantId = tenantElement.GetString();
+            }
+
+            string? projectId = null;
+            if (root.TryGetProperty("projectId", out var projectElement))
+            {
+                projectId = projectElement.GetString();
             }
 
             var baggage = new Dictionary<string, string>();
@@ -107,6 +122,8 @@ public sealed class GridContextSerializer
                 studioId: studioId,
                 environment: environment,
                 causationId: causationId,
+                tenantId: tenantId,
+                projectId: projectId,
                 baggage: baggage,
                 createdAtUtc: createdAtUtc);
         }

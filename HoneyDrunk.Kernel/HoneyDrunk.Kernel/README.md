@@ -9,41 +9,55 @@
 
 **HoneyDrunk.Kernel** provides the runtime implementations of all contracts defined in `HoneyDrunk.Kernel.Abstractions`. This is the package you use when building executable Nodes, services, or applications that participate in the Grid.
 
+**Package Relationships:**
+- **HoneyDrunk.Kernel.Abstractions** = Contracts only (interfaces, value types)
+- **HoneyDrunk.Kernel** = Real implementations, middleware, lifecycle orchestration, and bootstrapping helpers
+
+Use this package when you want a Node to actually run inside the Grid.
+
 ## 📦 What's Inside
 
 ### 🌐 Context Implementations
-- **GridContext** - Default implementation with causation chain support
-- **NodeContext** - Process-scoped Node identity
-- **OperationContext** - Operation tracking with timing and outcome
-- **GridContextAccessor** - Async-local context accessor
+- **GridContext** - Default implementation with correlation, causation, baggage, and `CreateChildContext()`
+- **NodeContext** - Process-scoped Node identity (NodeId, StudioId, Environment, version, lifecycle stage)
+- **OperationContext** - Per-operation tracking with timing, outcome, and metadata
+- **GridContextAccessor** - Async-local accessor for ambient Grid context
+- **OperationContextAccessor** - Async-local accessor for ambient operation context
+- **OperationContextFactory** - Creates `IOperationContext` from current `IGridContext`
 
 ### 🔄 Context Mappers
-Automatic context propagation from various sources:
-- **HttpContextMapper** - Maps HTTP headers to GridContext
-- **JobContextMapper** - Maps background job metadata
-- **MessagingContextMapper** - Maps message properties for event-driven architectures
+Automatic context extraction from transport envelopes:
+- **HttpContextMapper** - Maps HTTP headers to GridContext using `GridHeaderNames`
+- **MessagingContextMapper** - Maps message properties to GridContext
+- **JobContextMapper** - Maps background job metadata to GridContext
+
+### 🚚 Transport Binders
+Automatic context propagation to outgoing envelopes:
+- **HttpResponseBinder** - Writes Grid headers to HTTP responses
+- **MessagePropertiesBinder** - Writes Grid headers to message properties
+- **JobMetadataBinder** - Writes Grid headers to job metadata
+
+All implement `ITransportEnvelopeBinder`.
 
 ### ⚙️ Lifecycle Management
-- **NodeLifecycleManager** - Coordinates startup/shutdown
-- **NodeLifecycleHost** - Hosts Node lifecycle with health/readiness
+- **NodeLifecycleManager** - Coordinates startup/shutdown hooks, health/readiness contributors, and lifecycle stage transitions
+- **NodeLifecycleHost** - `IHostedService` bridge that runs the lifecycle inside ASP.NET Core hosting
 
-### 📈 Diagnostics
-- **NoOpMetricsCollector** - Zero-overhead placeholder (replace with OpenTelemetry in production)
-- **NodeLifecycleHealthContributor** - Lifecycle-based health
-- **NodeContextReadinessContributor** - Context-based readiness
+### 📈 Diagnostics & Health
+- **NoOpMetricsCollector** - Zero-overhead `IMetricsCollector` implementation when metrics are disabled
+- **NodeContextReadinessContributor** - Readiness signal based on `INodeContext.LifecycleStage`
+- **ConfigurationValidator** - Validates Node configuration at startup
 
 ### 🔧 Configuration
-- **StudioConfiguration** - Studio-wide configuration implementation
-
-### 🔐 Secrets
-- **CompositeSecretsSource** - Chains multiple secret sources with fallback logic
+- **StudioConfiguration** - Implementation of `IStudioConfiguration` over `IConfiguration`
 
 ### ❤️ Health
-- **CompositeHealthCheck** - Aggregates multiple health checks
+- **CompositeHealthCheck** - Aggregates multiple `IHealthCheck` instances into a single status
 
-### 💉 Dependency Injection
-- **HoneyDrunkCoreExtensions** - Core service registration (`AddHoneyDrunkCore`, `AddHoneyDrunkCoreNode`)
-- **ServiceProviderValidation** - Startup validation
+### 💉 Dependency Injection & Bootstrapping
+- **AddHoneyDrunkGrid** - Unified registration for all Kernel services required for a Node
+- **UseGridContext** - Middleware that creates and propagates GridContext for HTTP requests
+- **ValidateHoneyDrunkServices** - Extension that verifies Kernel services are registered correctly
 
 ## 📥 Installation
 
@@ -52,7 +66,9 @@ dotnet add package HoneyDrunk.Kernel
 ```
 
 ```xml
-<PackageReference Include="HoneyDrunk.Kernel" Version="0.2.1" />
+<ItemGroup>
+  <PackageReference Include="HoneyDrunk.Kernel" Version="0.3.0" />
+</ItemGroup>
 ```
 
 **Note:** This package automatically includes `HoneyDrunk.Kernel.Abstractions` as a dependency.
@@ -62,27 +78,37 @@ dotnet add package HoneyDrunk.Kernel
 ### Basic Node Setup
 
 ```csharp
-using HoneyDrunk.Kernel.Abstractions.Hosting;
-using HoneyDrunk.Kernel.DependencyInjection;
+using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register Kernel services with Node descriptor
-var nodeDescriptor = new NodeDescriptor
+// Register Grid services for this Node
+builder.Services.AddHoneyDrunkGrid(options =>
 {
-    NodeId = "payment-node",
-    Version = "1.0.0",
-    Name = "Payment Processing Node",
-    Sector = "commerce",
-    Cluster = "payments-cluster"
-};
+    options.NodeId = "payment-service";
+    options.StudioId = "demo-studio";
+    options.Environment = "development";
+    options.Version = "1.0.0";
+    options.Tags["region"] = "local";
+});
 
-builder.Services.AddHoneyDrunkCoreNode(nodeDescriptor);
+// Register additional Kernel services
+builder.Services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+builder.Services.AddScoped<IOperationContextFactory, OperationContextFactory>();
+
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Validate services before starting
+// Fail fast if required services are missing
 app.Services.ValidateHoneyDrunkServices();
+
+// Add Grid context middleware early in the pipeline
+app.UseGridContext();
+
+app.MapControllers();
 
 app.Run();
 ```
@@ -103,8 +129,8 @@ public class OrderService(
             nodeContext.NodeId,
             gridContext.CorrelationId);
         
-        // Create child context for downstream call
-        var childContext = gridContext.CreateChildContext("payment-node");
+        // Create child context for downstream Node
+        var childContext = gridContext.CreateChildContext("payment-service");
         await _paymentService.ChargeAsync(order, childContext);
     }
 }
@@ -113,50 +139,55 @@ public class OrderService(
 ### HTTP Context Mapping
 
 ```csharp
-// Automatically maps X-Correlation-ID, X-Causation-ID, X-Baggage-* headers
-app.UseMiddleware<GridContextMiddleware>();
+// Startup - automatically maps X-Correlation-Id, X-Causation-Id, X-Baggage-* headers
+app.UseGridContext();
 
-app.MapPost("/orders", async (Order order, IGridContext gridContext) =>
+app.MapPost("/orders", async (
+    Order order,
+    IGridContext gridContext,
+    IOrderService orderService) =>
 {
-    // gridContext is automatically populated from HTTP headers
-    await _orderService.ProcessOrderAsync(order);
+    // gridContext is populated from incoming HTTP headers or created if missing
+    await orderService.ProcessOrderAsync(order);
     return Results.Created($"/orders/{order.Id}", order);
 });
 ```
 
-### Lifecycle Hooks
+### Lifecycle Hooks and Health
 
 ```csharp
-// Register startup hooks
+// Startup hooks
 builder.Services.AddSingleton<IStartupHook, DatabaseMigrationHook>();
 builder.Services.AddSingleton<IStartupHook, CacheWarmupHook>();
 
-// Register shutdown hooks
+// Shutdown hooks
 builder.Services.AddSingleton<IShutdownHook, ConnectionDrainHook>();
 
-// Register health contributors
+// Health & readiness contributors
 builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();
-builder.Services.AddSingleton<IReadinessContributor, CacheReadinessContributor>();
+builder.Services.AddSingleton<IReadinessContributor, NodeContextReadinessContributor>();
 ```
 
-## 🎯 When to Use This Package
+Kubernetes can then wire probes to `/health` and `/ready` using your chosen web Node.
+
+## 🎯 When to Use Which Package
 
 **Use HoneyDrunk.Kernel when:**
-- ✅ Building an executable Node/service
-- ✅ You need context mappers (HTTP, messaging, jobs)
-- ✅ You need lifecycle orchestration
-- ✅ You want production-ready implementations
+- ✅ Building an executable Node or HTTP API
+- ✅ You want `AddHoneyDrunkGrid()` and `UseGridContext()`
+- ✅ You need lifecycle orchestration, health, readiness, and context mappers
 
-**Use HoneyDrunk.Kernel.Abstractions only when:**
-- ✅ Building a library (use abstractions to avoid implementation dependencies)
-- ✅ Creating custom implementations
+**Use HoneyDrunk.Kernel.Abstractions when:**
+- ✅ Building a shared library used by multiple Nodes
+- ✅ You want to depend only on contracts and provide your own implementations
+- ✅ You are writing test doubles or alternative runtimes
 
 ## 🏗️ Architecture
 
 ### Context Flow
 
 ```
-HTTP Request with X-Correlation-ID header
+HTTP Request with X-Correlation-Id header
     ↓
 HttpContextMapper extracts header → GridContext
     ↓
@@ -178,7 +209,7 @@ Execute IStartupHook instances (by priority)
     ↓
 Check IReadinessContributor instances
     ↓
-NodeLifecycleStage = Running
+NodeLifecycleStage = Ready
     ↓
 (Application runs...)
     ↓
@@ -200,25 +231,39 @@ NodeLifecycleStage = Stopped
 ```json
 {
   "Grid": {
-    "NodeId": "payment-node",
-    "Version": "1.0.0",
-    "StudioId": "honeycomb",
-    "Environment": "production",
+    "StudioId": "honeycomb-prod",
+    "Environment": "production"
+  },
+  "Node": {
+    "Id": "payment-service",
+    "Sector": "financial-services",
+    "Version": "2.1.0",
     "Tags": {
       "deployment-slot": "blue",
       "region": "us-east-1"
     }
-  },
-  "NodeRuntime": {
-    "Environment": "production",
-    "Region": "us-east-1",
-    "EnableDetailedTelemetry": true,
-    "EnableDistributedTracing": true,
-    "TelemetrySamplingRate": 1.0,
-    "HealthCheckIntervalSeconds": 30,
-    "ShutdownGracePeriodSeconds": 30
   }
 }
+```
+
+### Loading Configuration
+
+```csharp
+builder.Services.AddHoneyDrunkGrid(options =>
+{
+    var node = builder.Configuration.GetSection("Node");
+    
+    options.NodeId = node["Id"] ?? "unknown-node";
+    options.StudioId = builder.Configuration["Grid:StudioId"] ?? "default";
+    options.Environment = builder.Configuration["Grid:Environment"] ?? "development";
+    options.Version = node["Version"] ?? "1.0.0";
+    
+    // Load tags
+    foreach (var tag in node.GetSection("Tags").GetChildren())
+    {
+        options.Tags[tag.Key] = tag.Value ?? string.Empty;
+    }
+});
 ```
 
 ## 🔗 Related Packages
@@ -228,16 +273,20 @@ NodeLifecycleStage = Stopped
 
 ## 📚 Documentation
 
-- **[Complete File Guide](../docs/FILE_GUIDE.md)** - Comprehensive architecture documentation
+**See the main repository for comprehensive documentation:**
+- **[Complete File Guide](../docs/FILE_GUIDE.md)** - Architecture documentation
+- **[Bootstrapping Guide](../docs/Bootstrapping.md)** - Unified Node initialization
 - **[Context Guide](../docs/Context.md)** - Context propagation patterns
 - **[Lifecycle Guide](../docs/Lifecycle.md)** - Lifecycle orchestration
 - **[Implementations Guide](../docs/Implementations.md)** - Runtime implementation details
+- **[Transport Guide](../docs/Transport.md)** - Context propagation across boundaries
+- **[Testing Guide](../docs/Testing.md)** - Test patterns and best practices
 
 ## 🧪 Testing
 
 See **[Testing Guide](../docs/Testing.md)** for patterns on:
-- Mocking GridContext, NodeContext, OperationContext
-- Testing with deterministic time
+- Creating test contexts (GridContext, NodeContext, OperationContext)
+- Testing with real implementations vs mocks
 - Integration testing with DI
 - Testing lifecycle hooks and health contributors
 

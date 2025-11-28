@@ -146,7 +146,7 @@ public class TelemetryLogScopeFactoryTests
     {
         var testLogger = new TestLogger();
         var factory = new TelemetryLogScopeFactory(testLogger);
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+        var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
         var telemetryContext = new TelemetryContext(
             gridContext,
             "trace-id",
@@ -178,7 +178,7 @@ public class TelemetryLogScopeFactoryTests
 
     private static TelemetryContext CreateTestTelemetryContext()
     {
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test");
+        var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
         return new TelemetryContext(gridContext, "trace-id", "span-id");
     }
 

@@ -13,7 +13,7 @@ public interface INodeContext
 {
     /// <summary>
     /// Gets the unique identifier of this Node.
-    /// Example: "payment-node", "notification-node", "auth-gateway".
+    /// Uses kebab-case format (e.g., "kernel", "payment-service", "auth-gateway").
     /// </summary>
     string NodeId { get; }
 
@@ -25,13 +25,13 @@ public interface INodeContext
 
     /// <summary>
     /// Gets the Studio identifier that owns this Node.
-    /// Example: "honeycomb", "staging", "dev-alice".
+    /// Identifies which logical Studio (organization/tenant) this Node belongs to.
     /// </summary>
     string StudioId { get; }
 
     /// <summary>
     /// Gets the environment in which this Node is running.
-    /// Example: "production", "staging", "development".
+    /// Uses kebab-case format (e.g., "production", "staging", "development", "local").
     /// </summary>
     string Environment { get; }
 
@@ -57,6 +57,7 @@ public interface INodeContext
 
     /// <summary>
     /// Gets optional tags/labels associated with this Node instance.
+    /// Common tags include: sector, region, deployment-slot, availability-zone.
     /// Used for routing, capability advertisement, and observability.
     /// </summary>
     IReadOnlyDictionary<string, string> Tags { get; }

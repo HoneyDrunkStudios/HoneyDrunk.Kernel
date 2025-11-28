@@ -12,12 +12,16 @@ namespace HoneyDrunk.Kernel.Context.Mappers;
 /// - X-Correlation-Id or traceparent.
 /// - X-Causation-Id.
 /// - X-Studio-Id.
+/// - X-Tenant-Id (optional, identity only).
+/// - X-Project-Id (optional, identity only).
 /// </remarks>
 public sealed class HttpContextMapper
 {
     private const string CorrelationIdHeader = "X-Correlation-Id";
     private const string CausationIdHeader = "X-Causation-Id";
     private const string StudioIdHeader = "X-Studio-Id";
+    private const string TenantIdHeader = "X-Tenant-Id";
+    private const string ProjectIdHeader = "X-Project-Id";
     private const string TraceParentHeader = "traceparent";
 
     private readonly string _nodeId;
@@ -53,6 +57,8 @@ public sealed class HttpContextMapper
         var correlationId = ExtractCorrelationId(httpContext);
         var causationId = ExtractHeader(httpContext, CausationIdHeader);
         var studioId = ExtractHeader(httpContext, StudioIdHeader) ?? _defaultStudioId;
+        var tenantId = ExtractHeader(httpContext, TenantIdHeader);
+        var projectId = ExtractHeader(httpContext, ProjectIdHeader);
 
         var baggage = ExtractBaggage(httpContext);
 
@@ -62,6 +68,8 @@ public sealed class HttpContextMapper
             studioId: studioId,
             environment: _environment,
             causationId: causationId,
+            tenantId: tenantId,
+            projectId: projectId,
             baggage: baggage,
             cancellation: httpContext.RequestAborted);
     }
@@ -105,14 +113,12 @@ public sealed class HttpContextMapper
     {
         var baggage = new Dictionary<string, string>();
 
-        // Extract from baggage header (W3C format: key1=value1;metadata,key2=value2)
+        // Extract from W3C baggage header (baggage: key1=value1;metadata,key2=value2)
         if (httpContext.Request.Headers.TryGetValue("baggage", out var baggageHeader))
         {
             var baggageString = baggageHeader.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(baggageString))
             {
-                // W3C Baggage format: comma-separated list of key=value pairs
-                // Each pair may have properties after semicolon: key=value;property1;property2
                 var pairs = baggageString
                     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Select(ParseBaggageItem)
@@ -120,6 +126,20 @@ public sealed class HttpContextMapper
                     .Select(item => item!.Value);
 
                 foreach (var (key, value) in pairs)
+                {
+                    baggage[key] = value;
+                }
+            }
+        }
+
+        // Extract from X-Baggage-* headers (X-Baggage-tenant-id: value)
+        foreach (var header in httpContext.Request.Headers)
+        {
+            if (header.Key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var key = header.Key[GridHeaderNames.BaggagePrefix.Length..]; // Remove prefix
+                var value = header.Value.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(value))
                 {
                     baggage[key] = value;
                 }

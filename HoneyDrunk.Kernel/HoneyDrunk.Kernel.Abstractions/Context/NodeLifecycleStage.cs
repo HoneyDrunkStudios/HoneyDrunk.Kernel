@@ -18,7 +18,7 @@ public enum NodeLifecycleStage
     /// <summary>
     /// Node is fully operational and accepting work.
     /// </summary>
-    Running = 2,
+    Ready = 2,
 
     /// <summary>
     /// Node is degraded but still operational (e.g., dependency issues).

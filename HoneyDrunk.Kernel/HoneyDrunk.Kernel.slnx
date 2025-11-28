@@ -11,19 +11,23 @@
   </Folder>
   <Folder Name="/Docs/FileGuide/">
     <File Path="docs/Agents.md" />
+    <File Path="docs/Bootstrapping.md" />
     <File Path="docs/Configuration.md" />
     <File Path="docs/Context.md" />
     <File Path="docs/DependencyInjection.md" />
     <File Path="docs/Diagnostics.md" />
+    <File Path="docs/Errors.md" />
     <File Path="docs/FILE_GUIDE.md" />
     <File Path="docs/Health.md" />
     <File Path="docs/Hosting.md" />
     <File Path="docs/Identity.md" />
+    <File Path="docs/IdentityRegistries.md" />
     <File Path="docs/Implementations.md" />
     <File Path="docs/Lifecycle.md" />
-    <File Path="docs/Secrets.md" />
+    <File Path="docs/OpenTelemetry.md" />
     <File Path="docs/Telemetry.md" />
     <File Path="docs/Testing.md" />
+    <File Path="docs/Transport.md" />
   </Folder>
   <Folder Name="/Pipelines/">
     <File Path="../.github/workflows/publish.yml" />
@@ -32,4 +36,5 @@
   <Project Path="HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj" Id="262bb60d-6df6-4639-831d-2fdede62bccc" />
   <Project Path="HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj" />
   <Project Path="HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj" />
+  <Project Path="samples/MinimalNode/MinimalNode.csproj" />
 </Solution>
