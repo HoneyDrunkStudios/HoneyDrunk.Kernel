@@ -8,11 +8,11 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.2.1</Version>
+    <Version>0.3.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
-    <Description>Foundational abstractions and contracts for HoneyDrunk.OS. Provides interfaces for Grid context, Node lifecycle, identity, telemetry, and configuration primitives.</Description>
-    <PackageReleaseNotes>v0.2.1: Fixed README emoji encoding issues. v0.2.0: Major refactor as semantic OS layer. Added GridContext, NodeContext, OperationContext, lifecycle contracts, Identity types, telemetry contracts, and agent contracts. Removed thin BCL wrappers (IClock, IIdGenerator, ILogSink). See CHANGELOG.md for details.</PackageReleaseNotes>
-    <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting</PackageTags>
+    <Description>Pure semantic contracts for HoneyDrunk.OS Grid. Provides zero-dependency abstractions for Grid context, Node lifecycle, identity primitives, telemetry, transport, error handling, and agent execution. Safe for libraries and SDKs.</Description>
+    <PackageReleaseNotes>v0.3.0: Added transport abstraction (ITransportEnvelopeBinder, GridHeaderNames), structured error handling (HoneyDrunkException, ErrorCode, IErrorClassifier), telemetry tags (TelemetryTags), and multi-tenant context support (TenantId, ProjectId). Complete documentation rewrite. See CHANGELOG.md for details.</PackageReleaseNotes>
+    <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting;transport;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel</RepositoryUrl>

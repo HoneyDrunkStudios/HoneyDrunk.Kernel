@@ -25,6 +25,8 @@
 
 Transport abstractions enable automatic GridContext propagation across different transport mechanisms (HTTP, messaging, background jobs) without coupling to specific transport implementations.
 
+**What Transport Does:** Kernel transport binders handle **outbound context propagation** (writing GridContext into envelopes). **Inbound extraction** is handled by context factories and middleware (see [Context.md](Context.md) and [Hosting.md](Hosting.md)).
+
 **Location:** `HoneyDrunk.Kernel.Abstractions/Transport/`
 
 **Key Concepts:**
@@ -32,6 +34,9 @@ Transport abstractions enable automatic GridContext propagation across different
 - **Protocol-Agnostic** - Works with HTTP, gRPC, messaging, jobs, etc.
 - **Automatic Propagation** - Context flows transparently across Node boundaries
 - **Type-Safe** - Compile-time verification of envelope types
+- **Outbound Only** - Binders write context; middleware/factories read it
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -99,16 +104,16 @@ public class HttpResponseBinder : ITransportEnvelopeBinder
     {
         var response = (HttpResponse)envelope;
         
-        // Standard headers
-        response.Headers["X-Correlation-ID"] = context.CorrelationId;
-        response.Headers["X-Node-ID"] = context.NodeId;
+        // Use canonical header names from GridHeaderNames
+        response.Headers[GridHeaderNames.CorrelationId] = context.CorrelationId;
+        response.Headers[GridHeaderNames.NodeId] = context.NodeId;
         
         if (context.CausationId is not null)
-            response.Headers["X-Causation-ID"] = context.CausationId;
+            response.Headers[GridHeaderNames.CausationId] = context.CausationId;
         
-        // Baggage
+        // Baggage with standard prefix
         foreach (var (key, value) in context.Baggage)
-            response.Headers[$"X-Baggage-{key}"] = value;
+            response.Headers[$"{GridHeaderNames.BaggagePrefix}{key}"] = value;
     }
 }
 ```
@@ -117,9 +122,9 @@ public class HttpResponseBinder : ITransportEnvelopeBinder
 
 | Header | Source | Example |
 |--------|--------|---------|
-| `X-Correlation-ID` | `context.CorrelationId` | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
-| `X-Causation-ID` | `context.CausationId` | `01HQXY7J3SI8W4A2M1XE6UFBZP` |
-| `X-Node-ID` | `context.NodeId` | `payment-node` |
+| `X-Correlation-Id` | `context.CorrelationId` | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
+| `X-Causation-Id` | `context.CausationId` | `01HQXY7J3SI8W4A2M1XE6UFBZP` |
+| `X-Node-Id` | `context.NodeId` | `payment-node` |
 | `X-Baggage-{key}` | `context.Baggage[key]` | `X-Baggage-TenantId: 01HQXZ...` |
 
 **Usage Example:**
@@ -150,12 +155,14 @@ public class PaymentController(
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-X-Correlation-ID: 01HQXZ8K4TJ9X5B3N2YGF7WDCQ
-X-Node-ID: payment-node
+X-Correlation-Id: 01HQXZ8K4TJ9X5B3N2YGF7WDCQ
+X-Node-Id: payment-node
 X-Baggage-TenantId: 01HQXZ7G5FH4C2B1N0XD5EWARP
 
 { "paymentId": "PAY-123", "status": "completed" }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -164,6 +171,8 @@ X-Baggage-TenantId: 01HQXZ7G5FH4C2B1N0XD5EWARP
 **Location:** `HoneyDrunk.Kernel/Transport/MessagePropertiesBinder.cs`
 
 Binds GridContext to message properties for event-driven architectures.
+
+**Envelope Shape:** `IDictionary<string, object>` (AMQP-style headers used by RabbitMQ, Azure Service Bus, AWS SQS, etc.)
 
 ```csharp
 public class MessagePropertiesBinder : ITransportEnvelopeBinder
@@ -176,21 +185,22 @@ public class MessagePropertiesBinder : ITransportEnvelopeBinder
     {
         var properties = (IDictionary<string, object>)envelope;
         
-        properties["X-Correlation-ID"] = context.CorrelationId;
-        properties["X-Node-ID"] = context.NodeId;
-        properties["X-Studio-ID"] = context.StudioId;
-        properties["X-Environment"] = context.Environment;
+        // Use canonical header names
+        properties[GridHeaderNames.CorrelationId] = context.CorrelationId;
+        properties[GridHeaderNames.NodeId] = context.NodeId;
+        properties[GridHeaderNames.StudioId] = context.StudioId;
+        properties[GridHeaderNames.Environment] = context.Environment;
         
         if (context.CausationId is not null)
-            properties["X-Causation-ID"] = context.CausationId;
+            properties[GridHeaderNames.CausationId] = context.CausationId;
         
         foreach (var (key, value) in context.Baggage)
-            properties[$"X-Baggage-{key}"] = value;
+            properties[$"{GridHeaderNames.BaggagePrefix}{key}"] = value;
     }
 }
 ```
 
-**Usage with RabbitMQ:**
+**Example: RabbitMQ (AMQP):**
 
 ```csharp
 public class OrderEventPublisher(
@@ -205,7 +215,7 @@ public class OrderEventPublisher(
         var properties = channel.CreateBasicProperties();
         var messageProps = new Dictionary<string, object>();
         
-        // Bind Grid context to message properties
+        // Bind Grid context to message properties (shape: IDictionary<string, object>)
         messageBinder.Bind(messageProps, gridContext);
         
         // Copy to RabbitMQ properties
@@ -231,10 +241,10 @@ public class OrderEventPublisher(
 ```json
 {
   "headers": {
-    "X-Correlation-ID": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
-    "X-Causation-ID": "01HQXY7J3SI8W4A2M1XE6UFBZP",
-    "X-Node-ID": "order-service",
-    "X-Studio-ID": "honeycomb",
+    "X-Correlation-Id": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
+    "X-Causation-Id": "01HQXY7J3SI8W4A2M1XE6UFBZP",
+    "X-Node-Id": "order-service",
+    "X-Studio-Id": "honeycomb",
     "X-Environment": "production",
     "X-Baggage-TenantId": "01HQXZ7G5FH4C2B1N0XD5EWARP"
   },
@@ -252,9 +262,9 @@ public class OrderEventConsumer(IGridContextAccessor contextAccessor)
 {
     public async Task HandleAsync(BasicDeliverEventArgs ea)
     {
-        // Extract context from message headers
-        var correlationId = ea.BasicProperties.Headers["X-Correlation-ID"]?.ToString();
-        var nodeId = ea.BasicProperties.Headers["X-Node-ID"]?.ToString();
+        // Extract context from message headers (inbound extraction, not handled by binder)
+        var correlationId = ea.BasicProperties.Headers[GridHeaderNames.CorrelationId]?.ToString();
+        var nodeId = ea.BasicProperties.Headers[GridHeaderNames.NodeId]?.ToString();
         // ... extract other properties
         
         var gridContext = new GridContext(correlationId, nodeId, studioId, environment);
@@ -266,6 +276,8 @@ public class OrderEventConsumer(IGridContextAccessor contextAccessor)
 }
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ### JobMetadataBinder
@@ -273,6 +285,8 @@ public class OrderEventConsumer(IGridContextAccessor contextAccessor)
 **Location:** `HoneyDrunk.Kernel/Transport/JobMetadataBinder.cs`
 
 Binds GridContext to background job metadata for async processing.
+
+**Envelope Shape:** `IDictionary<string, string>` (string metadata used by Hangfire, Quartz, Azure Functions, etc.)
 
 ```csharp
 public class JobMetadataBinder : ITransportEnvelopeBinder
@@ -285,22 +299,23 @@ public class JobMetadataBinder : ITransportEnvelopeBinder
     {
         var metadata = (IDictionary<string, string>)envelope;
         
-        metadata["X-Correlation-ID"] = context.CorrelationId;
-        metadata["X-Node-ID"] = context.NodeId;
-        metadata["X-Studio-ID"] = context.StudioId;
-        metadata["X-Environment"] = context.Environment;
+        // Use canonical header names
+        metadata[GridHeaderNames.CorrelationId] = context.CorrelationId;
+        metadata[GridHeaderNames.NodeId] = context.NodeId;
+        metadata[GridHeaderNames.StudioId] = context.StudioId;
+        metadata[GridHeaderNames.Environment] = context.Environment;
         metadata["CreatedAtUtc"] = context.CreatedAtUtc.ToString("O");
         
         if (context.CausationId is not null)
-            metadata["X-Causation-ID"] = context.CausationId;
+            metadata[GridHeaderNames.CausationId] = context.CausationId;
         
         foreach (var (key, value) in context.Baggage)
-            metadata[$"X-Baggage-{key}"] = value;
+            metadata[$"{GridHeaderNames.BaggagePrefix}{key}"] = value;
     }
 }
 ```
 
-**Usage with Hangfire:**
+**Example: Hangfire (Background Jobs):**
 
 ```csharp
 public class ReportGenerator(
@@ -312,7 +327,7 @@ public class ReportGenerator(
     {
         var metadata = new Dictionary<string, string>();
         
-        // Bind Grid context to job metadata
+        // Bind Grid context to job metadata (shape: IDictionary<string, string>)
         jobBinder.Bind(metadata, gridContext);
         
         var jobId = jobClient.Enqueue(() => 
@@ -326,16 +341,16 @@ public class ReportGenerator(
         string reportId,
         Dictionary<string, string> metadata)
     {
-        // Reconstruct Grid context from metadata
-        var correlationId = metadata["X-Correlation-ID"];
-        var nodeId = metadata["X-Node-ID"];
-        var studioId = metadata["X-Studio-ID"];
-        var environment = metadata["X-Environment"];
+        // Reconstruct Grid context from metadata (inbound extraction)
+        var correlationId = metadata[GridHeaderNames.CorrelationId];
+        var nodeId = metadata[GridHeaderNames.NodeId];
+        var studioId = metadata[GridHeaderNames.StudioId];
+        var environment = metadata[GridHeaderNames.Environment];
         
         var baggage = metadata
-            .Where(kvp => kvp.Key.StartsWith("X-Baggage-"))
+            .Where(kvp => kvp.Key.StartsWith(GridHeaderNames.BaggagePrefix))
             .ToDictionary(
-                kvp => kvp.Key.Replace("X-Baggage-", ""),
+                kvp => kvp.Key.Replace(GridHeaderNames.BaggagePrefix, ""),
                 kvp => kvp.Value);
         
         var gridContext = new GridContext(
@@ -355,10 +370,10 @@ public class ReportGenerator(
   "jobId": "job-12345",
   "queue": "reports",
   "metadata": {
-    "X-Correlation-ID": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
-    "X-Causation-ID": "01HQXY7J3SI8W4A2M1XE6UFBZP",
-    "X-Node-ID": "report-service",
-    "X-Studio-ID": "honeycomb",
+    "X-Correlation-Id": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
+    "X-Causation-Id": "01HQXY7J3SI8W4A2M1XE6UFBZP",
+    "X-Node-Id": "report-service",
+    "X-Studio-Id": "honeycomb",
     "X-Environment": "production",
     "CreatedAtUtc": "2025-01-11T10:30:00.0000000Z",
     "X-Baggage-TenantId": "01HQXZ7G5FH4C2B1N0XD5EWARP",
@@ -366,6 +381,8 @@ public class ReportGenerator(
   }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 

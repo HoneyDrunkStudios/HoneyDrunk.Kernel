@@ -25,7 +25,6 @@
     <File Path="docs/Implementations.md" />
     <File Path="docs/Lifecycle.md" />
     <File Path="docs/OpenTelemetry.md" />
-    <File Path="docs/Secrets.md" />
     <File Path="docs/Telemetry.md" />
     <File Path="docs/Testing.md" />
     <File Path="docs/Transport.md" />

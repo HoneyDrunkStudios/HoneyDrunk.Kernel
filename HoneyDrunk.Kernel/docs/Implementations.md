@@ -26,6 +26,8 @@ This document covers the runtime implementations in `HoneyDrunk.Kernel` project.
 
 **Philosophy:** Implementations follow "thin wrapper" principles - delegate to BCL where possible, add Grid-specific semantics where necessary.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Context Implementations
@@ -74,7 +76,7 @@ public sealed class GridContext : IGridContext
 var rootContext = new GridContext(
     correlationId: Ulid.NewUlid().ToString(),
     nodeId: "api-gateway",
-    studioId: "production",
+    studioId: "demo-studio",        // Studio identifier, not environment
     environment: "production"
 );
 
@@ -84,6 +86,8 @@ var childContext = rootContext.CreateChildContext("payment-service");
 Assert.Equal(rootContext.CorrelationId, childContext.CorrelationId);
 Assert.Equal(rootContext.CorrelationId, childContext.CausationId); // Causality!
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -96,17 +100,17 @@ Static Node identity implementation carrying process-level metadata.
 ```csharp
 public sealed class NodeContext : INodeContext
 {
-    public NodeId NodeId { get; }
+    public string NodeId { get; }
     public string Version { get; }
     public string StudioId { get; }
-    public EnvironmentId Environment { get; }
+    public string Environment { get; }
     public NodeLifecycleStage LifecycleStage { get; private set; }
     public DateTimeOffset StartedAtUtc { get; }
-    public string InstanceId { get; }
-    public string HostName { get; }
+    public string MachineName { get; }
+    public int ProcessId { get; }
     public IReadOnlyDictionary<string, string> Tags { get; }
     
-    public void UpdateLifecycleStage(NodeLifecycleStage stage)
+    public void SetLifecycleStage(NodeLifecycleStage stage)
     {
         LifecycleStage = stage;
     }
@@ -116,17 +120,21 @@ public sealed class NodeContext : INodeContext
 **Key Features:**
 - Singleton-scoped (one per process)
 - Mutable `LifecycleStage` for startup/shutdown tracking
-- Captures machine/process metadata (hostname, instance ID)
+- Captures machine/process metadata (hostname, process ID)
 - Tags for observability (region, deployment slot, etc.)
 
 **Lifecycle Stages:**
 ```csharp
-NodeLifecycleStage.Initializing  // Just started
+NodeLifecycleStage.Initializing  // Just started (default)
 NodeLifecycleStage.Starting      // Running startup hooks
-NodeLifecycleStage.Running       // Ready to serve traffic
+NodeLifecycleStage.Ready         // Ready to serve traffic
+NodeLifecycleStage.Degraded      // Operational but impaired
 NodeLifecycleStage.Stopping      // Running shutdown hooks
 NodeLifecycleStage.Stopped       // Gracefully stopped
+NodeLifecycleStage.Failed        // Fatal error
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -140,47 +148,51 @@ Per-operation tracking implementation with timing and outcome.
 public sealed class OperationContext : IOperationContext
 {
     private readonly IGridContext _gridContext;
-    private readonly INodeContext _nodeContext;
-    private readonly string _runId;
+    private readonly string _operationId;
     private readonly DateTimeOffset _startedAtUtc;
-    private readonly Dictionary<string, string> _tags;
-    private bool _completed;
+    private readonly Dictionary<string, object?> _metadata;
     
-    public IGridContext Grid => _gridContext;
-    public INodeContext Node => _nodeContext;
-    public string RunId => _runId;
+    public IGridContext GridContext => _gridContext;
+    public string OperationName { get; }
+    public string OperationId => _operationId;
+    public string CorrelationId => _gridContext.CorrelationId;
+    public string? CausationId => _gridContext.CausationId;
     public DateTimeOffset StartedAtUtc => _startedAtUtc;
-    public IReadOnlyDictionary<string, string> Tags => _tags;
+    public DateTimeOffset? CompletedAtUtc { get; private set; }
+    public bool? IsSuccess { get; private set; }
+    public string? ErrorMessage { get; private set; }
+    public IReadOnlyDictionary<string, object?> Metadata => _metadata;
     
     public void Complete()
     {
-        if (_completed) return;
-        _completed = true;
-        // Emit telemetry: success, duration, etc.
+        if (CompletedAtUtc.HasValue) return;
+        CompletedAtUtc = DateTimeOffset.UtcNow;
+        IsSuccess = true;
+        // Runtime integration point: telemetry providers can observe completion via OperationContextAccessor
     }
     
-    public void Fail(string reason, Exception? exception = null)
+    public void Fail(string errorMessage, Exception? exception = null)
     {
-        if (_completed) return;
-        _completed = true;
-        _tags["outcome"] = "failed";
-        _tags["failureReason"] = reason;
-        // Emit telemetry: failure, exception, etc.
+        if (CompletedAtUtc.HasValue) return;
+        CompletedAtUtc = DateTimeOffset.UtcNow;
+        IsSuccess = false;
+        ErrorMessage = errorMessage;
+        // Runtime integration point: telemetry providers can observe failure via OperationContextAccessor
     }
     
-    public void AddTag(string key, string value)
+    public void AddMetadata(string key, object? value)
     {
-        _tags[key] = value;
+        _metadata[key] = value;
     }
 }
 ```
 
 **Key Features:**
 - Scoped lifetime (per-request, per-job, per-message)
-- Links `IGridContext` + `INodeContext`
+- Links `IGridContext` properties for convenience
 - Tracks timing (start → complete/fail)
-- Tags for custom metadata
-- Emits telemetry on completion
+- Metadata for custom tags
+- **Telemetry Integration:** Intended to be observed by telemetry providers (e.g., `ITelemetryActivityFactory`, `IMetricsCollector`) to record duration and outcome
 
 **Usage:**
 ```csharp
@@ -188,8 +200,8 @@ public class OrderService(IOperationContext operationContext)
 {
     public async Task ProcessOrderAsync(Order order)
     {
-        operationContext.AddTag("orderId", order.Id);
-        operationContext.AddTag("customerId", order.CustomerId);
+        operationContext.AddMetadata("orderId", order.Id);
+        operationContext.AddMetadata("customerId", order.CustomerId);
         
         try
         {
@@ -204,6 +216,8 @@ public class OrderService(IOperationContext operationContext)
     }
 }
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -244,6 +258,8 @@ var correlationId = _accessor.GridContext.CorrelationId;
 await CallDownstreamServiceAsync(); // GridContext still available
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ### OperationContextAccessor.cs
@@ -257,7 +273,7 @@ public sealed class OperationContextAccessor : IOperationContextAccessor
 {
     private static readonly AsyncLocal<IOperationContext?> _current = new();
     
-    public IOperationContext? OperationContext
+    public IOperationContext? Current
     {
         get => _current.Value;
         set => _current.Value = value;
@@ -266,6 +282,8 @@ public sealed class OperationContextAccessor : IOperationContextAccessor
 ```
 
 Same pattern as `GridContextAccessor` but for `IOperationContext`.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -279,22 +297,18 @@ Factory for creating `IOperationContext` instances.
 public sealed class OperationContextFactory : IOperationContextFactory
 {
     private readonly IGridContextAccessor _gridContextAccessor;
-    private readonly INodeContext _nodeContext;
     
-    public OperationContextFactory(
-        IGridContextAccessor gridContextAccessor,
-        INodeContext nodeContext)
+    public OperationContextFactory(IGridContextAccessor gridContextAccessor)
     {
         _gridContextAccessor = gridContextAccessor;
-        _nodeContext = nodeContext;
     }
     
-    public IOperationContext Create()
+    public IOperationContext Create(string operationName)
     {
         var gridContext = _gridContextAccessor.GridContext 
             ?? throw new InvalidOperationException("GridContext not set");
         
-        return new OperationContext(gridContext, _nodeContext);
+        return new OperationContext(gridContext, operationName);
     }
 }
 ```
@@ -305,9 +319,9 @@ public class MessageConsumer(IOperationContextFactory factory)
 {
     public async Task HandleAsync(Message message)
     {
-        using var operation = factory.Create();
+        var operation = factory.Create("ProcessMessage");
         
-        operation.AddTag("messageId", message.Id);
+        operation.AddMetadata("messageId", message.Id);
         
         try
         {
@@ -317,10 +331,15 @@ public class MessageConsumer(IOperationContextFactory factory)
         catch (Exception ex)
         {
             operation.Fail("Message processing failed", ex);
+            throw;
         }
     }
 }
 ```
+
+**Note:** `IOperationContext` does not implement `IDisposable`. Call `Complete()` or `Fail()` explicitly to mark operation outcome. Telemetry providers can observe operation state via `IOperationContextAccessor`.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -330,17 +349,17 @@ Context mappers extract GridContext from transport-specific envelopes. See [Tran
 
 ### HttpContextMapper.cs
 
-Extracts GridContext from HTTP request headers.
+Extracts GridContext from HTTP request headers using canonical `GridHeaderNames`.
 
 **Location:** `HoneyDrunk.Kernel/Context/Mappers/HttpContextMapper.cs`
 
 **Headers Read:**
-- `X-Correlation-ID` → `CorrelationId`
-- `X-Causation-ID` → `CausationId`
-- `X-Node-ID` → `NodeId`
-- `X-Studio-ID` → `StudioId`
-- `X-Environment` → `Environment`
-- `X-Baggage-*` → `Baggage`
+- `GridHeaderNames.CorrelationId` (`X-Correlation-Id`) → `CorrelationId`
+- `GridHeaderNames.CausationId` (`X-Causation-Id`) → `CausationId`
+- `GridHeaderNames.NodeId` (`X-Node-Id`) → `NodeId`
+- `GridHeaderNames.StudioId` (`X-Studio-Id`) → `StudioId`
+- `GridHeaderNames.Environment` (`X-Environment`) → `Environment`
+- `GridHeaderNames.BaggagePrefix` (`X-Baggage-*`) → `Baggage`
 
 ### MessagingContextMapper.cs
 
@@ -353,6 +372,8 @@ Extracts GridContext from message properties.
 Extracts GridContext from background job metadata.
 
 **Location:** `HoneyDrunk.Kernel/Context/Mappers/JobContextMapper.cs`
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -374,16 +395,16 @@ public class GridContextMiddleware
         IGridContextAccessor contextAccessor,
         INodeContext nodeContext)
     {
-        // Extract or create GridContext
-        var correlationId = httpContext.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+        // Extract or create GridContext using canonical header names
+        var correlationId = httpContext.Request.Headers[GridHeaderNames.CorrelationId].FirstOrDefault()
             ?? Ulid.NewUlid().ToString();
         
         var gridContext = new GridContext(
             correlationId: correlationId,
-            nodeId: nodeContext.NodeId.Value,
+            nodeId: nodeContext.NodeId,
             studioId: nodeContext.StudioId,
-            environment: nodeContext.Environment.Value,
-            causationId: httpContext.Request.Headers["X-Causation-ID"].FirstOrDefault(),
+            environment: nodeContext.Environment,
+            causationId: httpContext.Request.Headers[GridHeaderNames.CausationId].FirstOrDefault(),
             baggage: ExtractBaggage(httpContext.Request.Headers)
         );
         
@@ -392,9 +413,9 @@ public class GridContextMiddleware
         
         try
         {
-            // Echo correlation to response
-            httpContext.Response.Headers["X-Correlation-ID"] = gridContext.CorrelationId;
-            httpContext.Response.Headers["X-Node-ID"] = gridContext.NodeId;
+            // Echo correlation to response using canonical names
+            httpContext.Response.Headers[GridHeaderNames.CorrelationId] = gridContext.CorrelationId;
+            httpContext.Response.Headers[GridHeaderNames.NodeId] = gridContext.NodeId;
             
             await _next(httpContext);
         }
@@ -411,9 +432,9 @@ public class GridContextMiddleware
         
         foreach (var (key, value) in headers)
         {
-            if (key.StartsWith("X-Baggage-", StringComparison.OrdinalIgnoreCase))
+            if (key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase))
             {
-                var baggageKey = key.Substring("X-Baggage-".Length);
+                var baggageKey = key.Substring(GridHeaderNames.BaggagePrefix.Length);
                 baggage[baggageKey] = value.ToString();
             }
         }
@@ -428,90 +449,68 @@ public class GridContextMiddleware
 app.UseGridContext(); // Extension method
 ```
 
+**Note:** In more advanced setups, `GridContextMiddleware` can delegate to `HttpContextMapper` instead of inline extraction, enabling custom header mappings and protocol adapters.
+
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Lifecycle
 
-### NodeLifecycleManager.cs
+Runtime lifecycle orchestration is implemented in the following components:
 
-Coordinates startup hooks, shutdown hooks, and lifecycle stage transitions.
+### NodeLifecycleHost
+
+**Location:** `HoneyDrunk.Kernel/Lifecycle/NodeLifecycleHost.cs`
+
+Implements `IHostedService` and orchestrates Node startup and shutdown using:
+- `IStartupHook` (priority ordered, lower first)
+- `INodeLifecycle` implementations
+- `IShutdownHook` (priority ordered, lower first)
+
+**Transitions `INodeContext.LifecycleStage` through:**
+```
+Initializing → Starting → Ready → Stopping → Stopped (or Failed on error)
+```
+
+**Startup Flow:**
+1. Initial state: `Initializing` (set by `NodeContext` constructor)
+2. Transition to `Starting`
+3. Execute `IStartupHook` instances by priority (lowest first)
+4. Execute `INodeLifecycle.StartAsync` for all registered lifecycles
+5. Transition to `Ready`
+6. On error: Transition to `Failed`
+
+**Shutdown Flow:**
+1. Transition to `Stopping`
+2. Execute `INodeLifecycle.StopAsync` for all registered lifecycles
+3. Execute `IShutdownHook` instances by priority (lowest first)
+4. Transition to `Stopped`
+5. On error: Transition to `Failed`
+
+### NodeLifecycleManager
 
 **Location:** `HoneyDrunk.Kernel/Lifecycle/NodeLifecycleManager.cs`
 
-```csharp
-public sealed class NodeLifecycleManager : INodeLifecycle
-{
-    private readonly IEnumerable<IStartupHook> _startupHooks;
-    private readonly IEnumerable<IShutdownHook> _shutdownHooks;
-    private readonly INodeContext _nodeContext;
-    private readonly ILogger<NodeLifecycleManager> _logger;
-    
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        _nodeContext.UpdateLifecycleStage(NodeLifecycleStage.Starting);
-        
-        _logger.LogInformation("Starting Node {NodeId}", _nodeContext.NodeId);
-        
-        // Execute startup hooks in sequence
-        foreach (var hook in _startupHooks.OrderBy(h => h.Order))
-        {
-            _logger.LogDebug("Executing startup hook {HookName}", hook.GetType().Name);
-            await hook.ExecuteAsync(cancellationToken);
-        }
-        
-        _nodeContext.UpdateLifecycleStage(NodeLifecycleStage.Running);
-        _logger.LogInformation("Node {NodeId} running", _nodeContext.NodeId);
-    }
-    
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        _nodeContext.UpdateLifecycleStage(NodeLifecycleStage.Stopping);
-        
-        _logger.LogInformation("Stopping Node {NodeId}", _nodeContext.NodeId);
-        
-        // Execute shutdown hooks in reverse order
-        foreach (var hook in _shutdownHooks.OrderByDescending(h => h.Order))
-        {
-            _logger.LogDebug("Executing shutdown hook {HookName}", hook.GetType().Name);
-            await hook.ExecuteAsync(cancellationToken);
-        }
-        
-        _nodeContext.UpdateLifecycleStage(NodeLifecycleStage.Stopped);
-        _logger.LogInformation("Node {NodeId} stopped", _nodeContext.NodeId);
-    }
-}
-```
+Aggregates `IHealthContributor` and `IReadinessContributor` and provides:
+- `CheckHealthAsync(...)` - Returns aggregated `HealthStatus` + per-contributor details
+- `CheckReadinessAsync(...)` - Returns aggregated readiness + per-contributor details
+- `TransitionToStage(NodeLifecycleStage newStage)` - Updates lifecycle stage with telemetry
 
-**Hook Execution Order:**
-- **Startup:** Ordered ascending (lowest Order first)
-- **Shutdown:** Ordered descending (highest Order first, LIFO)
+Used by health/readiness endpoints and background health monitors.
 
----
+**Health Aggregation:**
+- Critical contributors with `Unhealthy` status → Node is `Unhealthy` (fail-fast)
+- Any contributor with `Degraded` status → Node is `Degraded`
+- All contributors `Healthy` → Node is `Healthy`
 
-### NodeLifecycleHost.cs
+**Readiness Aggregation:**
+- Any required contributor not ready → Node is `Not Ready`
+- All required contributors ready → Node is `Ready`
 
-`IHostedService` implementation that integrates with ASP.NET Core hosting.
+**See [Lifecycle.md](Lifecycle.md) for complete behavior and state machine.**
 
-**Location:** `HoneyDrunk.Kernel/Hosting/NodeLifecycleHost.cs`
-
-```csharp
-public sealed class NodeLifecycleHost : IHostedService
-{
-    private readonly INodeLifecycle _lifecycle;
-    
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        return _lifecycle.StartAsync(cancellationToken);
-    }
-    
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return _lifecycle.StopAsync(cancellationToken);
-    }
-}
-```
-
-Bridges `INodeLifecycle` to ASP.NET Core's `IHostedService`.
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -526,68 +525,23 @@ Zero-overhead metrics stub for when metrics are disabled.
 ```csharp
 internal sealed class NoOpMetricsCollector : IMetricsCollector
 {
-    public void IncrementCounter(string name, long value = 1, params KeyValuePair<string, object>[] tags) { }
+    public void RecordCounter(string name, long value, params KeyValuePair<string, object?>[] tags) { }
     
-    public void RecordValue(string name, double value, params KeyValuePair<string, object>[] tags) { }
+    public void RecordHistogram(string name, double value, params KeyValuePair<string, object?>[] tags) { }
     
-    public void RecordDuration(string name, TimeSpan duration, params KeyValuePair<string, object>[] tags) { }
-    
-    public IDisposable MeasureDuration(string name, params KeyValuePair<string, object>[] tags)
-    {
-        return NullDisposable.Instance;
-    }
-    
-    private sealed class NullDisposable : IDisposable
-    {
-        public static readonly NullDisposable Instance = new();
-        public void Dispose() { }
-    }
+    public void RecordGauge(string name, double value, params KeyValuePair<string, object?>[] tags) { }
 }
 ```
 
-**Registered When:** Metrics are disabled in configuration.
+**Registered When:** Metrics are disabled in configuration or no concrete collector is registered.
 
----
-
-### NodeLifecycleHealthContributor.cs
-
-Health contributor based on Node lifecycle stage.
-
-**Location:** `HoneyDrunk.Kernel/Diagnostics/NodeLifecycleHealthContributor.cs`
-
-```csharp
-public sealed class NodeLifecycleHealthContributor : IHealthContributor
-{
-    private readonly INodeContext _nodeContext;
-    
-    public string Name => "lifecycle";
-    
-    public Task<HealthStatus> CheckHealthAsync(CancellationToken cancellationToken)
-    {
-        var status = _nodeContext.LifecycleStage switch
-        {
-            NodeLifecycleStage.Running => HealthStatus.Healthy,
-            NodeLifecycleStage.Starting => HealthStatus.Degraded,
-            NodeLifecycleStage.Stopping => HealthStatus.Unhealthy,
-            _ => HealthStatus.Unhealthy
-        };
-        
-        return Task.FromResult(status);
-    }
-}
-```
-
-**Health Mapping:**
-- `Running` → `Healthy`
-- `Starting` → `Degraded` (not yet ready)
-- `Stopping` → `Unhealthy` (shutting down)
-- Other → `Unhealthy`
+[↑ Back to top](#table-of-contents)
 
 ---
 
 ### NodeContextReadinessContributor.cs
 
-Readiness contributor ensuring NodeContext is initialized.
+Readiness contributor ensuring NodeContext is initialized and in appropriate stage.
 
 **Location:** `HoneyDrunk.Kernel/Diagnostics/NodeContextReadinessContributor.cs`
 
@@ -596,27 +550,48 @@ public sealed class NodeContextReadinessContributor : IReadinessContributor
 {
     private readonly INodeContext _nodeContext;
     
-    public string Name => "node-context";
-    
-    public Task<bool> IsReadyAsync(CancellationToken cancellationToken)
+    public NodeContextReadinessContributor(INodeContext nodeContext)
     {
-        var isReady = _nodeContext.LifecycleStage == NodeLifecycleStage.Running;
-        return Task.FromResult(isReady);
+        _nodeContext = nodeContext ?? throw new ArgumentNullException(nameof(nodeContext));
+    }
+    
+    public string Name => "node-context";
+    public int Priority => 0; // Run first
+    public bool IsRequired => true;
+    
+    public Task<(bool isReady, string? reason)> CheckReadinessAsync(CancellationToken cancellationToken = default)
+    {
+        // Check that Node context has valid data
+        if (string.IsNullOrWhiteSpace(_nodeContext.NodeId))
+        {
+            return Task.FromResult((false, (string?)"NodeId is not set"));
+        }
+        
+        // Check that Node is in appropriate stage for readiness
+        var stage = _nodeContext.LifecycleStage;
+        if (stage is NodeLifecycleStage.Initializing or NodeLifecycleStage.Starting)
+        {
+            return Task.FromResult((false, (string?)$"Node is still {stage}"));
+        }
+        
+        if (stage is NodeLifecycleStage.Failed or NodeLifecycleStage.Stopped or NodeLifecycleStage.Stopping)
+        {
+            return Task.FromResult((false, (string?)$"Node is {stage}"));
+        }
+        
+        // Ready or Degraded are both considered ready
+        return Task.FromResult((true, (string?)null));
     }
 }
 ```
 
-**Kubernetes Integration:**
-```yaml
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 8080
-readinessProbe:
-  httpGet:
-    path: /ready
-    port: 8080
-```
+**Readiness Mapping:**
+- `Ready` → Ready ✅
+- `Degraded` → Ready ⚠️ (operational but impaired)
+- `Initializing` / `Starting` → Not Ready (still starting up)
+- `Stopping` / `Stopped` / `Failed` → Not Ready (not operational)
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -633,14 +608,14 @@ public sealed class ConfigurationValidator
     {
         ArgumentNullException.ThrowIfNull(options);
         
-        if (string.IsNullOrWhiteSpace(options.NodeId?.Value))
+        if (string.IsNullOrWhiteSpace(options.NodeId))
             throw new InvalidOperationException("NodeId is required");
         
         if (string.IsNullOrWhiteSpace(options.StudioId))
             throw new InvalidOperationException("StudioId is required");
         
-        if (options.EnvironmentId is null || string.IsNullOrWhiteSpace(options.EnvironmentId.Value))
-            throw new InvalidOperationException("EnvironmentId is required");
+        if (string.IsNullOrWhiteSpace(options.Environment))
+            throw new InvalidOperationException("Environment is required");
         
         // Validate version format
         if (!string.IsNullOrWhiteSpace(options.Version))
@@ -653,6 +628,8 @@ public sealed class ConfigurationValidator
 ```
 
 Fails fast if configuration is invalid.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -686,6 +663,8 @@ public sealed class StudioConfiguration : IStudioConfiguration
 
 Thin wrapper over `IConfiguration` with Studio identity.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Dependency Injection
@@ -697,6 +676,8 @@ Core service registration extension methods.
 **Location:** `HoneyDrunk.Kernel/DependencyInjection/HoneyDrunkCoreExtensions.cs`
 
 Registers all Kernel services. See [Bootstrapping.md](Bootstrapping.md) for details.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -716,7 +697,6 @@ public static class ServiceProviderValidation
         _ = services.GetRequiredService<IGridContextAccessor>();
         _ = services.GetRequiredService<IOperationContextAccessor>();
         _ = services.GetRequiredService<IOperationContextFactory>();
-        _ = services.GetRequiredService<INodeLifecycle>();
         
         // Validate at least one transport binder
         var binders = services.GetServices<ITransportEnvelopeBinder>();
@@ -731,6 +711,8 @@ public static class ServiceProviderValidation
 app.Services.ValidateHoneyDrunkServices(); // Throws if services missing
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Summary
@@ -738,20 +720,30 @@ app.Services.ValidateHoneyDrunkServices(); // Throws if services missing
 | Category | Implementation | Purpose |
 |----------|----------------|---------|
 | **Context** | GridContext, NodeContext, OperationContext | Core context carriers |
-| **Accessors** | GridContextAccessor, OperationContextAccessor | Ambient context access |
+| **Accessors** | GridContextAccessor, OperationContextAccessor | Ambient context access via `AsyncLocal<T>` |
 | **Factories** | OperationContextFactory | Create operation contexts |
 | **Mappers** | Http/Messaging/JobContextMapper | Extract context from transports |
-| **Middleware** | GridContextMiddleware | HTTP request context |
-| **Lifecycle** | NodeLifecycleManager, NodeLifecycleHost | Startup/shutdown orchestration |
-| **Diagnostics** | NoOpMetricsCollector, Health/Readiness Contributors | Observability |
+| **Middleware** | GridContextMiddleware | HTTP request context using `GridHeaderNames` |
+| **Lifecycle** | NodeLifecycleHost, NodeLifecycleManager | Startup/shutdown orchestration + health/readiness |
+| **Diagnostics** | NoOpMetricsCollector, NodeContextReadinessContributor | Observability |
 | **Validation** | ConfigurationValidator, ServiceProviderValidation | Fail-fast validation |
 
 **Key Design Principles:**
 - ✅ Thin wrappers over BCL (`AsyncLocal`, `IConfiguration`)
-- ✅ Immutable value types where possible
+- ✅ Immutable core identity (`GridContext`) with controlled mutation for runtime state (`OperationContext`)
 - ✅ Fail-fast validation at startup
 - ✅ Zero-overhead no-op implementations for disabled features
-- ✅ Integration with ASP.NET Core primitives
+- ✅ Integration with ASP.NET Core primitives (`IHostedService`, `IMiddleware`)
+- ✅ Canonical header names via `GridHeaderNames`
+
+**Lifecycle Stage Transitions:**
+```
+Initializing → Starting → Ready ⇄ Degraded
+                             ↓
+                          Stopping → Stopped
+                             ↓
+                          Failed
+```
 
 ---
 

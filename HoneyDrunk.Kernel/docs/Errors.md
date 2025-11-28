@@ -60,21 +60,23 @@ public class HoneyDrunkException : Exception
 }
 ```
 
+**Design:** In most cases you should construct `HoneyDrunkException` from the current `IGridContext` and `INodeContext` so the error stays aligned with the active Grid context. **Avoid hardcoding NodeId/EnvironmentId as string literals** - pull them from Grid context.
+
 ### Constructor Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `message` | `string` | ✅ Yes | Human-readable error message |
-| `correlationId` | `CorrelationId?` | ❌ No | Correlation ID for tracing |
+| `correlationId` | `CorrelationId?` | ❌ No | Correlation ID for tracing (from `IGridContext`) |
 | `errorCode` | `ErrorCode?` | ❌ No | Structured error code |
-| `nodeId` | `NodeId?` | ❌ No | Node where error occurred |
-| `environmentId` | `EnvironmentId?` | ❌ No | Environment identifier |
+| `nodeId` | `NodeId?` | ❌ No | Node where error occurred (from `IGridContext` or `INodeContext`) |
+| `environmentId` | `EnvironmentId?` | ❌ No | Environment identifier (from `IGridContext`) |
 | `innerException` | `Exception?` | ❌ No | Underlying cause |
 
 ### Usage Example
 
 ```csharp
-public class OrderService(IGridContext gridContext)
+public class OrderService(IGridContext gridContext, INodeContext nodeContext)
 {
     public async Task ProcessOrderAsync(Order order)
     {
@@ -84,12 +86,13 @@ public class OrderService(IGridContext gridContext)
         }
         catch (Exception ex)
         {
+            // Pull Grid identity from context, not literals
             throw new HoneyDrunkException(
                 message: "Order processing failed",
-                correlationId: gridContext.CorrelationId,
+                correlationId: new CorrelationId(gridContext.CorrelationId),
                 errorCode: new ErrorCode("order.processing.failed"),
-                nodeId: new NodeId("order-service"),
-                environmentId: new EnvironmentId("production"),
+                nodeId: new NodeId(gridContext.NodeId),
+                environmentId: new EnvironmentId(gridContext.Environment),
                 innerException: ex
             );
         }
@@ -115,6 +118,13 @@ public class OrderService(IGridContext gridContext)
 ---
 
 ## Typed Exception Hierarchy
+
+**When to Use:**
+- **ValidationException** - Anything the caller can fix by changing input (invalid email, negative amount, missing required field)
+- **NotFoundException** - Missing resources (order not found, user not found)
+- **SecurityException** - Authentication/authorization problems (expired token, missing permission)
+- **ConcurrencyException** - Optimistic concurrency failures, uniqueness violations, duplicate keys
+- **DependencyFailureException** - External systems breaking (database timeout, API unavailable, queue full)
 
 ### ValidationException.cs
 
@@ -193,6 +203,7 @@ public class SecurityException : HoneyDrunkException
 
 **Usage:**
 ```csharp
+// Authorization failure (user lacks permission)
 if (!user.HasPermission("orders.delete"))
 {
     throw new SecurityException(
@@ -201,6 +212,7 @@ if (!user.HasPermission("orders.delete"))
     );
 }
 
+// Authentication failure (user identity not verified)
 if (!IsAuthenticated())
 {
     throw new SecurityException(
@@ -210,7 +222,11 @@ if (!IsAuthenticated())
 }
 ```
 
-**Transport Mapping:** HTTP 403 Forbidden (authorization) or HTTP 401 Unauthorized (authentication)
+**Transport Mapping:** 
+- HTTP 403 Forbidden (authorization failure - `authorization.failure`)
+- HTTP 401 Unauthorized (authentication failure - `authentication.failure`)
+
+**Note:** The default `IErrorClassifier` maps `SecurityException` to HTTP 403. For HTTP 401 responses, throw with `ErrorCode.WellKnown.AuthenticationFailure` and implement custom classifier logic to check the error code.
 
 ---
 
@@ -337,14 +353,16 @@ var code1 = new ErrorCode("validation.input.email");
 var code2 = new ErrorCode("dependency.timeout.redis");
 var code3 = new ErrorCode("authorization.role.missing");
 
-// Validation
-if (ErrorCode.IsValid("invalid-code!", out var error))
+// Validation - valid code
+if (ErrorCode.IsValid("validation.input.email", out var error1))
 {
-    // Valid
+    // Valid: all lowercase, alphanumeric, dot-separated
 }
-else
+
+// Validation - invalid code
+if (!ErrorCode.IsValid("VALIDATION.FAILED", out var error2))
 {
-    Console.WriteLine(error); // "Segments must be lowercase alphanumeric only."
+    Console.WriteLine(error2); // "Segments must be lowercase alphanumeric only."
 }
 
 // TryParse
@@ -362,12 +380,16 @@ throw new NotFoundException(
 
 ### Custom Error Codes
 
+**Best Practice:** Each domain should centralize its error codes into a static class (e.g., `PaymentErrorCodes`) to avoid duplication and typos across the codebase.
+
 ```csharp
-public static class MyErrorCodes
+public static class PaymentErrorCodes
 {
-    public static readonly ErrorCode PaymentDeclined = new("payment.declined");
-    public static readonly ErrorCode ShippingUnavailable = new("shipping.unavailable");
-    public static readonly ErrorCode InventoryInsufficient = new("inventory.insufficient");
+    public static readonly ErrorCode CardDeclined = new("payment.card.declined");
+    public static readonly ErrorCode CardExpired = new("payment.card.expired");
+    public static readonly ErrorCode InsufficientFunds = new("payment.card.insufficientfunds");
+    public static readonly ErrorCode FraudSuspected = new("payment.fraud.suspected");
+    public static readonly ErrorCode ProcessorUnavailable = new("payment.processor.unavailable");
 }
 
 // Usage
@@ -375,7 +397,7 @@ if (paymentResult.Declined)
 {
     throw new ValidationException(
         "Payment declined by processor",
-        MyErrorCodes.PaymentDeclined
+        PaymentErrorCodes.CardDeclined
     );
 }
 ```
@@ -387,19 +409,21 @@ if (paymentResult.Declined)
 ## ErrorClassification.cs
 
 ### What it is
-Transport-agnostic error classification result used for mapping exceptions to HTTP status codes, gRPC codes, or messaging errors.
+Transport-specific error classification result used for mapping exceptions to HTTP status codes. **The default `IErrorClassifier` targets HTTP APIs.** Other transports (gRPC, messaging) can provide their own classifier implementations mapping the same exception types to transport-specific codes.
 
 ### Properties
 
 ```csharp
 public sealed class ErrorClassification
 {
-    public int StatusCode { get; }      // HTTP status (400, 404, 500, etc.)
+    public int StatusCode { get; }      // HTTP status code (400, 404, 500, etc.)
     public string Title { get; }        // Short human-readable title
     public string? ErrorCode { get; }   // Structured error code
     public string? TypeUri { get; }     // Documentation URL
 }
 ```
+
+**Design Note:** `StatusCode` is interpreted as an HTTP status code by default. Non-HTTP transports can map this to equivalent semantics (e.g., gRPC status codes, messaging error envelopes).
 
 ### Usage Example
 
@@ -512,6 +536,71 @@ public class ErrorHandlingMiddleware(
 
 ## Complete Error Handling Example
 
+### Global Middleware (Recommended)
+
+**In most Nodes, global `ErrorHandlingMiddleware` handles exceptions automatically.** Controllers only need to catch specific exceptions when they want to override the default classification or add custom response metadata.
+
+```csharp
+public class ErrorHandlingMiddleware(
+    IErrorClassifier errorClassifier,
+    ILogger<ErrorHandlingMiddleware> logger)
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unhandled exception");
+            
+            var classification = errorClassifier.Classify(ex);
+            
+            if (classification is not null)
+            {
+                context.Response.StatusCode = classification.StatusCode;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    type = classification.TypeUri,
+                    title = classification.Title,
+                    status = classification.StatusCode,
+                    errorCode = classification.ErrorCode,
+                    traceId = Activity.Current?.Id ?? context.TraceIdentifier
+                });
+            }
+            else
+            {
+                // Fallback to generic 500
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    title = "Internal Server Error",
+                    status = 500,
+                    traceId = Activity.Current?.Id ?? context.TraceIdentifier
+                });
+            }
+        }
+    }
+}
+```
+
+**Response Example:**
+
+```json
+{
+  "type": "https://docs.honeydrunk.io/errors/not-found",
+  "title": "Order 12345 not found",
+  "status": 404,
+  "errorCode": "resource.notfound",
+  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+
+### Manual Handling (Special Cases)
+
+Controllers can override default classification for special cases (e.g., custom retry logic, rate limit headers):
+
 ```csharp
 public class OrderController(
     IOrderService orderService,
@@ -526,34 +615,11 @@ public class OrderController(
             var order = await orderService.GetByIdAsync(orderId);
             return Ok(order);
         }
-        catch (NotFoundException ex)
-        {
-            logger.LogWarning(ex,
-                "Order {OrderId} not found with correlation {CorrelationId}",
-                orderId,
-                ex.CorrelationId ?? gridContext.CorrelationId);
-            
-            return NotFound(new
-            {
-                errorCode = ex.ErrorCode?.Value,
-                message = ex.Message,
-                correlationId = ex.CorrelationId?.ToString()
-            });
-        }
-        catch (ValidationException ex)
-        {
-            logger.LogWarning(ex, "Validation failed for order {OrderId}", orderId);
-            
-            return BadRequest(new
-            {
-                errorCode = ex.ErrorCode?.Value,
-                message = ex.Message
-            });
-        }
         catch (DependencyFailureException ex)
         {
             logger.LogError(ex, "Dependency failure while fetching order {OrderId}", orderId);
             
+            // Custom handling: add Retry-After header
             return StatusCode(502, new
             {
                 errorCode = ex.ErrorCode?.Value,
@@ -561,17 +627,7 @@ public class OrderController(
                 retryAfter = 30
             });
         }
-        catch (HoneyDrunkException ex)
-        {
-            logger.LogError(ex, "Unhandled Kernel exception");
-            
-            return StatusCode(500, new
-            {
-                errorCode = ex.ErrorCode?.Value ?? "internal.error",
-                message = "Internal server error",
-                correlationId = ex.CorrelationId?.ToString()
-            });
-        }
+        // Other exceptions handled by global middleware
     }
 }
 ```
@@ -636,9 +692,11 @@ catch (Exception ex)
     throw new HoneyDrunkException("Failed"); // ❌ Missing innerException
 }
 
-// Don't expose stack traces to clients
+// Don't expose stack traces to external clients
 return Ok(new { error = ex.StackTrace }); // ❌ Security risk
 ```
+
+**Note:** Internal logs can still capture full exception details (including stack traces) for debugging. Client responses should use error codes and correlation IDs only.
 
 [↑ Back to top](#table-of-contents)
 

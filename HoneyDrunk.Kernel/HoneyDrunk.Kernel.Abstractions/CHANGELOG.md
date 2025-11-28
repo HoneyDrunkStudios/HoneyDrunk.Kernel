@@ -1,9 +1,38 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to HoneyDrunk.Kernel.Abstractions will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.0] - 2025-11-28
+
+### Added
+- **Transport Abstraction**: `ITransportEnvelopeBinder` for protocol-agnostic context propagation
+- **Error Handling**: Structured exception hierarchy with `HoneyDrunkException` base
+  - `ValidationException`, `NotFoundException`, `SecurityException`, `ConcurrencyException`, `DependencyFailureException`
+  - `ErrorCode` with well-known taxonomy and custom error code support
+  - `IErrorClassifier` for automatic HTTP status mapping and retry policy determination
+- **Standard Headers**: `GridHeaderNames` constants for consistent HTTP/messaging headers
+  - `X-Correlation-Id`, `X-Causation-Id`, `X-Node-Id`, `X-Studio-Id`, `X-Environment`
+  - `X-Tenant-Id`, `X-Project-Id` for multi-tenant scenarios
+  - `X-Baggage-*` prefix for metadata propagation
+  - W3C `traceparent` and `baggage` support
+- **Telemetry Tags**: `TelemetryTags` constants for standard OpenTelemetry tag names
+  - Correlation, causation, node, studio, environment tags
+  - Tenant and project tags for multi-tenant observability
+- **Operation Context Extensions**: Enhanced `IOperationContext` with metadata and timing
+- **Grid Context Extensions**: Multi-tenant identity support (`TenantId`, `ProjectId`)
+
+### Changed
+- **Context Model Enhancement**: GridContext now includes `TenantId` and `ProjectId` for multi-tenant scenarios
+- **Documentation**: Complete rewrite of package README to focus on contracts vs runtime
+- **Telemetry Integration**: Standardized tag names across all telemetry abstractions
+
+### Improved
+- **Identity Primitives**: Enhanced validation and serialization support
+- **Configuration Abstractions**: Clarified hierarchical scoping design (Studio → Node)
+- **Agent Contracts**: Improved agent execution context with scoped permissions
 
 ## [0.2.1] - 2025-11-22
 

@@ -34,7 +34,11 @@ GridActivitySource provides OpenTelemetry-compatible distributed tracing using .
 - **ActivitySource** - OpenTelemetry-compatible source for creating traces
 - **Automatic Enrichment** - Grid context automatically added to all activities
 - **Standard Naming** - Consistent activity names across the Grid
-- **Zero Dependencies** - Uses built-in .NET `Activity` API
+- **Zero Kernel Dependencies** - Uses built-in .NET `Activity` API (no OpenTelemetry SDK required in Kernel itself)
+
+**Design Note:** `GridActivitySource` is **infrastructure-facing** - use from adapters, middleware, and transport layers. For application services, prefer `ITelemetryActivityFactory` which provides ambient context access and automatic enrichment. See [Telemetry.md](Telemetry.md) for application-level telemetry patterns.
+
+**Prerequisites:** `GridContext` must be established by middleware (e.g., `GridContextMiddleware`) or transport mappers before using `GridActivitySource`. Activities inherit trace context from `Activity.Current` automatically.
 
 ---
 
@@ -95,15 +99,15 @@ public static Activity? StartActivity(
 
 **Returns:** `Activity?` - The started activity, or `null` if no listeners are active.
 
-**Automatic Tags Added:**
+**Automatic Tags Added (using TelemetryTags constants):**
 
 | Tag | Source | Example |
 |-----|--------|---------|
-| `hd.correlation_id` | `gridContext.CorrelationId` | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
-| `hd.node_id` | `gridContext.NodeId` | `payment-service` |
-| `hd.studio_id` | `gridContext.StudioId` | `honeycomb-prod` |
-| `hd.environment` | `gridContext.Environment` | `production` |
-| `hd.causation_id` | `gridContext.CausationId` | `01HQXY7J3SI8W4A2M1XE6UFBZP` |
+| `TelemetryTags.CorrelationId` (`hd.correlation_id`) | `gridContext.CorrelationId` | `01HQXZ8K4TJ9X5B3N2YGF7WDCQ` |
+| `TelemetryTags.NodeId` (`hd.node_id`) | `gridContext.NodeId` | `payment-service` |
+| `TelemetryTags.StudioId` (`hd.studio_id`) | `gridContext.StudioId` | `honeycomb-prod` |
+| `TelemetryTags.Environment` (`hd.environment`) | `gridContext.Environment` | `production` |
+| `TelemetryTags.CausationId` (`hd.causation_id`) | `gridContext.CausationId` | `01HQXY7J3SI8W4A2M1XE6UFBZP` |
 | `hd.baggage.*` | `gridContext.Baggage` | `hd.baggage.TenantId: 01HQXZ...` |
 
 **Example:**
@@ -470,6 +474,8 @@ return result;
 
 ### Registering the ActivitySource
 
+**Note:** Kernel itself has no dependency on the OpenTelemetry SDK. Applications using Kernel add the SDK and configure it to listen to `GridActivitySource.SourceName`.
+
 ```csharp
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -673,9 +679,15 @@ catch (Exception ex)
 activity?.SetTag("payment.amount", amount);
 activity?.SetTag("payment.provider", "stripe");
 
-// Use semantic conventions
+// Use semantic conventions for well-known tags
 activity?.SetTag("http.method", "POST");
 activity?.SetTag("db.operation", "query");
+activity?.SetTag("db.system", "postgresql"); // Standard semantic convention
+activity?.SetTag("db.name", "PaymentsDb"); // Database name
+
+// Use TelemetryTags constants for Grid tags
+activity?.SetTag(TelemetryTags.CorrelationId, gridContext.CorrelationId);
+activity?.SetTag(TelemetryTags.NodeId, gridContext.NodeId);
 ```
 
 ### ❌ DON'T
@@ -699,6 +711,19 @@ activity = GridActivitySource.StartActivity("payment_process", ...); // ❌ snak
 activity = GridActivitySource.StartActivity("PROCESSPAYMENT", ...); // ❌ UPPERCASE
 ```
 
+### When to Use GridActivitySource vs ITelemetryActivityFactory
+
+| Scenario | Use |
+|----------|-----|
+| **Infrastructure/Adapter Code** | `GridActivitySource` - Direct span creation with explicit GridContext |
+| **Application Services** | `ITelemetryActivityFactory` - Ambient context, automatic enrichment, log scopes |
+| **Middleware** | `GridActivitySource` - Low-level HTTP/transport instrumentation |
+| **Repositories** | `GridActivitySource` - Database-specific semantic tags |
+| **Message Handlers** | `GridActivitySource` - Messaging-specific semantic tags |
+| **Business Logic** | `ITelemetryActivityFactory` - Cleaner API, integrated with logging |
+
+**See [Telemetry.md](Telemetry.md) for application-level telemetry patterns.**
+
 ---
 
 ## Testing
@@ -710,28 +735,40 @@ activity = GridActivitySource.StartActivity("PROCESSPAYMENT", ...); // ❌ UPPER
 public async Task ProcessPayment_CreatesActivity()
 {
     // Arrange
+    Activity? capturedActivity = null;
+    
     var activityListener = new ActivityListener
     {
         ShouldListenTo = source => source.Name == GridActivitySource.SourceName,
-        Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+        ActivityStarted = activity => capturedActivity = activity
     };
     
     ActivitySource.AddActivityListener(activityListener);
     
-    var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
+    var gridContext = new GridContext(
+        correlationId: "corr-123",
+        nodeId: "test-node",
+        studioId: "test-studio",
+        environment: "test",
+        causationId: null,
+        baggage: new Dictionary<string, string>(),
+        createdAtUtc: DateTimeOffset.UtcNow);
+    
     var service = new PaymentService(gridContext);
     
     // Act
-    Activity? capturedActivity = null;
-    activityListener.ActivityStarted = activity => capturedActivity = activity;
-    
     await service.ProcessAsync(new PaymentRequest { Amount = 100 });
     
     // Assert
     Assert.NotNull(capturedActivity);
     Assert.Equal("ProcessPayment", capturedActivity.DisplayName);
-    Assert.Equal("corr-123", capturedActivity.GetTagItem("hd.correlation_id"));
+    Assert.Equal("corr-123", capturedActivity.GetTagItem(TelemetryTags.CorrelationId));
+    Assert.Equal("test-node", capturedActivity.GetTagItem(TelemetryTags.NodeId));
     Assert.Equal(ActivityStatusCode.Ok, capturedActivity.Status);
+    
+    // Cleanup
+    activityListener.Dispose();
 }
 ```
 
@@ -750,12 +787,17 @@ public async Task ProcessPayment_CreatesActivity()
 | **SetSuccess** | Mark activity as successful | `void` |
 
 **Key Benefits:**
-- ✅ Automatic Grid context enrichment
+- ✅ Automatic Grid context enrichment using `TelemetryTags`
 - ✅ OpenTelemetry-compatible (standard Activity API)
 - ✅ Consistent activity naming
 - ✅ Semantic tagging (HTTP, DB, messaging)
-- ✅ Zero external dependencies
+- ✅ Zero Kernel dependencies on OpenTelemetry SDK
 - ✅ Works with Jaeger, Zipkin, Grafana, Azure Monitor, etc.
+
+**Design Philosophy:**
+- **Infrastructure-facing** - Use from adapters, middleware, transport layers
+- **Application services** should prefer `ITelemetryActivityFactory` for cleaner API
+- **Kernel has no OTel dependency** - Applications add OpenTelemetry SDK and configure listeners
 
 **OpenTelemetry Exporters:**
 - Console (development)

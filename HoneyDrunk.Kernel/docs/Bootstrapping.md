@@ -7,8 +7,8 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [AddHoneyDrunkNode](#addhoneydrunknode)
-- [HoneyDrunkNodeOptions](#honeydrunk-nodeoptions)
+- [AddHoneyDrunkGrid](#addhoneydrunkgrid)
+- [GridOptions](#gridoptions)
 - [Basic Usage](#basic-usage)
 - [Service Validation](#service-validation)
 - [Middleware Registration](#middleware-registration)
@@ -16,7 +16,6 @@
 - [Complete Example](#complete-example)
 - [Configuration from appsettings.json](#configuration-from-appsettingsjson)
 - [Testing](#testing)
-- [Migration from v0.2.x](#migration-from-v02x)
 - [Summary](#summary)
 
 ---
@@ -28,14 +27,16 @@ Bootstrapping provides a unified, opinionated way to configure HoneyDrunk Nodes 
 **Location:** `HoneyDrunk.Kernel/Hosting/`
 
 **Key Concepts:**
-- **Unified Registration** - Single `AddHoneyDrunkNode()` call registers all services
+- **Unified Registration** - Single `AddHoneyDrunkGrid()` call registers all services
 - **Service Validation** - Built-in validation ensures required services are present
 - **Middleware Helpers** - Easy middleware registration with `UseGridContext()`
-- **Fluent Builder** - Chainable configuration via `IHoneyDrunkBuilder`
+- **String-Based Configuration** - Runtime uses plain strings for performance (no value objects)
+
+**Design Note:** The method is called `AddHoneyDrunkGrid()` (not `AddHoneyDrunkNode`) for historical reasons. It registers all core Grid services needed for a Node to participate in the Grid. Think of it as "add this Node to the Grid."
 
 ---
 
-## AddHoneyDrunkNode
+## AddHoneyDrunkGrid
 
 ### What it is
 The primary bootstrapping method that registers all HoneyDrunk Kernel services in a single call.
@@ -46,90 +47,72 @@ Like a "turnkey solution" for a house - walls, plumbing, electricity, and HVAC a
 ### Method Signature
 
 ```csharp
-public static IHoneyDrunkBuilder AddHoneyDrunkNode(
+public static IServiceCollection AddHoneyDrunkGrid(
     this IServiceCollection services,
-    Action<HoneyDrunkNodeOptions> configure)
+    Action<GridOptions> configure)
 ```
 
 ### What It Registers
 
 | Service | Lifetime | Description |
 |---------|----------|-------------|
-| `HoneyDrunkNodeOptions` | Singleton | Node configuration options |
 | `INodeContext` | Singleton | Static Node identity and metadata |
-| `INodeDescriptor` | Singleton | Node descriptor for service discovery |
-| `IGridContextAccessor` | Singleton | Ambient Grid context accessor (AsyncLocal) |
-| `IOperationContextAccessor` | Singleton | Ambient operation context accessor (AsyncLocal) |
-| `IOperationContextFactory` | Scoped | Factory for creating operation contexts |
-| `IErrorClassifier` | Singleton | Error classification for transport mapping |
-| `IServiceProviderValidation` | Singleton | Service registration validation |
-| `ITransportEnvelopeBinder` (HTTP) | Singleton | HTTP response context binder |
-| `ITransportEnvelopeBinder` (Message) | Singleton | Message properties context binder |
-| `ITransportEnvelopeBinder` (Job) | Singleton | Job metadata context binder |
-| `IGridContext` | Scoped | Default Grid context factory |
-| `NodeLifecycleManager` | Singleton | Lifecycle coordination and health/readiness aggregation |
+| `IGridContext` | Scoped | Default Grid context for operations |
+| `IMetricsCollector` | Singleton | Metrics collection (defaults to `NoOpMetricsCollector`) |
 | `NodeLifecycleHost` | IHostedService | Startup/shutdown hook orchestration |
-| `GridActivitySource` | Singleton | OpenTelemetry ActivitySource for distributed tracing |
 
-**Returns:** `IHoneyDrunkBuilder` for fluent configuration chaining.
+**Additional Services (register separately):**
+- `IGridContextAccessor` - Register with `services.AddSingleton<IGridContextAccessor, GridContextAccessor>()`
+- `IOperationContextAccessor` - Register with `services.AddSingleton<IOperationContextAccessor, OperationContextAccessor>()`
+- `IOperationContextFactory` - Register with `services.AddScoped<IOperationContextFactory, OperationContextFactory>()`
+- `ITransportEnvelopeBinder` implementations - Register transport binders as needed
+- `NodeLifecycleManager` - Register with `services.AddSingleton<NodeLifecycleManager>()`
 
-**New in v0.3.0:**
-- ✅ Lifecycle coordination (`NodeLifecycleManager`, `NodeLifecycleHost`) - Orchestrates startup/shutdown hooks and health monitoring
-- ✅ Telemetry primitives (`GridActivitySource`) - OpenTelemetry-ready distributed tracing
+**Returns:** `IServiceCollection` for fluent configuration chaining.
 
-**Note:** Agent interop services (`AgentContextProjection`, `GridContextSerializer`, `AgentResultSerializer`) are static helper classes and don't require DI registration. Use them directly via static methods (see [Agents.md](Agents.md#agentsinterop---serialization-and-context-marshaling)).
+**Design Note:** The current implementation registers core services. Additional context accessors, transport binders, and lifecycle coordination services are registered separately as shown in the examples below. Future versions may consolidate all registrations into a single call.
 
 ---
 
-## HoneyDrunkNodeOptions
+## GridOptions
 
 ### Configuration Properties
 
 ```csharp
-public class HoneyDrunkNodeOptions
+public sealed class GridOptions
 {
     /// <summary>
-    /// Required: The Node identifier (validated kebab-case).
+    /// Required: The Node identifier.
+    /// Example: "payment-node", "notification-node".
     /// </summary>
-    public NodeId? NodeId { get; set; }
+    public string NodeId { get; set; } = string.Empty;
     
     /// <summary>
-    /// Required: The sector this Node belongs to.
+    /// Required: The Node version.
+    /// Example: "1.0.0", "2.1.3-beta".
     /// </summary>
-    public SectorId? SectorId { get; set; }
+    public string Version { get; set; } = "1.0.0";
     
     /// <summary>
-    /// Optional: The Studio identifier (defaults to grid-level config).
+    /// Required: The Studio identifier.
+    /// Example: "honeycomb", "staging".
     /// </summary>
-    public string? StudioId { get; set; }
+    public string StudioId { get; set; } = string.Empty;
     
     /// <summary>
-    /// Optional: The environment identifier (defaults to grid-level config).
+    /// Required: The environment name.
+    /// Example: "production", "staging", "development".
     /// </summary>
-    public EnvironmentId? EnvironmentId { get; set; }
-    
-    /// <summary>
-    /// Optional: The Node version (defaults to assembly version).
-    /// </summary>
-    public string? Version { get; set; }
+    public string Environment { get; set; } = "development";
     
     /// <summary>
     /// Optional: Additional metadata tags.
     /// </summary>
-    public Dictionary<string, string> Tags { get; set; } = new();
-    
-    /// <summary>
-    /// Validates all required options are set.
-    /// </summary>
-    public void Validate()
-    {
-        if (NodeId is null)
-            throw new InvalidOperationException("NodeId is required.");
-        if (SectorId is null)
-            throw new InvalidOperationException("SectorId is required.");
-    }
+    public Dictionary<string, string> Tags { get; } = new();
 }
 ```
+
+**Validation:** The bootstrapping extension validates that `NodeId` and `StudioId` are not empty. Other validation happens at runtime.
 
 ---
 
@@ -138,26 +121,27 @@ public class HoneyDrunkNodeOptions
 ### Minimal Configuration
 
 ```csharp
-using HoneyDrunk.Kernel.Abstractions.Identity;
 using HoneyDrunk.Kernel.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register all HoneyDrunk services
-builder.Services.AddHoneyDrunkNode(options =>
+// Register Grid services (core only)
+builder.Services.AddHoneyDrunkGrid(options =>
 {
-    options.NodeId = new NodeId("payment-service");
-    options.SectorId = SectorId.WellKnown.Core;
-    options.EnvironmentId = EnvironmentId.WellKnown.Production;
+    options.NodeId = "payment-service";
+    options.StudioId = "honeycomb";
+    options.Environment = "production";
+    options.Version = "1.0.0";
 });
+
+// Register additional services
+builder.Services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+builder.Services.AddScoped<IOperationContextFactory, OperationContextFactory>();
 
 var app = builder.Build();
 
-// Validate services (throws if required services missing)
+// Validate services (optional but recommended)
 app.Services.ValidateHoneyDrunkServices();
-
-// Add Grid context middleware
-app.UseGridContext();
 
 app.Run();
 ```
@@ -165,17 +149,14 @@ app.Run();
 ### Full Configuration
 
 ```csharp
-builder.Services.AddHoneyDrunkNode(options =>
+builder.Services.AddHoneyDrunkGrid(options =>
 {
     // Required: Node identity
-    options.NodeId = new NodeId("payment-service");
-    options.SectorId = new SectorId("financial-services");
-    
-    // Optional: Studio and environment
+    options.NodeId = "payment-service";
     options.StudioId = "honeycomb-prod";
-    options.EnvironmentId = new EnvironmentId("production");
+    options.Environment = builder.Environment.EnvironmentName; // "Production", "Development", etc.
     
-    // Optional: Version (defaults to assembly version)
+    // Optional: Version (defaults to "1.0.0")
     options.Version = "2.1.0";
     
     // Optional: Metadata tags
@@ -183,39 +164,20 @@ builder.Services.AddHoneyDrunkNode(options =>
     options.Tags["deployment-slot"] = "blue";
     options.Tags["cost-center"] = "engineering";
 });
-```
 
-### Using Well-Known Identities
+// Register context accessors
+builder.Services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+builder.Services.AddSingleton<IOperationContextAccessor, OperationContextAccessor>();
 
-```csharp
-builder.Services.AddHoneyDrunkNode(options =>
-{
-    options.NodeId = new NodeId("api-gateway");
-    
-    // Use well-known sectors
-    options.SectorId = SectorId.WellKnown.Web;
-    
-    // Use well-known environments
-    options.EnvironmentId = EnvironmentId.WellKnown.Development;
-    
-    // Available well-known sectors:
-    // - SectorId.WellKnown.Core
-    // - SectorId.WellKnown.AI
-    // - SectorId.WellKnown.Ops
-    // - SectorId.WellKnown.Data
-    // - SectorId.WellKnown.Web
-    // - SectorId.WellKnown.Messaging
-    // - SectorId.WellKnown.Storage
-    
-    // Available well-known environments:
-    // - EnvironmentId.WellKnown.Production
-    // - EnvironmentId.WellKnown.Staging
-    // - EnvironmentId.WellKnown.Development
-    // - EnvironmentId.WellKnown.Testing
-    // - EnvironmentId.WellKnown.Performance
-    // - EnvironmentId.WellKnown.Integration
-    // - EnvironmentId.WellKnown.Local
-});
+// Register context factory
+builder.Services.AddScoped<IOperationContextFactory, OperationContextFactory>();
+
+// Register lifecycle coordination
+builder.Services.AddSingleton<NodeLifecycleManager>();
+
+// Register health/readiness contributors as needed
+builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();
+builder.Services.AddSingleton<IReadinessContributor, NodeContextReadinessContributor>();
 ```
 
 ---
@@ -224,7 +186,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 ### ValidateHoneyDrunkServices
 
-Validates that all required Kernel services are properly registered. Should be called during application startup before processing requests.
+Validates that required Kernel services are properly registered. Should be called during application startup before processing requests.
 
 ```csharp
 public static void ValidateHoneyDrunkServices(this IServiceProvider serviceProvider)
@@ -235,20 +197,14 @@ public static void ValidateHoneyDrunkServices(this IServiceProvider serviceProvi
 - ✅ `IGridContextAccessor` - Ambient Grid context accessor
 - ✅ `IOperationContextAccessor` - Ambient operation context accessor
 - ✅ `IOperationContextFactory` - Operation context factory
-- ✅ `INodeDescriptor` - Node descriptor
-- ✅ `IErrorClassifier` - Error classification
-- ✅ `NodeLifecycleManager` - Lifecycle coordination (NEW v0.3.0)
-- ✅ `NodeLifecycleHost` - Startup/shutdown orchestration (NEW v0.3.0)
+- ✅ `INodeDescriptor` - Node descriptor (if registered)
+- ✅ `IErrorClassifier` - Error classification (if registered)
+- ✅ `NodeLifecycleManager` - Lifecycle coordination (if registered)
+- ✅ `NodeLifecycleHost` - Startup/shutdown orchestration (via `IHostedService`)
 
-**Warns if missing (recommended):**
-- ⚠️ `ITransportEnvelopeBinder` - Transport context binders
-- ⚠️ `IStudioConfiguration` - Studio-level configuration
-
-**Warns if missing (optional but recommended for v3):**
-- ⚠️ `IStartupHook` - Custom Node initialization logic
-- ⚠️ `IShutdownHook` - Custom graceful cleanup logic
-- ⚠️ `IHealthContributor` - Health monitoring for /health endpoint
-- ⚠️ `IReadinessContributor` - Readiness checks for /ready endpoint traffic gating
+**Behavior:**
+- **Throws `InvalidOperationException`** if core services (`INodeContext`, context accessors) are missing
+- **Logs warnings** if recommended services are missing (transport binders, lifecycle services)
 
 **Example:**
 
@@ -273,9 +229,8 @@ app.Run();
 ```
 Service validation failed:
 Required HoneyDrunk services are not registered:
-  - INodeContext is missing. Register via: AddHoneyDrunkNode()
-  - IGridContextAccessor is missing. Register via: AddHoneyDrunkNode()
-  - IOperationContextAccessor is missing. Register via: AddHoneyDrunkNode()
+  - INodeContext is missing. Register via: AddHoneyDrunkGrid()
+  - IGridContextAccessor is missing. Register via: services.AddSingleton<IGridContextAccessor, GridContextAccessor>()
 ```
 
 ---
@@ -284,20 +239,20 @@ Required HoneyDrunk services are not registered:
 
 ### UseGridContext
 
-Registers the GridContext middleware that extracts correlation/causation/studio headers from incoming requests and establishes Grid and Operation contexts.
+Registers the GridContext middleware that extracts correlation/causation/studio headers from incoming requests and establishes Grid context.
 
 ```csharp
 public static IApplicationBuilder UseGridContext(this IApplicationBuilder app)
 ```
 
 **What It Does:**
-1. Extracts Grid context from request headers (`X-Correlation-ID`, `X-Causation-ID`, etc.)
+1. Extracts Grid context from request headers (`X-Correlation-Id`, `X-Causation-Id`, etc.)
 2. Creates a `GridContext` for the request
 3. Sets `IGridContextAccessor.GridContext` (available to all downstream services)
-4. Creates an `OperationContext` to track request timing and outcome
-5. Sets `IOperationContextAccessor.Current` (available to all downstream services)
-6. Echoes `X-Correlation-ID` and `X-Node-ID` to response headers
-7. Cleans up ambient contexts when request completes
+4. Echoes `X-Correlation-Id` and `X-Node-Id` to response headers
+5. Cleans up ambient context when request completes
+
+**Note:** The middleware does **not** automatically create `IOperationContext`. If you need operation tracking, create `OperationContext` explicitly in your services using `IOperationContextFactory`.
 
 **Middleware Order:**
 
@@ -319,44 +274,37 @@ app.Run();
 
 | Request Header | Mapped To |
 |----------------|-----------|
-| `X-Correlation-ID` | `gridContext.CorrelationId` |
-| `X-Causation-ID` | `gridContext.CausationId` |
-| `X-Studio-ID` | `gridContext.StudioId` |
+| `X-Correlation-Id` | `gridContext.CorrelationId` |
+| `X-Causation-Id` | `gridContext.CausationId` |
+| `X-Studio-Id` | Ignored (uses `INodeContext.StudioId`) |
 | `X-Baggage-*` | `gridContext.Baggage["*"]` |
 
 **Headers Added to Response:**
 
 | Response Header | Source |
 |-----------------|--------|
-| `X-Correlation-ID` | `gridContext.CorrelationId` |
-| `X-Node-ID` | `nodeContext.NodeId` |
+| `X-Correlation-Id` | `gridContext.CorrelationId` |
+| `X-Node-Id` | `nodeContext.NodeId` |
 
 ---
 
 ## Fluent Builder Pattern
 
-### IHoneyDrunkBuilder
+### Chaining Configuration
 
-The `AddHoneyDrunkNode()` method returns an `IHoneyDrunkBuilder` for fluent configuration:
-
-```csharp
-public interface IHoneyDrunkBuilder
-{
-    IServiceCollection Services { get; }
-}
-```
-
-**Chaining Configuration:**
+The `AddHoneyDrunkGrid()` method returns `IServiceCollection` for fluent configuration:
 
 ```csharp
 builder.Services
-    .AddHoneyDrunkNode(options =>
+    .AddHoneyDrunkGrid(options =>
     {
-        options.NodeId = new NodeId("payment-service");
-        options.SectorId = SectorId.WellKnown.Core;
-        options.EnvironmentId = EnvironmentId.WellKnown.Production;
+        options.NodeId = "payment-service";
+        options.StudioId = "honeycomb";
+        options.Environment = "production";
+        options.Version = "2.1.0";
     })
-    .Services // Access IServiceCollection for additional registrations
+    .AddSingleton<IGridContextAccessor, GridContextAccessor>()
+    .AddScoped<IOperationContextFactory, OperationContextFactory>()
     .AddSingleton<IPaymentGateway, StripeGateway>()
     .AddScoped<IOrderService, OrderService>();
 ```
@@ -368,26 +316,35 @@ builder.Services
 ### Production-Ready Node
 
 ```csharp
-using HoneyDrunk.Kernel.Abstractions.Identity;
+using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Hosting;
+using HoneyDrunk.Kernel.Lifecycle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure HoneyDrunk Node
-builder.Services.AddHoneyDrunkNode(options =>
+// Configure HoneyDrunk Grid
+builder.Services.AddHoneyDrunkGrid(options =>
 {
-    options.NodeId = new NodeId("payment-service");
-    options.SectorId = new SectorId("financial-services");
-    options.EnvironmentId = new EnvironmentId(builder.Environment.EnvironmentName);
+    options.NodeId = "payment-service";
+    options.StudioId = builder.Configuration["Grid:StudioId"] ?? "honeycomb";
+    options.Environment = builder.Environment.EnvironmentName;
     options.Version = "2.1.0";
-    options.StudioId = builder.Configuration["Grid:StudioId"];
     
     options.Tags["region"] = builder.Configuration["Azure:Region"] ?? "unknown";
     options.Tags["deployment-slot"] = builder.Configuration["DeploymentSlot"] ?? "primary";
 });
+
+// Register context services
+builder.Services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+builder.Services.AddSingleton<IOperationContextAccessor, OperationContextAccessor>();
+builder.Services.AddScoped<IOperationContextFactory, OperationContextFactory>();
+
+// Register lifecycle coordination
+builder.Services.AddSingleton<NodeLifecycleManager>();
 
 // Register application services
 builder.Services.AddControllers();
@@ -421,11 +378,18 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Health endpoint
-app.MapGet("/health", () => Results.Ok(new
+app.MapGet("/health", (NodeLifecycleManager lifecycleManager) => 
 {
-    Status = "Healthy",
-    Timestamp = DateTimeOffset.UtcNow
-}));
+    var (status, details) = await lifecycleManager.CheckHealthAsync();
+    return Results.Json(new { status, details });
+});
+
+// Readiness endpoint
+app.MapGet("/ready", (NodeLifecycleManager lifecycleManager) => 
+{
+    var (isReady, details) = await lifecycleManager.CheckReadinessAsync();
+    return isReady ? Results.Ok(new { ready = true }) : Results.StatusCode(503);
+});
 
 app.Run();
 ```
@@ -489,8 +453,8 @@ public class PaymentsController(
     "nodeId": "payment-service",
     "version": "2.1.0",
     "studioId": "honeycomb-prod",
-    "environment": "production",
-    "lifecycleStage": "Running"
+    "environment": "Production",
+    "lifecycleStage": "Ready"
   },
   "request": {
     "correlationId": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
@@ -515,12 +479,9 @@ public class PaymentsController(
     }
   },
   "Grid": {
+    "NodeId": "payment-service",
     "StudioId": "honeycomb-prod",
-    "Environment": "production"
-  },
-  "Node": {
-    "Id": "payment-service",
-    "Sector": "financial-services",
+    "Environment": "production",
     "Version": "2.1.0",
     "Tags": {
       "region": "us-east-1",
@@ -533,19 +494,17 @@ public class PaymentsController(
 ### Loading from Configuration
 
 ```csharp
-builder.Services.AddHoneyDrunkNode(options =>
+builder.Services.AddHoneyDrunkGrid(options =>
 {
-    var nodeConfig = builder.Configuration.GetSection("Node");
+    var gridConfig = builder.Configuration.GetSection("Grid");
     
-    options.NodeId = new NodeId(nodeConfig["Id"] ?? "unknown-node");
-    options.SectorId = new SectorId(nodeConfig["Sector"] ?? "core");
-    options.Version = nodeConfig["Version"];
-    options.StudioId = builder.Configuration["Grid:StudioId"];
-    options.EnvironmentId = new EnvironmentId(
-        builder.Configuration["Grid:Environment"] ?? "development");
+    options.NodeId = gridConfig["NodeId"] ?? throw new InvalidOperationException("Grid:NodeId is required");
+    options.StudioId = gridConfig["StudioId"] ?? throw new InvalidOperationException("Grid:StudioId is required");
+    options.Environment = gridConfig["Environment"] ?? builder.Environment.EnvironmentName;
+    options.Version = gridConfig["Version"] ?? "1.0.0";
     
     // Load tags
-    var tagsSection = nodeConfig.GetSection("Tags");
+    var tagsSection = gridConfig.GetSection("Tags");
     foreach (var tag in tagsSection.GetChildren())
     {
         options.Tags[tag.Key] = tag.Value ?? string.Empty;
@@ -557,35 +516,32 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 ## Testing
 
-### Unit Testing with AddHoneyDrunkNode
+### Unit Testing with AddHoneyDrunkGrid
 
 ```csharp
 [Fact]
-public void AddHoneyDrunkNode_RegistersRequiredServices()
+public void AddHoneyDrunkGrid_RegistersRequiredServices()
 {
     // Arrange
     var services = new ServiceCollection();
     
     // Act
-    services.AddHoneyDrunkNode(options =>
+    services.AddHoneyDrunkGrid(options =>
     {
-        options.NodeId = new NodeId("test-node");
-        options.SectorId = SectorId.WellKnown.Core;
-        options.EnvironmentId = EnvironmentId.WellKnown.Development;
+        options.NodeId = "test-node";
+        options.StudioId = "test-studio";
+        options.Environment = "test";
     });
     
     var serviceProvider = services.BuildServiceProvider();
     
     // Assert
     Assert.NotNull(serviceProvider.GetService<INodeContext>());
-    Assert.NotNull(serviceProvider.GetService<IGridContextAccessor>());
-    Assert.NotNull(serviceProvider.GetService<IOperationContextAccessor>());
-    Assert.NotNull(serviceProvider.GetService<IOperationContextFactory>());
-    Assert.NotNull(serviceProvider.GetService<IErrorClassifier>());
+    Assert.NotNull(serviceProvider.GetService<IMetricsCollector>());
 }
 
 [Fact]
-public void ValidateHoneyDrunkServices_ThrowsWhenServicesNotRegistered()
+public void ValidateHoneyDrunkServices_ThrowsWhenCoreServicesNotRegistered()
 {
     // Arrange
     var services = new ServiceCollection();
@@ -603,12 +559,16 @@ public void ValidateHoneyDrunkServices_SucceedsWhenAllServicesRegistered()
 {
     // Arrange
     var services = new ServiceCollection();
-    services.AddHoneyDrunkNode(options =>
+    services.AddHoneyDrunkGrid(options =>
     {
-        options.NodeId = new NodeId("test-node");
-        options.SectorId = SectorId.WellKnown.Core;
-        options.EnvironmentId = EnvironmentId.WellKnown.Development;
+        options.NodeId = "test-node";
+        options.StudioId = "test-studio";
+        options.Environment = "test";
     });
+    
+    // Add additional required services
+    services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+    services.AddScoped<IOperationContextFactory, OperationContextFactory>();
     
     var serviceProvider = services.BuildServiceProvider();
     
@@ -636,7 +596,7 @@ public class PaymentServiceIntegrationTests : IClassFixture<WebApplicationFactor
         var client = _factory.CreateClient();
         var correlationId = Ulid.NewUlid().ToString();
         
-        client.DefaultRequestHeaders.Add("X-Correlation-ID", correlationId);
+        client.DefaultRequestHeaders.Add("X-Correlation-Id", correlationId);
         
         // Act
         var response = await client.PostAsJsonAsync("/api/payments", new
@@ -647,83 +607,41 @@ public class PaymentServiceIntegrationTests : IClassFixture<WebApplicationFactor
         
         // Assert
         response.EnsureSuccessStatusCode();
-        Assert.Equal(correlationId, response.Headers.GetValues("X-Correlation-ID").First());
-        Assert.NotNull(response.Headers.GetValues("X-Node-ID").First());
+        Assert.Equal(correlationId, response.Headers.GetValues("X-Correlation-Id").First());
+        Assert.NotNull(response.Headers.GetValues("X-Node-Id").First());
     }
 }
 ```
 
 ---
 
-## Migration from v0.2.x
-
-### Before (v0.2.x)
-
-```csharp
-builder.Services.AddHoneyDrunkGrid(options =>
-{
-    options.NodeId = "payment-service";
-    options.Version = "2.1.0";
-    options.StudioId = "honeycomb";
-    options.Environment = "production";
-    options.Tags["region"] = "us-east-1";
-});
-
-// Manually register context accessors
-builder.Services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
-builder.Services.AddSingleton<IOperationContextAccessor, OperationContextAccessor>();
-builder.Services.AddScoped<IOperationContextFactory, OperationContextFactory>();
-```
-
-### After (v0.3.0)
-
-```csharp
-builder.Services.AddHoneyDrunkNode(options =>
-{
-    options.NodeId = new NodeId("payment-service");
-    options.SectorId = SectorId.WellKnown.Core;
-    options.EnvironmentId = EnvironmentId.WellKnown.Production;
-    options.Version = "2.1.0";
-    options.StudioId = "honeycomb";
-    options.Tags["region"] = "us-east-1";
-});
-
-// Everything registered automatically!
-```
-
-**Breaking Changes:**
-- ✅ `NodeId` is now strongly-typed (use `new NodeId("...")`)
-- ✅ `SectorId` is now required
-- ✅ `EnvironmentId` is now strongly-typed (use `new EnvironmentId("...")` or `EnvironmentId.WellKnown.*`)
-- ✅ All context accessors registered automatically
-- ✅ Transport binders registered automatically
-
----
-
 ## Summary
 
-| Component | Purpose | Lifecycle |
+| Component | Purpose | Signature |
 |-----------|---------|-----------|
-| **AddHoneyDrunkNode** | Unified service registration | Build time |
-| **HoneyDrunkNodeOptions** | Node configuration | Singleton |
-| **ValidateHoneyDrunkServices** | Service validation | Startup |
-| **UseGridContext** | Middleware registration | Request pipeline |
-| **IHoneyDrunkBuilder** | Fluent configuration | Build time |
+| **AddHoneyDrunkGrid** | Unified service registration | `IServiceCollection AddHoneyDrunkGrid(this IServiceCollection, Action<GridOptions>)` |
+| **GridOptions** | Node configuration | String-based (NodeId, StudioId, Environment, Version, Tags) |
+| **ValidateHoneyDrunkServices** | Service validation | `void ValidateHoneyDrunkServices(this IServiceProvider)` |
+| **UseGridContext** | Middleware registration | `IApplicationBuilder UseGridContext(this IApplicationBuilder)` |
 
 **Key Benefits:**
-- ✅ Single method registers all services
+- ✅ Core services registered with one call
 - ✅ Built-in validation prevents runtime errors
-- ✅ Strongly-typed configuration with compile-time safety
-- ✅ Automatic transport binder registration
+- ✅ String-based configuration for performance
 - ✅ Fluent builder for chainable configuration
 - ✅ Environment-aware configuration loading
 
 **Best Practices:**
 - Always call `ValidateHoneyDrunkServices()` during startup
 - Place `UseGridContext()` early in middleware pipeline
-- Use well-known identities when possible
 - Load configuration from `appsettings.json`
 - Add descriptive tags for observability
+- Register additional services (context accessors, lifecycle) explicitly
+
+**Current State (v0.3.0):**
+- `AddHoneyDrunkGrid()` registers core services (`INodeContext`, scoped `IGridContext`, `IMetricsCollector`, `NodeLifecycleHost`)
+- Additional services (context accessors, lifecycle manager, transport binders) are registered separately
+- Future versions may consolidate all registrations into a single bootstrap call
 
 ---
 
