@@ -285,6 +285,251 @@ public class NodeLifecycleManagerTests
         nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Ready);
     }
 
+    [Fact]
+    public async Task CheckHealthAsync_WithCancellationToken_PropagatesToken()
+    {
+        using var cts = new CancellationTokenSource();
+        var contributor = new CancellationAwareHealthContributor("check", cts.Token);
+        var manager = CreateManager(healthContributors: [contributor]);
+
+        await manager.CheckHealthAsync(cts.Token);
+
+        contributor.WasCancellationTokenPassed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_CancellationRequested_CompletesGracefully()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var manager = CreateManager();
+
+        // Implementation catches and handles cancellation, doesn't rethrow
+        var (status, details) = await manager.CheckHealthAsync(cts.Token);
+
+        // Should return results even with cancelled token
+        status.Should().Be(HealthStatus.Healthy);
+    }
+
+    [Fact]
+    public async Task CheckReadinessAsync_WithCancellationToken_PropagatesToken()
+    {
+        using var cts = new CancellationTokenSource();
+        var contributor = new CancellationAwareReadinessContributor("check", cts.Token);
+        var manager = CreateManager(readinessContributors: [contributor]);
+
+        await manager.CheckReadinessAsync(cts.Token);
+
+        contributor.WasCancellationTokenPassed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CheckReadinessAsync_CancellationRequested_CompletesGracefully()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var manager = CreateManager();
+
+        // Implementation catches and handles cancellation, doesn't rethrow
+        var (isReady, details) = await manager.CheckReadinessAsync(cts.Token);
+
+        // Should return results even with cancelled token
+        isReady.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_MultipleContributorsSamePriority_ExecutesAll()
+    {
+        var contributors = new[]
+        {
+            new TestHealthContributor("check1", HealthStatus.Healthy, priority: 5),
+            new TestHealthContributor("check2", HealthStatus.Healthy, priority: 5),
+            new TestHealthContributor("check3", HealthStatus.Healthy, priority: 5)
+        };
+        var manager = CreateManager(healthContributors: contributors);
+
+        var (status, details) = await manager.CheckHealthAsync();
+
+        status.Should().Be(HealthStatus.Healthy);
+        details.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task CheckReadinessAsync_MultipleContributorsSamePriority_ExecutesAll()
+    {
+        var contributors = new[]
+        {
+            new TestReadinessContributor("check1", isReady: true, priority: 5),
+            new TestReadinessContributor("check2", isReady: true, priority: 5),
+            new TestReadinessContributor("check3", isReady: true, priority: 5)
+        };
+        var manager = CreateManager(readinessContributors: contributors);
+
+        var (isReady, details) = await manager.CheckReadinessAsync();
+
+        isReady.Should().BeTrue();
+        details.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_ContributorWithNullMessage_HandlesGracefully()
+    {
+        var contributors = new[]
+        {
+            new TestHealthContributor("check1", HealthStatus.Healthy, message: null)
+        };
+        var manager = CreateManager(healthContributors: contributors);
+
+        var (status, details) = await manager.CheckHealthAsync();
+
+        status.Should().Be(HealthStatus.Healthy);
+        details["check1"].message.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CheckReadinessAsync_ContributorWithNullReason_HandlesGracefully()
+    {
+        var contributors = new[]
+        {
+            new TestReadinessContributor("check1", isReady: true, reason: null)
+        };
+        var manager = CreateManager(readinessContributors: contributors);
+
+        var (isReady, details) = await manager.CheckReadinessAsync();
+
+        isReady.Should().BeTrue();
+        details["check1"].reason.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_MixedCriticalAndNonCritical_StopsOnCriticalFailure()
+    {
+        var contributors = new[]
+        {
+            new TestHealthContributor("check1", HealthStatus.Healthy, priority: 1),
+            new TestHealthContributor("check2", HealthStatus.Unhealthy, isCritical: true, priority: 2),
+            new TestHealthContributor("check3", HealthStatus.Healthy, priority: 3)
+        };
+        var manager = CreateManager(healthContributors: contributors);
+
+        var (status, details) = await manager.CheckHealthAsync();
+
+        status.Should().Be(HealthStatus.Unhealthy);
+        details.Should().HaveCount(2);
+        details.Should().ContainKey("check1");
+        details.Should().ContainKey("check2");
+        details.Should().NotContainKey("check3");
+    }
+
+    [Fact]
+    public async Task CheckReadinessAsync_AllOptionalNotReady_StillReturnsReady()
+    {
+        var contributors = new[]
+        {
+            new TestReadinessContributor("check1", isReady: false, isRequired: false),
+            new TestReadinessContributor("check2", isReady: false, isRequired: false)
+        };
+        var manager = CreateManager(readinessContributors: contributors);
+
+        var (isReady, details) = await manager.CheckReadinessAsync();
+
+        isReady.Should().BeTrue();
+        details.Should().HaveCount(2);
+        details["check1"].isReady.Should().BeFalse();
+        details["check2"].isReady.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_OptionalThrowingContributor_ContinuesExecution()
+    {
+        var contributors = new IHealthContributor[]
+        {
+            new TestHealthContributor("check1", HealthStatus.Healthy, priority: 1),
+            new ThrowingHealthContributor("failing", new InvalidOperationException("Test"), isCritical: false),
+            new TestHealthContributor("check2", HealthStatus.Healthy, priority: 3)
+        };
+        var manager = CreateManager(healthContributors: contributors);
+
+        var (status, details) = await manager.CheckHealthAsync();
+
+        status.Should().Be(HealthStatus.Unhealthy);
+        details.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task CheckReadinessAsync_OptionalThrowingContributor_ContinuesExecution()
+    {
+        var contributors = new IReadinessContributor[]
+        {
+            new TestReadinessContributor("check1", isReady: true, priority: 1),
+            new ThrowingReadinessContributor("failing", new InvalidOperationException("Test"), isRequired: false),
+            new TestReadinessContributor("check2", isReady: true, priority: 3)
+        };
+        var manager = CreateManager(readinessContributors: contributors);
+
+        var (isReady, details) = await manager.CheckReadinessAsync();
+
+        isReady.Should().BeTrue();
+        details.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void TransitionToStage_ValidTransition_UpdatesStage()
+    {
+        var nodeContext = CreateTestNodeContext();
+        var manager = CreateManager(nodeContext);
+
+        manager.TransitionToStage(NodeLifecycleStage.Starting);
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Starting);
+
+        manager.TransitionToStage(NodeLifecycleStage.Ready);
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Ready);
+    }
+
+    [Fact]
+    public void TransitionToStage_ToFailedStage_UpdatesStage()
+    {
+        var nodeContext = CreateTestNodeContext();
+        var manager = CreateManager(nodeContext);
+
+        manager.TransitionToStage(NodeLifecycleStage.Failed);
+
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Failed);
+    }
+
+    [Fact]
+    public void TransitionToStage_ToDegradedStage_UpdatesStage()
+    {
+        var nodeContext = CreateTestNodeContext();
+        var manager = CreateManager(nodeContext);
+
+        manager.TransitionToStage(NodeLifecycleStage.Degraded);
+
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Degraded);
+    }
+
+    [Fact]
+    public void TransitionToStage_ToStoppingStage_UpdatesStage()
+    {
+        var nodeContext = CreateTestNodeContext();
+        var manager = CreateManager(nodeContext);
+
+        manager.TransitionToStage(NodeLifecycleStage.Stopping);
+
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Stopping);
+    }
+
+    [Fact]
+    public void TransitionToStage_ToStoppedStage_UpdatesStage()
+    {
+        var nodeContext = CreateTestNodeContext();
+        var manager = CreateManager(nodeContext);
+
+        manager.TransitionToStage(NodeLifecycleStage.Stopped);
+
+        nodeContext.LifecycleStage.Should().Be(NodeLifecycleStage.Stopped);
+    }
+
     private static NodeLifecycleManager CreateManager(
         TestNodeContext? nodeContext = null,
         IEnumerable<IHealthContributor>? healthContributors = null,
@@ -416,6 +661,44 @@ public class NodeLifecycleManagerTests
         public Task<(bool isReady, string? reason)> CheckReadinessAsync(CancellationToken cancellationToken = default)
         {
             throw exception;
+        }
+    }
+
+    private sealed class CancellationAwareHealthContributor(string name, CancellationToken expectedToken) : IHealthContributor
+    {
+        private readonly CancellationToken _expectedToken = expectedToken;
+
+        public string Name { get; } = name;
+
+        public int Priority => 0;
+
+        public bool IsCritical => false;
+
+        public bool WasCancellationTokenPassed { get; private set; }
+
+        public Task<(HealthStatus status, string? message)> CheckHealthAsync(CancellationToken cancellationToken = default)
+        {
+            WasCancellationTokenPassed = cancellationToken == _expectedToken;
+            return Task.FromResult((status: HealthStatus.Healthy, message: (string?)null));
+        }
+    }
+
+    private sealed class CancellationAwareReadinessContributor(string name, CancellationToken expectedToken) : IReadinessContributor
+    {
+        private readonly CancellationToken _expectedToken = expectedToken;
+
+        public string Name { get; } = name;
+
+        public int Priority => 0;
+
+        public bool IsRequired => true;
+
+        public bool WasCancellationTokenPassed { get; private set; }
+
+        public Task<(bool isReady, string? reason)> CheckReadinessAsync(CancellationToken cancellationToken = default)
+        {
+            WasCancellationTokenPassed = cancellationToken == _expectedToken;
+            return Task.FromResult((isReady: true, reason: (string?)null));
         }
     }
 }

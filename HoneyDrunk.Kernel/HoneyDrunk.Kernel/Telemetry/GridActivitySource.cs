@@ -72,7 +72,9 @@ public static class GridActivitySource
         {
             foreach (var (key, value) in tags)
             {
-                activity.SetTag(key, value);
+                // Activity.SetTag accepts object? but Activity.Tags only exposes string values
+                // Convert to string if needed for proper tag storage
+                activity.SetTag(key, value?.ToString() ?? string.Empty);
             }
         }
 

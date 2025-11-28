@@ -302,6 +302,127 @@ public class StudioConfigurationTests
         studioConfig.Tags.Should().NotContainKey("NullTag");
     }
 
+    [Fact]
+    public void TryGetValue_EmptyStringValue_ReturnsEmptyString()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            ["EmptyKey"] = string.Empty
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration);
+
+        var result = studioConfig.TryGetValue("EmptyKey", out var value);
+
+        result.Should().BeTrue();
+        value.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public void TryGetValue_NestedKey_ReturnsValue()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            ["Parent:Child:GrandChild"] = "nested-value"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration);
+
+        var result = studioConfig.TryGetValue("Parent:Child:GrandChild", out var value);
+
+        result.Should().BeTrue();
+        value.Should().Be("nested-value");
+    }
+
+    [Fact]
+    public void Constructor_NullSecretsSource_AllowsNullSecretsSource()
+    {
+        var configuration = CreateTestConfiguration();
+
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration, secretsSource: null);
+
+        studioConfig.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TryGetValue_SecretsSourceReturnsEmptyString_ReturnsEmptyString()
+    {
+        var configuration = CreateTestConfiguration();
+        var secretsSource = new TestSecretsSource
+        {
+            ["Key"] = string.Empty
+        };
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration, secretsSource);
+
+        var result = studioConfig.TryGetValue("Key", out var value);
+
+        result.Should().BeTrue();
+        value.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public void TryGetValue_ConfigurationReturnsNull_TriesSecretsSource()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            ["Key"] = null
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+        var secretsSource = new TestSecretsSource
+        {
+            ["Key"] = "SecretValue"
+        };
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration, secretsSource);
+
+        var result = studioConfig.TryGetValue("Key", out var value);
+
+        result.Should().BeTrue();
+        value.Should().Be("SecretValue");
+    }
+
+    [Fact]
+    public void Constructor_MultipleFeatureFlags_LoadsAll()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            ["Studio:FeatureFlags:Flag1"] = "true",
+            ["Studio:FeatureFlags:Flag2"] = "false",
+            ["Studio:FeatureFlags:Flag3"] = "true",
+            ["Studio:FeatureFlags:Flag4"] = "false"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration);
+
+        studioConfig.FeatureFlags.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public void Constructor_MultipleTags_LoadsAll()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            ["Studio:Tags:Tag1"] = "value1",
+            ["Studio:Tags:Tag2"] = "value2",
+            ["Studio:Tags:Tag3"] = "value3"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+
+        var studioConfig = new StudioConfiguration("test-studio", "production", configuration);
+
+        studioConfig.Tags.Should().HaveCount(3);
+    }
+
     private static IConfiguration CreateTestConfiguration()
     {
         return new ConfigurationBuilder().Build();

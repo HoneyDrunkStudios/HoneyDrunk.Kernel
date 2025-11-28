@@ -21,17 +21,23 @@ public class GridContextMiddlewareTests
         var gridAccessor = new GridContextAccessor();
         var opAccessor = new OperationContextAccessor();
         var opFactory = CreateTestOperationContextFactory();
+        IGridContext? capturedContext = null;
 
         var middleware = new GridContextMiddleware(
-            next: async _ => await Task.CompletedTask,
+            next: async _ =>
+            {
+                capturedContext = gridAccessor.GridContext;
+                await Task.CompletedTask;
+            },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
         await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
 
-        httpContext.Response.Headers.Should().ContainKey(GridHeaderNames.CorrelationId);
-        httpContext.Response.Headers[GridHeaderNames.CorrelationId].ToString().Should().Be("test-corr-123");
-        httpContext.Response.Headers.Should().ContainKey(GridHeaderNames.NodeId);
-        httpContext.Response.Headers[GridHeaderNames.NodeId].ToString().Should().Be("test-node");
+        capturedContext.Should().NotBeNull();
+        capturedContext!.CorrelationId.Should().Be("test-corr-123");
+        capturedContext.NodeId.Should().Be("test-node");
+        capturedContext.StudioId.Should().Be("test-studio");
+        capturedContext.Environment.Should().Be("test");
     }
 
     [Fact]
@@ -45,15 +51,21 @@ public class GridContextMiddlewareTests
         var gridAccessor = new GridContextAccessor();
         var opAccessor = new OperationContextAccessor();
         var opFactory = CreateTestOperationContextFactory();
+        IGridContext? capturedContext = null;
 
         var middleware = new GridContextMiddleware(
-            next: async _ => await Task.CompletedTask,
+            next: async _ =>
+            {
+                capturedContext = gridAccessor.GridContext;
+                await Task.CompletedTask;
+            },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
         await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
 
-        httpContext.Response.Headers.Should().ContainKey(GridHeaderNames.CorrelationId);
-        httpContext.Response.Headers[GridHeaderNames.CorrelationId].ToString().Should().NotBeNullOrWhiteSpace();
+        capturedContext.Should().NotBeNull();
+        capturedContext!.CorrelationId.Should().NotBeNullOrWhiteSpace();
+        capturedContext.NodeId.Should().Be("test-node");
     }
 
     [Fact]

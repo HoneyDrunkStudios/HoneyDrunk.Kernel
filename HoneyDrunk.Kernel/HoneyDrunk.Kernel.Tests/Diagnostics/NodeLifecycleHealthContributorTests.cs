@@ -52,7 +52,7 @@ public class NodeLifecycleHealthContributorTests
         var (status, message) = await contributor.CheckHealthAsync();
 
         status.Should().Be(HealthStatus.Healthy);
-        message.Should().Be("Node is running");
+        message.Should().Be("Node is ready");
     }
 
     [Fact]

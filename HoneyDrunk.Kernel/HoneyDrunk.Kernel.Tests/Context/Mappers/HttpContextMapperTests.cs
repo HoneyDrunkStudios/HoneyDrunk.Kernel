@@ -276,6 +276,158 @@ public class HttpContextMapperTests
         gridContext.Baggage["sessionId"].Should().Be("123");
     }
 
+    [Fact]
+    public void MapFromHttpContext_WithTenantIdHeader_ExtractsTenantId()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["X-Tenant-Id"] = "tenant-789";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.TenantId.Should().Be("tenant-789");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithProjectIdHeader_ExtractsProjectId()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["X-Project-Id"] = "project-012";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.ProjectId.Should().Be("project-012");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithTenantAndProjectHeaders_ExtractsBoth()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["X-Tenant-Id"] = "tenant-789";
+        httpContext.Request.Headers["X-Project-Id"] = "project-012";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.TenantId.Should().Be("tenant-789");
+        gridContext.ProjectId.Should().Be("project-012");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithXBaggagePrefixHeaders_ExtractsBaggage()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["X-Baggage-tenant-id"] = "tenant-123";
+        httpContext.Request.Headers["X-Baggage-user-id"] = "user-456";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.Baggage.Should().HaveCount(2);
+        gridContext.Baggage["tenant-id"].Should().Be("tenant-123");
+        gridContext.Baggage["user-id"].Should().Be("user-456");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithBothBaggageFormats_MergesBaggage()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["baggage"] = "w3c-key=w3c-value";
+        httpContext.Request.Headers["X-Baggage-custom-key"] = "custom-value";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.Baggage.Should().HaveCount(2);
+        gridContext.Baggage["w3c-key"].Should().Be("w3c-value");
+        gridContext.Baggage["custom-key"].Should().Be("custom-value");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithEmptyXBaggageValue_SkipsEntry()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["X-Baggage-valid-key"] = "valid-value";
+        httpContext.Request.Headers["X-Baggage-empty-key"] = string.Empty;
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.Baggage.Should().HaveCount(1);
+        gridContext.Baggage.Should().ContainKey("valid-key");
+        gridContext.Baggage.Should().NotContainKey("empty-key");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithWhitespaceXBaggageValue_SkipsEntry()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["X-Baggage-valid-key"] = "valid-value";
+        httpContext.Request.Headers["X-Baggage-whitespace-key"] = "   ";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.Baggage.Should().HaveCount(1);
+        gridContext.Baggage.Should().ContainKey("valid-key");
+        gridContext.Baggage.Should().NotContainKey("whitespace-key");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithInvalidTraceParentFormat_GeneratesNewCorrelationId()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["traceparent"] = "invalid-format";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.CorrelationId.Should().NotBeNullOrWhiteSpace();
+        gridContext.CorrelationId.Should().NotBe("invalid-format");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithShortTraceParentFormat_ExtractsTraceId()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["traceparent"] = "00-shortid";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        // traceparent with format "00-shortid" has 2 parts, so parts[1] is extracted
+        gridContext.CorrelationId.Should().Be("shortid");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithEmptyBaggageKey_SkipsEntry()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["baggage"] = "=value,validKey=validValue";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.Baggage.Should().HaveCount(1);
+        gridContext.Baggage.Should().ContainKey("validKey");
+    }
+
+    [Fact]
+    public void MapFromHttpContext_WithCaseInsensitiveXBaggagePrefix_ExtractsBaggage()
+    {
+        var mapper = new HttpContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers["x-baggage-lowercase"] = "lower-value";
+        httpContext.Request.Headers["X-BAGGAGE-UPPERCASE"] = "upper-value";
+
+        var gridContext = mapper.MapFromHttpContext(httpContext);
+
+        gridContext.Baggage.Should().HaveCount(2);
+        gridContext.Baggage["lowercase"].Should().Be("lower-value");
+        gridContext.Baggage["UPPERCASE"].Should().Be("upper-value");
+    }
+
     private static DefaultHttpContext CreateHttpContext()
     {
         return new DefaultHttpContext();

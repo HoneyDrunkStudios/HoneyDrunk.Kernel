@@ -346,4 +346,90 @@ public class GridContextTests
         context.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("value");
         context.Baggage.Should().NotContainKey("new-key");
     }
+
+    [Fact]
+    public void Constructor_WithTenantId_StoresTenantId()
+    {
+        // Act
+        var context = new GridContext(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            tenantId: "tenant-456");
+
+        // Assert
+        context.TenantId.Should().Be("tenant-456");
+    }
+
+    [Fact]
+    public void Constructor_WithProjectId_StoresProjectId()
+    {
+        // Act
+        var context = new GridContext(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            projectId: "project-789");
+
+        // Assert
+        context.ProjectId.Should().Be("project-789");
+    }
+
+    [Fact]
+    public void Constructor_WithTenantAndProject_StoresBoth()
+    {
+        // Act
+        var context = new GridContext(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            tenantId: "tenant-456",
+            projectId: "project-789");
+
+        // Assert
+        context.TenantId.Should().Be("tenant-456");
+        context.ProjectId.Should().Be("project-789");
+    }
+
+    [Fact]
+    public void WithBaggage_PreservesTenantAndProjectIds()
+    {
+        // Arrange
+        var context = new GridContext(
+            "corr",
+            "node",
+            "studio",
+            "env",
+            tenantId: "tenant-123",
+            projectId: "project-456");
+
+        // Act
+        var newContext = context.WithBaggage("key", "value");
+
+        // Assert
+        newContext.TenantId.Should().Be("tenant-123");
+        newContext.ProjectId.Should().Be("project-456");
+    }
+
+    [Fact]
+    public void Constructor_WithCancelledToken_StoresCancellation()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        var context = new GridContext(
+            "corr",
+            "node",
+            "studio",
+            "env",
+            cancellation: cts.Token);
+
+        // Assert
+        context.Cancellation.IsCancellationRequested.Should().BeTrue();
+    }
 }

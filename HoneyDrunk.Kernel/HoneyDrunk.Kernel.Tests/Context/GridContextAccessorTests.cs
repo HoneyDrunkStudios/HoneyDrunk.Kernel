@@ -24,7 +24,7 @@ public class GridContextAccessorTests
     {
         // Arrange
         var accessor = new GridContextAccessor();
-        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var gridContext = new GridContext("corr", "node", "studio", "env");
 
         // Act
         accessor.GridContext = gridContext;
@@ -38,7 +38,7 @@ public class GridContextAccessorTests
     {
         // Arrange
         var accessor = new GridContextAccessor();
-        var gridContext = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var gridContext = new GridContext("corr", "node", "studio", "env");
         accessor.GridContext = gridContext;
 
         // Act
@@ -53,8 +53,8 @@ public class GridContextAccessorTests
     {
         // Arrange
         var accessor = new GridContextAccessor();
-        var context1 = new GridContext("corr1", Ulid.NewUlid().ToString(), "node1", "studio1", "env1");
-        var context2 = new GridContext("corr2", Ulid.NewUlid().ToString(), "node2", "studio2", "env2");
+        var context1 = new GridContext("corr1", "node1", "studio1", "env1");
+        var context2 = new GridContext("corr2", "node2", "studio2", "env2");
         IGridContext? task1Result = null;
         IGridContext? task2Result = null;
 
@@ -86,7 +86,7 @@ public class GridContextAccessorTests
     {
         // Arrange
         var accessor = new GridContextAccessor();
-        var context = new GridContext("corr", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context = new GridContext("corr", "node", "studio", "env");
         accessor.GridContext = context;
 
         // Act
@@ -110,9 +110,9 @@ public class GridContextAccessorTests
     {
         // Arrange
         var accessor = new GridContextAccessor();
-        var context1 = new GridContext("corr1", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var context2 = new GridContext("corr2", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var context3 = new GridContext("corr3", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context1 = new GridContext("corr1", "node", "studio", "env");
+        var context2 = new GridContext("corr2", "node", "studio", "env");
+        var context3 = new GridContext("corr3", "node", "studio", "env");
 
         // Act & Assert
         accessor.GridContext = context1;
@@ -167,9 +167,9 @@ public class GridContextAccessorTests
     {
         // Arrange
         var accessor = new GridContextAccessor();
-        var context1 = new GridContext("corr1", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var context2 = new GridContext("corr2", Ulid.NewUlid().ToString(), "node", "studio", "env");
-        var context3 = new GridContext("corr3", Ulid.NewUlid().ToString(), "node", "studio", "env");
+        var context1 = new GridContext("corr1", "node", "studio", "env");
+        var context2 = new GridContext("corr2", "node", "studio", "env");
+        var context3 = new GridContext("corr3", "node", "studio", "env");
 
         // Act
         var task1 = Task.Run(async () =>
