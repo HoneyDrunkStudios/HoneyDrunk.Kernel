@@ -1,9 +1,36 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to HoneyDrunk.Kernel.Abstractions will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2026-01-19
+
+### ⚠️ Breaking Changes
+
+- **IGridContext**: Removed `BeginScope()` method (was no-op placeholder API)
+- **IGridContext**: Removed `WithBaggage(key, value)` method - replaced with `AddBaggage(key, value)` (void, mutates in place)
+- **IGridContext**: Added `IsInitialized` property to check initialization state
+- **IGridContextAccessor**: Changed from `IGridContext? GridContext { get; set; }` to `IGridContext GridContext { get; }` (non-nullable, read-only)
+- **IGridContextFactory**: Removed `CreateRoot()` method - root contexts are now DI-scoped only
+
+### Added
+
+- **IGridContext.IsInitialized**: Property indicating whether context has been initialized with request-specific values
+- **IGridContext.AddBaggage()**: Mutable method to add baggage items to existing context
+
+### Changed
+
+- **IGridContext**: Documentation updated to reflect single-instance-per-scope ownership model
+- **IGridContextAccessor**: Documentation updated to reflect read-only accessor pattern
+- **IGridContextFactory**: Documentation updated to clarify CreateChild() is for cross-node propagation only
+
+### Removed
+
+- **IGridContext.BeginScope()**: Removed placeholder API that returned no-op disposable
+- **IGridContext.WithBaggage()**: Replaced with mutable `AddBaggage()` to match scoped ownership model
+- **IGridContextFactory.CreateRoot()**: Root context creation moved to DI container responsibility
 
 ## [0.3.0] - 2025-11-28
 

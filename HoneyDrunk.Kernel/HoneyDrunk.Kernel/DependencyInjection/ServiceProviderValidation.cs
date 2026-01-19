@@ -26,11 +26,16 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
         var errors = new List<string>();
         var warnings = new List<string>();
 
+        // Create a scope to validate scoped services (avoids "Cannot resolve scoped service from root provider")
+        using var scope = services.CreateScope();
+        var scopedServices = scope.ServiceProvider;
+
         // Validate core context services (required)
+        // Note: Use scopedServices for scoped registrations, services for singletons
         ValidateRequired<INodeContext>(services, errors, "INodeContext", "AddHoneyDrunkNode()");
         ValidateRequired<IGridContextAccessor>(services, errors, "IGridContextAccessor", "AddHoneyDrunkNode()");
         ValidateRequired<IOperationContextAccessor>(services, errors, "IOperationContextAccessor", "AddHoneyDrunkNode()");
-        ValidateRequired<IOperationContextFactory>(services, errors, "IOperationContextFactory", "AddHoneyDrunkNode()");
+        ValidateRequiredScoped<IOperationContextFactory>(scopedServices, errors, "IOperationContextFactory", "AddHoneyDrunkNode()");
 
         // Validate hosting services (required)
         ValidateRequired<INodeDescriptor>(services, errors, "INodeDescriptor", "AddHoneyDrunkNode()");
@@ -81,6 +86,19 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
         string registrationHint)
     {
         if (services.GetService<T>() is null)
+        {
+            errors.Add($"  - {serviceName} is missing. Register via: {registrationHint}");
+        }
+    }
+
+    private static void ValidateRequiredScoped<T>(
+        IServiceProvider scopedServices,
+        List<string> errors,
+        string serviceName,
+        string registrationHint)
+    {
+        // scopedServices should be from a created scope to avoid "Cannot resolve scoped service from root provider"
+        if (scopedServices.GetService<T>() is null)
         {
             errors.Add($"  - {serviceName} is missing. Register via: {registrationHint}");
         }

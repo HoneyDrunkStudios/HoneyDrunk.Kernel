@@ -465,4 +465,4 @@ This project is licensed under the [MIT License](../LICENSE).
 
 **Built with ?? by HoneyDrunk Studios**
 
-[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](../docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
+[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) ï¿½ [Documentation](../docs/FILE_GUIDE.md) ï¿½ [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)

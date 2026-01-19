@@ -1,4 +1,4 @@
-﻿# HoneyDrunk.Kernel - Repository Changelog
+# HoneyDrunk.Kernel - Repository Changelog
 
 All notable changes to the HoneyDrunk.Kernel repository will be documented in this file.
 
@@ -8,6 +8,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Note:** See individual package CHANGELOGs for detailed changes:
 - [HoneyDrunk.Kernel.Abstractions CHANGELOG](HoneyDrunk.Kernel.Abstractions/CHANGELOG.md)
 - [HoneyDrunk.Kernel CHANGELOG](HoneyDrunk.Kernel/CHANGELOG.md)
+
+---
+
+## [0.4.0] - 2026-01-19
+
+### ⚠️ BREAKING CHANGES
+
+This release contains significant breaking changes to unify GridContext ownership and eliminate architectural gaps identified during scenario-driven verification.
+
+**GridContext Ownership Model**
+- GridContext is now created by DI scope and initialized by middleware/mappers
+- Removed multi-argument constructors from `GridContext` - now takes only `(nodeId, studioId, environment)`
+- Added `Initialize()` method for setting request-specific values (correlationId, causationId, etc.)
+- Context throws `InvalidOperationException` if accessed before initialization
+- Context throws `ObjectDisposedException` if accessed after scope ends
+
+**IGridContext Interface**
+- Removed `BeginScope()` method entirely (was a no-op placeholder)
+- Removed `WithBaggage()` method - replaced with `AddBaggage()` (void, mutates in place)
+- Added `IsInitialized` property to check initialization state
+
+**IGridContextAccessor Interface**
+- Changed from `IGridContext? GridContext { get; set; }` to `IGridContext GridContext { get; }` (read-only)
+- Accessor now reads from `HttpContext.RequestServices`, not independent `AsyncLocal`
+- Throws `InvalidOperationException` when accessed outside valid scope
+
+**IGridContextFactory Interface**
+- Removed `CreateRoot()` method - root contexts are now created by DI only
+- `CreateChild()` remains for cross-node propagation scenarios
+
+**Context Mappers (Now Static)**
+- `HttpContextMapper` is now static with `ExtractFromHttpContext()` and `InitializeFromHttpContext()` methods
+- `JobContextMapper` is now static with `InitializeForJob()`, `InitializeForScheduledJob()`, `InitializeFromMetadata()` methods
+- `MessagingContextMapper` is now static with `InitializeFromMessage()` and `ExtractFromMessage()` methods
+
+**Service Registration**
+- Added duplicate registration guard - calling `AddHoneyDrunkNode()` twice now throws `InvalidOperationException`
+- Added `FrameworkReference` to `Microsoft.AspNetCore.App` for HTTP context support
+
+### 🎯 Architectural Improvements
+
+**Unified Context Ownership**
+- DI scope now owns the single GridContext instance
+- Middleware initializes existing scoped context instead of creating new ones
+- GridContextAccessor mirrors DI scope - never diverges
+
+**Fail-Fast Behavior**
+- Accessing uninitialized context properties throws immediately
+- Accessing disposed context throws `ObjectDisposedException`
+- Missing middleware configuration fails loudly at first access
+
+**Fire-and-Forget Detection**
+- `GridContext.MarkDisposed()` called when scope ends
+- Background work that incorrectly holds context references will fail
+- Forces explicit context creation for background scenarios
+
+### 📝 Migration Guide
+
+**Updating GridContext Creation**
+```csharp
+// Old (v0.3)
+var context = new GridContext("corr-id", "node", "studio", "env", causationId: "cause");
+
+// New (v0.4)
+var context = new GridContext("node", "studio", "env");
+context.Initialize(correlationId: "corr-id", causationId: "cause");
+```
+
+**Updating Baggage**
+```csharp
+// Old (v0.3) - immutable, returns new instance
+context = context.WithBaggage("key", "value");
+
+// New (v0.4) - mutable, modifies in place
+context.AddBaggage("key", "value");
+```
+
+**Updating Mappers**
+```csharp
+// Old (v0.3) - instance-based
+var mapper = new HttpContextMapper("node", "studio", "env");
+var context = mapper.MapFromHttpContext(httpContext);
+
+// New (v0.4) - static, initializes existing context
+var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
+// Or directly initialize:
+HttpContextMapper.InitializeFromHttpContext(gridContext, httpContext);
+```
 
 ---
 
@@ -41,7 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Middleware & Bootstrapping**
 - Added `GridContextMiddleware` for automatic HTTP context establishment
 - Implemented `UseGridContext()` middleware extension
-- Added `AddHoneyDrunkGrid()` unified bootstrapping
+- Added `AddHoneyDrunkNode()` unified bootstrapping
 - Implemented `ValidateHoneyDrunkServices()` for fail-fast validation
 
 **Multi-Tenant Support**

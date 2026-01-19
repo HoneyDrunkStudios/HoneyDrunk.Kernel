@@ -1,6 +1,6 @@
 using FluentAssertions;
 using HoneyDrunk.Kernel.Abstractions.Context;
-using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 using HoneyDrunk.Kernel.Transport;
 using Microsoft.AspNetCore.Http;
 
@@ -44,7 +44,11 @@ public class HttpResponseBinderTests
         var binder = new HttpResponseBinder();
         var httpContext = new DefaultHttpContext();
         var response = httpContext.Response;
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(response, gridContext);
 
@@ -60,7 +64,12 @@ public class HttpResponseBinderTests
         var binder = new HttpResponseBinder();
         var httpContext = new DefaultHttpContext();
         var response = httpContext.Response;
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", "cause-456");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            causationId: "cause-456");
 
         binder.Bind(response, gridContext);
 
@@ -74,7 +83,11 @@ public class HttpResponseBinderTests
         var binder = new HttpResponseBinder();
         var httpContext = new DefaultHttpContext();
         var response = httpContext.Response;
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(response, gridContext);
 
@@ -92,7 +105,12 @@ public class HttpResponseBinderTests
             ["tenant_id"] = "tenant-123",
             ["user_id"] = "user-456"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            baggage: baggage);
 
         binder.Bind(response, gridContext);
 
@@ -108,7 +126,11 @@ public class HttpResponseBinderTests
         var binder = new HttpResponseBinder();
         var httpContext = new DefaultHttpContext();
         var response = httpContext.Response;
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(response, gridContext);
 
@@ -120,7 +142,11 @@ public class HttpResponseBinderTests
     public void Bind_WithNullEnvelope_ThrowsArgumentNullException()
     {
         var binder = new HttpResponseBinder();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         var act = () => binder.Bind(null!, gridContext);
 
@@ -145,7 +171,11 @@ public class HttpResponseBinderTests
     {
         var binder = new HttpResponseBinder();
         var notResponse = new object();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         var act = () => binder.Bind(notResponse, gridContext);
 
@@ -160,8 +190,16 @@ public class HttpResponseBinderTests
         var binder = new HttpResponseBinder();
         var httpContext = new DefaultHttpContext();
         var response = httpContext.Response;
-        var gridContext1 = new GridContext("corr-123", "node-1", "studio", "env");
-        var gridContext2 = new GridContext("corr-456", "node-2", "studio", "env");
+        var gridContext1 = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "node-1",
+            studioId: "studio",
+            environment: "env");
+        var gridContext2 = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-456",
+            nodeId: "node-2",
+            studioId: "studio",
+            environment: "env");
 
         binder.Bind(response, gridContext1);
         binder.Bind(response, gridContext2);
@@ -182,7 +220,12 @@ public class HttpResponseBinderTests
             ["key2"] = "value2",
             ["key3"] = "value3"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            baggage: baggage);
 
         binder.Bind(response, gridContext);
 
@@ -198,7 +241,11 @@ public class HttpResponseBinderTests
         var httpContext = new DefaultHttpContext();
         var response = httpContext.Response;
         response.Headers["X-Custom-Header"] = "custom-value";
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(response, gridContext);
 
@@ -217,7 +264,12 @@ public class HttpResponseBinderTests
             ["key-with-spaces"] = "value with spaces",
             ["key-with-special"] = "value=with=equals"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            baggage: baggage);
 
         binder.Bind(response, gridContext);
 

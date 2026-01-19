@@ -38,53 +38,106 @@ Default implementation of `IGridContext` carrying distributed tracing and baggag
 
 **Location:** `HoneyDrunk.Kernel/Context/GridContext.cs`
 
+**v0.4.0 Two-Phase Initialization:**
+
 ```csharp
-public sealed class GridContext : IGridContext
+public sealed class GridContext : IGridContext, IDisposable
 {
-    public string CorrelationId { get; }
-    public string? CausationId { get; }
+    // Immutable identity (set in constructor)
     public string NodeId { get; }
     public string StudioId { get; }
     public string Environment { get; }
-    public DateTimeOffset CreatedAtUtc { get; }
-    public IReadOnlyDictionary<string, string> Baggage { get; }
     
-    public IGridContext CreateChildContext(string targetNodeId)
+    // Request-specific values (set via Initialize())
+    public string CorrelationId { get; private set; } = "";
+    public string? CausationId { get; private set; }
+    public string? TenantId { get; private set; }
+    public string? ProjectId { get; private set; }
+    public DateTimeOffset CreatedAtUtc { get; private set; }
+    public CancellationToken Cancellation { get; private set; }
+    public IReadOnlyDictionary<string, string> Baggage => _baggage;
+    
+    public bool IsInitialized { get; private set; }
+    public bool IsDisposed { get; private set; }
+    
+    private readonly Dictionary<string, string> _baggage = new();
+    
+    // Phase 1: Constructor - identity values only
+    public GridContext(string nodeId, string studioId, string environment)
     {
-        return new GridContext(
-            correlationId: CorrelationId,          // Same correlation
-            nodeId: targetNodeId,                   // New node
-            studioId: StudioId,
-            environment: Environment,
-            causationId: CorrelationId,             // Parent correlation becomes causation
-            baggage: Baggage,
-            createdAtUtc: DateTimeOffset.UtcNow
-        );
+        NodeId = nodeId ?? throw new ArgumentNullException(nameof(nodeId));
+        StudioId = studioId ?? throw new ArgumentNullException(nameof(studioId));
+        Environment = environment ?? throw new ArgumentNullException(nameof(environment));
     }
+    
+    // Phase 2: Initialize - request-specific values
+    public void Initialize(
+        string correlationId,
+        string? causationId = null,
+        string? tenantId = null,
+        string? projectId = null,
+        IReadOnlyDictionary<string, string>? baggage = null,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        if (IsInitialized) throw new InvalidOperationException("Context already initialized.");
+        
+        CorrelationId = correlationId ?? throw new ArgumentNullException(nameof(correlationId));
+        CausationId = causationId;
+        TenantId = tenantId;
+        ProjectId = projectId;
+        Cancellation = cancellationToken;
+        CreatedAtUtc = DateTimeOffset.UtcNow;
+        
+        if (baggage != null)
+        {
+            foreach (var kvp in baggage)
+                _baggage[kvp.Key] = kvp.Value;
+        }
+        
+        IsInitialized = true;
+    }
+    
+    // Mutates in-place, returns void (v0.4.0 change)
+    public void AddBaggage(string key, string value)
+    {
+        ThrowIfNotInitialized();
+        ThrowIfDisposed();
+        _baggage[key] = value;
+    }
+    
+    public IGridContext CreateChildContext(string targetNodeId) { ... }
+    
+    public void Dispose() { IsDisposed = true; }
 }
 ```
 
-**Key Features:**
-- Immutable by design
+**Key Features (v0.4.0):**
+- **Two-phase initialization** - Constructor sets identity, `Initialize()` sets request values
+- **IsInitialized property** - Check whether context has been initialized
+- **AddBaggage() is mutable** - Returns `void`, mutates in-place
+- **BeginScope() removed** - Was a no-op, now gone
+- **Disposal tracking** - Throws on access after disposal
 - `CreateChildContext()` preserves correlation across Node boundaries
 - CausationId tracks parent-child relationships
 - Baggage flows automatically to children
 
 **Usage:**
 ```csharp
-// Create root context
-var rootContext = new GridContext(
-    correlationId: Ulid.NewUlid().ToString(),
+// DI creates the context (Phase 1)
+var context = new GridContext(
     nodeId: "api-gateway",
-    studioId: "demo-studio",        // Studio identifier, not environment
-    environment: "production"
-);
+    studioId: "demo-studio",
+    environment: "production");
 
-// Create child for downstream call
-var childContext = rootContext.CreateChildContext("payment-service");
+// Middleware initializes it (Phase 2)
+context.Initialize(
+    correlationId: Ulid.NewUlid().ToString(),
+    causationId: incomingCausationId,
+    tenantId: tenantFromHeader);
 
-Assert.Equal(rootContext.CorrelationId, childContext.CorrelationId);
-Assert.Equal(rootContext.CorrelationId, childContext.CausationId); // Causality!
+// Now context is fully usable
+var childContext = context.CreateChildContext("payment-service");
 ```
 
 [↑ Back to top](#table-of-contents)
@@ -223,40 +276,53 @@ public class OrderService(IOperationContext operationContext)
 
 ### GridContextAccessor.cs
 
-Async-local storage for ambient context access.
+Accesses GridContext from the current DI scope via HttpContext.
 
 **Location:** `HoneyDrunk.Kernel/Context/GridContextAccessor.cs`
+
+**v0.4.0 Implementation (Breaking Change):**
 
 ```csharp
 public sealed class GridContextAccessor : IGridContextAccessor
 {
-    private static readonly AsyncLocal<IGridContext?> _current = new();
+    private readonly IHttpContextAccessor _httpContextAccessor;
     
-    public IGridContext? GridContext
+    public GridContextAccessor(IHttpContextAccessor httpContextAccessor)
     {
-        get => _current.Value;
-        set => _current.Value = value;
+        _httpContextAccessor = httpContextAccessor;
+    }
+    
+    public IGridContext GridContext
+    {
+        get
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+                throw new InvalidOperationException("No active HTTP context.");
+            
+            return httpContext.RequestServices.GetRequiredService<IGridContext>();
+        }
     }
 }
 ```
 
-**Key Features:**
-- Uses `AsyncLocal<T>` for async flow
-- Automatically flows across `await` boundaries
-- Isolated per async execution context
-- Singleton-scoped service
+**Key Changes in v0.4.0:**
+- **No AsyncLocal** - Reads from `HttpContext.RequestServices` instead
+- **Read-only property** - No setter; DI scope owns the context
+- **Non-nullable** - Throws if accessed outside HTTP request scope
+- **Requires IHttpContextAccessor** - Must be registered in DI
 
 **How It Works:**
 ```csharp
-// Middleware sets context
-_accessor.GridContext = new GridContext(...);
-
-// Service reads context
+// DI automatically creates GridContext for each request scope
+// Accessor reads from the current request's service provider
 var correlationId = _accessor.GridContext.CorrelationId;
 
-// Context flows across async calls
-await CallDownstreamServiceAsync(); // GridContext still available
+// Throws if called outside HTTP request (e.g., background job)
+// For background jobs, resolve IGridContext directly from job's scope
 ```
+
+**Migration Note:** If you were setting `GridContext` on the accessor directly, this is no longer supported. The DI container now owns context lifecycle.
 
 [↑ Back to top](#table-of-contents)
 
@@ -345,33 +411,91 @@ public class MessageConsumer(IOperationContextFactory factory)
 
 ## Context Mappers
 
-Context mappers extract GridContext from transport-specific envelopes. See [Transport.md](Transport.md) for detailed mapper documentation.
+Context mappers extract and initialize GridContext from transport-specific envelopes. **v0.4.0:** All mappers are now **static classes** with initialization methods.
 
-### HttpContextMapper.cs
+### HttpContextMapper.cs (Static)
 
-Extracts GridContext from HTTP request headers using canonical `GridHeaderNames`.
+Extracts headers from HTTP requests and initializes GridContext.
 
 **Location:** `HoneyDrunk.Kernel/Context/Mappers/HttpContextMapper.cs`
 
+```csharp
+public static class HttpContextMapper
+{
+    // Extract header values without modifying context
+    public static (string CorrelationId, string? CausationId, string? TenantId, ...)
+        ExtractFromHttpContext(HttpContext httpContext);
+    
+    // Initialize an existing GridContext from HTTP headers
+    public static void InitializeFromHttpContext(
+        IGridContext gridContext, 
+        HttpContext httpContext);
+}
+```
+
+**Usage:**
+```csharp
+// In middleware:
+var gridContext = httpContext.RequestServices.GetRequiredService<IGridContext>();
+HttpContextMapper.InitializeFromHttpContext(gridContext, httpContext);
+```
+
 **Headers Read:**
-- `GridHeaderNames.CorrelationId` (`X-Correlation-Id`) → `CorrelationId`
-- `GridHeaderNames.CausationId` (`X-Causation-Id`) → `CausationId`
-- `GridHeaderNames.NodeId` (`X-Node-Id`) → `NodeId`
-- `GridHeaderNames.StudioId` (`X-Studio-Id`) → `StudioId`
-- `GridHeaderNames.Environment` (`X-Environment`) → `Environment`
-- `GridHeaderNames.BaggagePrefix` (`X-Baggage-*`) → `Baggage`
+- `X-Correlation-Id` → `CorrelationId`
+- `X-Causation-Id` → `CausationId`
+- `X-Tenant-Id` → `TenantId`
+- `X-Project-Id` → `ProjectId`
+- `X-Baggage-*` → `Baggage`
 
-### MessagingContextMapper.cs
+### MessagingContextMapper.cs (Static)
 
-Extracts GridContext from message properties.
+Extracts context from message properties and initializes GridContext.
 
 **Location:** `HoneyDrunk.Kernel/Context/Mappers/MessagingContextMapper.cs`
 
-### JobContextMapper.cs
+```csharp
+public static class MessagingContextMapper
+{
+    // Initialize GridContext from message properties
+    public static void InitializeFromMessage(
+        IGridContext gridContext,
+        IReadOnlyDictionary<string, object?> messageProperties);
+    
+    // Extract correlation ID from message (returns null if not found)
+    public static string? ExtractFromMessage(
+        IReadOnlyDictionary<string, object?> messageProperties);
+}
+```
 
-Extracts GridContext from background job metadata.
+### JobContextMapper.cs (Static)
+
+Initializes GridContext for background jobs.
 
 **Location:** `HoneyDrunk.Kernel/Context/Mappers/JobContextMapper.cs`
+
+```csharp
+public static class JobContextMapper
+{
+    // Initialize for a generic background job
+    public static void InitializeForJob(
+        IGridContext gridContext,
+        string jobId,
+        string? parentCorrelationId = null);
+    
+    // Initialize for a scheduled/recurring job
+    public static void InitializeForScheduledJob(
+        IGridContext gridContext,
+        string scheduleId,
+        string? scheduleName = null);
+    
+    // Initialize from job metadata dictionary
+    public static void InitializeFromMetadata(
+        IGridContext gridContext,
+        IReadOnlyDictionary<string, object?> metadata);
+}
+```
+
+**Design Note (v0.4.0):** Mappers are static because they don't hold state. The context instance is passed in and mutated directly via `Initialize()` method.
 
 [↑ Back to top](#table-of-contents)
 
@@ -381,68 +505,54 @@ Extracts GridContext from background job metadata.
 
 ### GridContextMiddleware.cs
 
-ASP.NET Core middleware that creates GridContext for each HTTP request.
+ASP.NET Core middleware that initializes GridContext for each HTTP request.
 
 **Location:** `HoneyDrunk.Kernel/Context/Middleware/GridContextMiddleware.cs`
+
+**v0.4.0 Behavior (Breaking Change):**
+
+The middleware no longer creates a new GridContext. Instead, it **initializes the existing scoped context** from the DI container:
 
 ```csharp
 public class GridContextMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<GridContextMiddleware> _logger;
     
     public async Task InvokeAsync(
         HttpContext httpContext,
-        IGridContextAccessor contextAccessor,
-        INodeContext nodeContext)
+        IGridContext gridContext)  // Resolved from DI - already created, not initialized
     {
-        // Extract or create GridContext using canonical header names
-        var correlationId = httpContext.Request.Headers[GridHeaderNames.CorrelationId].FirstOrDefault()
-            ?? Ulid.NewUlid().ToString();
+        // Initialize the context with request-specific values
+        HttpContextMapper.InitializeFromHttpContext(gridContext, httpContext);
         
-        var gridContext = new GridContext(
-            correlationId: correlationId,
-            nodeId: nodeContext.NodeId,
-            studioId: nodeContext.StudioId,
-            environment: nodeContext.Environment,
-            causationId: httpContext.Request.Headers[GridHeaderNames.CausationId].FirstOrDefault(),
-            baggage: ExtractBaggage(httpContext.Request.Headers)
-        );
-        
-        // Set ambient context
-        contextAccessor.GridContext = gridContext;
+        // Now context is fully usable
         
         try
         {
-            // Echo correlation to response using canonical names
-            httpContext.Response.Headers[GridHeaderNames.CorrelationId] = gridContext.CorrelationId;
-            httpContext.Response.Headers[GridHeaderNames.NodeId] = gridContext.NodeId;
+            // Echo correlation to response
+            httpContext.Response.OnStarting(() =>
+            {
+                httpContext.Response.Headers[GridHeaderNames.CorrelationId] = gridContext.CorrelationId;
+                httpContext.Response.Headers[GridHeaderNames.NodeId] = gridContext.NodeId;
+                return Task.CompletedTask;
+            });
             
             await _next(httpContext);
         }
         finally
         {
-            // Clean up
-            contextAccessor.GridContext = null;
+            // Disposal handled by DI scope, not middleware
         }
-    }
-    
-    private Dictionary<string, string> ExtractBaggage(IHeaderDictionary headers)
-    {
-        var baggage = new Dictionary<string, string>();
-        
-        foreach (var (key, value) in headers)
-        {
-            if (key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                var baggageKey = key.Substring(GridHeaderNames.BaggagePrefix.Length);
-                baggage[baggageKey] = value.ToString();
-            }
-        }
-        
-        return baggage;
     }
 }
 ```
+
+**Key Differences from v0.3.0:**
+- Context is **resolved from DI**, not created in middleware
+- Middleware calls `Initialize()` on the existing context
+- No setter on `IGridContextAccessor` - context comes from DI scope
+- `IDisposable` cleanup handled by DI container
 
 **Registered via:**
 ```csharp

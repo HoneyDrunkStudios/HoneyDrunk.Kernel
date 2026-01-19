@@ -1,4 +1,4 @@
-﻿# ⚠️ Errors - Exception Hierarchy and Error Handling
+# ⚠️ Errors - Exception Hierarchy and Error Handling
 
 [← Back to File Guide](FILE_GUIDE.md)
 

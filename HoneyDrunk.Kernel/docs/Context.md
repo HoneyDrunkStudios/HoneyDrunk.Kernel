@@ -294,14 +294,14 @@ Kernel provides the **rails** (plumbing) for identity propagation so that downst
 ### Key Methods
 
 ```csharp
-// Add baggage (propagates downstream)
-IGridContext WithBaggage(string key, string value);
+// Add baggage to this context (mutates in-place)
+void AddBaggage(string key, string value);
 
-// Create nested scope
-IDisposable BeginScope();
+// Check if context has been initialized with request-specific values
+bool IsInitialized { get; }
 ```
 
-**Note:** `CreateChildContext()` has been **removed** from `IGridContext` in v0.3.0. Use `IGridContextFactory.CreateChild()` instead. See [IGridContextFactory](#ioperationcontextfactorycs-new-v030) for child context creation.
+**Note:** In v0.4.0, `WithBaggage()` was renamed to `AddBaggage()` and now returns `void` instead of a new `IGridContext` (baggage mutation is now in-place). The `BeginScope()` method has been **removed** as it was a no-op placeholder. `CreateChildContext()` was **removed** in v0.3.0. Use `IGridContextFactory.CreateChild()` instead.
 
 ### Creating Child Contexts (v0.3.0)
 
@@ -345,10 +345,9 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
         
         // Note: OperationId is accessed via IOperationContext, not GridContext
         
-        // Add context baggage
-        var enrichedContext = gridContext
-            .WithBaggage("order_id", order.Id)
-            .WithBaggage("customer_id", order.CustomerId);
+        // Add context baggage (mutates in-place, returns void)
+        gridContext.AddBaggage("order_id", order.Id);
+        gridContext.AddBaggage("customer_id", order.CustomerId);
         
         // For child context creation, use IGridContextFactory
         // (See CreateChild example above)
@@ -604,10 +603,27 @@ Prefer explicit `IOperationContext` injection; use accessor only when necessary 
 ## IGridContextAccessor.cs
 
 ### What it is
-Ambient accessor for current GridContext (like `IHttpContextAccessor`).
+Ambient accessor for current GridContext. **v0.4.0 breaking change:** The property is now `IGridContext GridContext { get; }` (non-nullable, read-only).
 
 ### Real-world analogy
 Like `Thread.CurrentPrincipal` - access current context anywhere.
+
+### Interface (v0.4.0)
+
+```csharp
+public interface IGridContextAccessor
+{
+    /// <summary>
+    /// Gets the current Grid context. Never null in properly configured applications.
+    /// </summary>
+    IGridContext GridContext { get; }
+}
+```
+
+**Key Changes in v0.4.0:**
+- Property is **read-only** (no setter) - DI scope owns context, not callers
+- Property is **non-nullable** - throws if accessed outside a DI scope
+- Implementation reads from `IHttpContextAccessor.HttpContext?.RequestServices`
 
 ### Usage
 
@@ -616,11 +632,10 @@ public class LegacyLogger(IGridContextAccessor contextAccessor)
 {
     public void Log(string message)
     {
+        // GridContext is non-nullable in v0.4.0 - no null check needed
+        // (throws if accessed outside DI scope)
         var context = contextAccessor.GridContext;
-        if (context != null)
-        {
-            Console.WriteLine($"[{context.CorrelationId}] {message}");
-        }
+        Console.WriteLine($"[{context.CorrelationId}] {message}");
     }
 }
 ```
@@ -631,7 +646,7 @@ public class LegacyLogger(IGridContextAccessor contextAccessor)
 - Deep call stacks where passing context is impractical
 
 ### ⚠️ Caution
-Prefer explicit injection; use accessor only when necessary (async-local storage has performance overhead).
+Prefer explicit injection; use accessor only when necessary. The accessor now relies on `IHttpContextAccessor` and will throw if used outside an HTTP request scope or before middleware has run.
 
 [↑ Back to top](#table-of-contents)
 

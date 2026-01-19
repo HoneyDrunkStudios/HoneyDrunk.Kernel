@@ -133,10 +133,10 @@ public async Task StopAsync(CancellationToken cancellationToken)
 
 ### Registration
 
-The `NodeLifecycleHost` is automatically registered when you call `AddHoneyDrunkGrid`:
+The `NodeLifecycleHost` is automatically registered when you call `AddHoneyDrunkNode`:
 
 ```csharp
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = "payment-node";
     options.StudioId = "demo-studio";
@@ -166,7 +166,7 @@ builder.Services.AddHoneyDrunkGrid(options =>
 - Should prefer `NodeLifecycleManager.TransitionToStage()` to get telemetry tags, structured logging, and a single mutation path.
 
 ### When to use
-- Automatically used when `AddHoneyDrunkGrid` is called
+- Automatically used when `AddHoneyDrunkNode` is called
 - No manual interaction required - host orchestrates everything
 - For custom orchestration, you can implement your own `IHostedService` and use `NodeLifecycleManager.TransitionToStage()` (or, in advanced cases, manipulate `INodeContext.SetLifecycleStage()` directly)
 
@@ -201,7 +201,7 @@ public NodeLifecycleManager(
     ILogger<NodeLifecycleManager> logger)
 ```
 
-**Dependency Injection:** This is resolved by DI and you usually never `new` up this type yourself. It's automatically registered when you call `AddHoneyDrunkGrid()`.
+**Dependency Injection:** This is resolved by DI and you usually never `new` up this type yourself. It's automatically registered when you call `AddHoneyDrunkNode()`.
 
 ### Methods
 
@@ -1019,7 +1019,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         
         // Register Grid services (includes NodeLifecycleHost as IHostedService)
-        builder.Services.AddHoneyDrunkGrid(options =>
+        builder.Services.AddHoneyDrunkNode(options =>
         {
             options.NodeId = "payment-node";
             options.StudioId = "demo-studio";
@@ -1185,7 +1185,7 @@ public async Task ReadinessContributor_RequiredNotReady_BlocksReadiness()
 | **IReadinessContributor** | Traffic gating | Yes | Yes (`IsRequired`) |
 
 **Key Patterns:**
-- **NodeLifecycleHost** is the runtime orchestrator (registered via `AddHoneyDrunkGrid`)
+- **NodeLifecycleHost** is the runtime orchestrator (registered via `AddHoneyDrunkNode`)
 - **NodeLifecycleManager** provides health/readiness aggregation and stage transitions
 - **INodeLifecycle** invoked after hooks complete, before Ready state
 - Startup hooks execute in priority order (lower first)

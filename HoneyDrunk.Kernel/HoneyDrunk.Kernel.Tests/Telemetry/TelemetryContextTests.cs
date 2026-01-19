@@ -1,6 +1,7 @@
 using FluentAssertions;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Telemetry;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 
 namespace HoneyDrunk.Kernel.Tests.Telemetry;
 
@@ -235,6 +236,10 @@ public class TelemetryContextTests
 
     private static GridContext CreateTestGridContext()
     {
-        return new GridContext("corr-123", "test-node", "test-studio", "test");
+        return GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test");
     }
 }

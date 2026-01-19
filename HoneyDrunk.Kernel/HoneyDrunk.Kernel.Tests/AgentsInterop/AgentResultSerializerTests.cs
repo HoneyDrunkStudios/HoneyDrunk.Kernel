@@ -2,7 +2,7 @@ using FluentAssertions;
 using HoneyDrunk.Kernel.Abstractions.Agents;
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.AgentsInterop;
-using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 
 namespace HoneyDrunk.Kernel.Tests.AgentsInterop;
 
@@ -344,7 +344,11 @@ public class AgentResultSerializerTests
         return new TestAgentExecutionContext
         {
             Agent = new TestAgentDescriptor { AgentId = "test-agent" },
-            GridContext = new GridContext("corr-123", "test-node", "test-studio", "test"),
+            GridContext = GridContextTestHelper.CreateInitialized(
+                correlationId: "corr-123",
+                nodeId: "test-node",
+                studioId: "test-studio",
+                environment: "test"),
             StartedAtUtc = DateTimeOffset.UtcNow
         };
     }

@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Pure semantic contracts for HoneyDrunk.OS Grid. Provides zero-dependency abstractions for Grid context, Node lifecycle, identity primitives, telemetry, transport, error handling, and agent execution. Safe for libraries and SDKs.</Description>
-    <PackageReleaseNotes>v0.3.0: Added transport abstraction (ITransportEnvelopeBinder, GridHeaderNames), structured error handling (HoneyDrunkException, ErrorCode, IErrorClassifier), telemetry tags (TelemetryTags), and multi-tenant context support (TenantId, ProjectId). Complete documentation rewrite. See CHANGELOG.md for details.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.4.0: BREAKING CHANGES - IGridContext: AddBaggage() replaces WithBaggage() (void return), IsInitialized property added, BeginScope() removed. IGridContextAccessor: now read-only non-nullable GridContext property (no setter). IGridContextFactory: CreateRoot() removed, only CreateChild() remains. See CHANGELOG.md for migration guide.</PackageReleaseNotes>
     <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting;transport;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

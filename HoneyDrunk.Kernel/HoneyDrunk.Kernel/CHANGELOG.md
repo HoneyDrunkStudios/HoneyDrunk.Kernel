@@ -1,9 +1,54 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to HoneyDrunk.Kernel will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2026-01-19
+
+### ⚠️ Breaking Changes
+
+- **GridContext**: Constructor now takes only `(nodeId, studioId, environment)`. Use `Initialize()` to set correlationId and other request-specific values.
+- **GridContext**: Removed `BeginScope()` method (was no-op placeholder)
+- **GridContext**: Replaced `WithBaggage()` with `AddBaggage()` - now mutates in place instead of returning new instance
+- **GridContext**: Added `IsInitialized` and `IsDisposed` properties
+- **GridContext**: Throws `InvalidOperationException` if properties accessed before `Initialize()`
+- **GridContext**: Throws `ObjectDisposedException` if accessed after scope ends
+- **GridContextAccessor**: Now requires `IHttpContextAccessor` in constructor
+- **GridContextAccessor**: `GridContext` property is now read-only (no setter)
+- **GridContextAccessor**: Reads from `HttpContext.RequestServices` instead of independent `AsyncLocal`
+- **GridContextFactory**: Removed `CreateRoot()` method - root contexts created by DI only
+- **HttpContextMapper**: Now static class with `ExtractFromHttpContext()` and `InitializeFromHttpContext()` methods
+- **JobContextMapper**: Now static class with `InitializeForJob()`, `InitializeForScheduledJob()`, `InitializeFromMetadata()` methods
+- **MessagingContextMapper**: Now static class with `InitializeFromMessage()` and `ExtractFromMessage()` methods
+- **AddHoneyDrunkNode()**: Now throws if called twice (duplicate registration guard)
+
+### Added
+
+- **GridContext.Initialize()**: Two-phase initialization pattern for request-specific values
+- **GridContext.MarkDisposed()**: Internal method to mark context as disposed when scope ends
+- **GridContext.IsDisposed**: Property to check if context has been disposed
+- **ScopedGridContextAccessor**: For non-HTTP scenarios using `AsyncLocal`
+- **KernelRegistrationMarker**: Internal marker to prevent duplicate registration
+- **GridContextTestHelper**: Test helper for creating initialized GridContext instances
+- **MessageContextValues**: Record for extracted message context values
+- **GridContextInitValues**: Record for extracted HTTP context values
+
+### Changed
+
+- **GridContextMiddleware**: Now initializes existing scoped GridContext instead of creating new one
+- **GridContextMiddleware**: Calls `MarkDisposed()` in finally block to detect fire-and-forget misuse
+- **OperationContextFactory**: Validates GridContext is initialized before creating operations
+- **GridContextSerializer**: Updated to use two-phase GridContext initialization
+- **HoneyDrunkServiceCollectionExtensions**: Updated `AddHoneyDrunkNode()` to use new GridContext pattern
+- **HoneyDrunkNodeServiceCollectionExtensions**: Added `IHttpContextAccessor` registration
+
+### Removed
+
+- **GridContext multi-arg constructors**: Removed constructors that took correlationId, causationId, etc.
+- **GridContextAccessor.GridContext setter**: Property is now read-only
+- **IGridContextFactory.CreateRoot()**: Root context creation is DI-only
 
 ## [0.3.0] - 2025-11-28
 
@@ -26,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Creates GridContext and OperationContext automatically
   - Echoes correlation headers in responses
 - **Bootstrapping**: Unified Node initialization
-  - `AddHoneyDrunkGrid(options)` for service registration
+  - `AddHoneyDrunkNode(options)` for service registration
   - `UseGridContext()` middleware extension
   - `ValidateHoneyDrunkServices()` for fail-fast validation
 - **Telemetry**: `GridActivitySource` for OpenTelemetry Activity API integration

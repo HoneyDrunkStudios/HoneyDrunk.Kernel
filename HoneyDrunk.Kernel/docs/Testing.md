@@ -53,23 +53,69 @@ Testing guidance and patterns for HoneyDrunk.Kernel, including unit tests, integ
 
 ### Mocking Context
 
-#### GridContext
+#### GridContext (v0.4.0 Two-Phase Initialization)
+
+**Breaking Change in v0.4.0:** `GridContext` now uses a two-phase initialization pattern:
+
+1. **Constructor** - Sets immutable identity values (NodeId, StudioId, Environment)
+2. **Initialize()** - Sets request-specific values (CorrelationId, CausationId, Baggage)
 
 ```csharp
-// Create test GridContext with known values
+// Create and initialize test GridContext manually
 var testContext = new GridContext(
-    correlationId: "test-corr-123",
     nodeId: "test-node",
     studioId: "test-studio",
-    environment: "test",
-    causationId: null,
+    environment: "test");
+
+testContext.Initialize(
+    correlationId: "test-corr-123",
+    causationId: "parent-op-456",
+    tenantId: "test-tenant",
+    projectId: "test-project",
     baggage: new Dictionary<string, string>
     {
-        ["tenant_id"] = "test-tenant",
-        ["user_id"] = "test-user"
+        ["custom_key"] = "custom_value"
     },
-    createdAtUtc: DateTimeOffset.UtcNow);
+    cancellationToken: CancellationToken.None);
+
+// Context is now fully initialized
+Assert.True(testContext.IsInitialized);
+Assert.Equal("test-corr-123", testContext.CorrelationId);
 ```
+
+#### GridContextTestHelper (Recommended for Tests)
+
+The `GridContextTestHelper` class provides convenient factory methods for creating test contexts:
+
+```csharp
+using HoneyDrunk.Kernel.Tests;
+
+// Create a fully initialized context with defaults
+var context = GridContextTestHelper.Create();
+// CorrelationId will be a new ULID, NodeId = "test-node", etc.
+
+// Create with custom values
+var customContext = GridContextTestHelper.Create(
+    correlationId: "my-corr-123",
+    nodeId: "custom-node",
+    studioId: "custom-studio",
+    environment: "staging",
+    tenantId: "tenant-xyz");
+
+// Create uninitialized context (for testing initialization behavior)
+var uninitializedContext = GridContextTestHelper.CreateUninitialized();
+Assert.False(uninitializedContext.IsInitialized);
+```
+
+**GridContextTestHelper Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `Create(...)` | Creates a fully initialized context with optional overrides |
+| `CreateUninitialized()` | Creates an uninitialized context (for testing Initialize behavior) |
+| `CreateWithBaggage(baggage)` | Creates context with specific baggage |
+
+**Recommendation:** Use `GridContextTestHelper` in all test code to avoid breaking tests when internal APIs change.
 
 #### NodeContext
 
@@ -113,13 +159,12 @@ testOperation.AddMetadata("test_key", "test_value");
 [Fact]
 public void GridContext_CreateChildContext_PreservesCorrelation()
 {
-    // Arrange
-    var parentContext = new GridContext(
+    // Arrange - Use GridContextTestHelper for v0.4.0 two-phase initialization
+    var parentContext = GridContextTestHelper.Create(
         correlationId: "parent-123",
         nodeId: "parent-node",
         studioId: "test-studio",
-        environment: "test",
-        causationId: null);
+        environment: "test");
     
     // Act
     var childContext = parentContext.CreateChildContext("child-node");
@@ -138,18 +183,16 @@ public void GridContext_CreateChildContext_PreservesCorrelation()
 [Fact]
 public void GridContext_BaggagePropagates_ToChildren()
 {
-    // Arrange
-    var parentContext = new GridContext(
+    // Arrange - Use CreateWithBaggage helper
+    var parentContext = GridContextTestHelper.Create(
         correlationId: "test-123",
         nodeId: "parent-node",
         studioId: "test-studio",
-        environment: "test",
-        causationId: null,
-        baggage: new Dictionary<string, string>
-        {
-            ["tenant_id"] = "tenant-abc",
-            ["project_id"] = "project-xyz"
-        });
+        environment: "test");
+    
+    // Add baggage (mutates in-place in v0.4.0)
+    parentContext.AddBaggage("tenant_id", "tenant-abc");
+    parentContext.AddBaggage("project_id", "project-xyz");
     
     // Act
     var childContext = parentContext.CreateChildContext("child-node");
@@ -160,7 +203,7 @@ public void GridContext_BaggagePropagates_ToChildren()
 }
 ```
 
-**Design Note:** GridContext does not have a `WithBaggage()` method in the current implementation. To test context with different baggage, construct a new instance with the desired baggage dictionary.
+**Design Note (v0.4.0):** `AddBaggage()` mutates the context in-place and returns `void`. Child contexts created via `CreateChildContext()` receive a copy of the parent's baggage.
 
 #### OperationContext Tracking
 
@@ -472,7 +515,7 @@ public class ServiceTests
         var services = new ServiceCollection();
         
         // Register Kernel services (v0.3)
-        services.AddHoneyDrunkGrid(options =>
+        services.AddHoneyDrunkNode(options =>
         {
             options.NodeId = "test-node";
             options.StudioId = "test-studio";
@@ -690,7 +733,7 @@ public class ContextBenchmarks
 
 **v0.3 Alignment:**
 - All examples use actual `GridOptions` (string-based, not value objects)
-- `AddHoneyDrunkGrid()` for bootstrap (current method name)
+- `AddHoneyDrunkNode()` for bootstrap (current method name)
 - Context accessors registered explicitly
 - No fictional interfaces (IHealthContributor with tuples matches actual API)
 - Node identity uses plain strings at runtime (`NodeId` property is `string`, not struct)

@@ -3,37 +3,15 @@ using HoneyDrunk.Kernel.Abstractions.Context;
 namespace HoneyDrunk.Kernel.Context;
 
 /// <summary>
-/// Default implementation of IGridContextFactory.
+/// Factory for creating child GridContext instances for cross-node propagation.
 /// </summary>
+/// <remarks>
+/// This factory creates initialized child contexts for scenarios where context must be
+/// serialized and sent to another node. It does NOT create root contexts - those are
+/// created by DI scope initialization.
+/// </remarks>
 public sealed class GridContextFactory : IGridContextFactory
 {
-    /// <inheritdoc />
-    public IGridContext CreateRoot(
-        string nodeId,
-        string studioId,
-        string environment,
-        string? correlationId = null,
-        string? causationId = null,
-        string? tenantId = null,
-        string? projectId = null,
-        IReadOnlyDictionary<string, string>? baggage = null,
-        CancellationToken cancellation = default)
-    {
-        // Generate correlation ID if not provided
-        var correlation = correlationId ?? Ulid.NewUlid().ToString();
-
-        return new GridContext(
-            correlationId: correlation,
-            nodeId: nodeId,
-            studioId: studioId,
-            environment: environment,
-            causationId: causationId,
-            tenantId: tenantId,
-            projectId: projectId,
-            baggage: baggage,
-            cancellation: cancellation);
-    }
-
     /// <inheritdoc />
     public IGridContext CreateChild(
         IGridContext parent,
@@ -43,6 +21,12 @@ public sealed class GridContextFactory : IGridContextFactory
     {
         ArgumentNullException.ThrowIfNull(parent);
         ArgumentNullException.ThrowIfNull(operation);
+
+        if (!parent.IsInitialized)
+        {
+            throw new InvalidOperationException(
+                "Cannot create child context from uninitialized parent GridContext.");
+        }
 
         // Merge parent baggage with extra baggage
         Dictionary<string, string>? mergedBaggage = null;
@@ -58,16 +42,19 @@ public sealed class GridContextFactory : IGridContextFactory
             }
         }
 
-        // Create child with causation set to parent operation's OperationId
-        return new GridContext(
+        // Create a new context for cross-node propagation
+        // This context is pre-initialized (it's for serialization, not local use)
+        var effectiveNodeId = nodeId ?? parent.NodeId;
+        var child = new GridContext(effectiveNodeId, parent.StudioId, parent.Environment);
+
+        child.Initialize(
             correlationId: parent.CorrelationId,
-            nodeId: nodeId ?? parent.NodeId,
-            studioId: parent.StudioId,
-            environment: parent.Environment,
-            causationId: operation.OperationId,
+            causationId: operation.OperationId, // Key: causation chain links to parent operation
             tenantId: parent.TenantId,
             projectId: parent.ProjectId,
             baggage: mergedBaggage,
             cancellation: parent.Cancellation);
+
+        return child;
     }
 }
