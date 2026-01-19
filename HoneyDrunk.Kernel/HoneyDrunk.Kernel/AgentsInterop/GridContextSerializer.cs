@@ -116,16 +116,21 @@ public sealed class GridContextSerializer
                 createdAtUtc = createdAtElement.GetDateTimeOffset();
             }
 
-            return new Context.GridContext(
-                correlationId: correlationId,
+            // Create and initialize a new GridContext for deserialization scenarios
+            // This is used when receiving context from external sources (e.g., agent results)
+            var gridContext = new Context.GridContext(
                 nodeId: nodeId,
                 studioId: studioId,
-                environment: environment,
+                environment: environment);
+
+            gridContext.Initialize(
+                correlationId: correlationId,
                 causationId: causationId,
                 tenantId: tenantId,
                 projectId: projectId,
-                baggage: baggage,
-                createdAtUtc: createdAtUtc);
+                baggage: baggage);
+
+            return gridContext;
         }
         catch (JsonException)
         {

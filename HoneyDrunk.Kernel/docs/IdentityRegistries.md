@@ -1,4 +1,4 @@
-﻿# 🏷️ Identity Registries - Static Well-Known Values
+# 🏷️ Identity Registries - Static Well-Known Values
 
 [← Back to File Guide](FILE_GUIDE.md)
 

@@ -1,21 +1,93 @@
 using FluentAssertions;
 using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 
 namespace HoneyDrunk.Kernel.Tests.Context;
 
 public class GridContextTests
 {
     [Fact]
-    public void Constructor_ValidParameters_CreatesContext()
+    public void Constructor_ValidParameters_CreatesUninitializedContext()
     {
         // Arrange & Act
         var context = new GridContext(
-            correlationId: "corr-123",
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "test-env");
 
         // Assert
+        context.IsInitialized.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("", "studio", "env")]
+    [InlineData("node", "", "env")]
+    [InlineData("node", "studio", "")]
+    public void Constructor_NullOrWhitespaceParameters_ThrowsArgumentException(
+        string nodeId,
+        string studioId,
+        string environment)
+    {
+        // Act
+        var act = () => new GridContext(nodeId, studioId, environment);
+
+        // Assert
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData(null, "studio", "env")]
+    [InlineData("node", null, "env")]
+    [InlineData("node", "studio", null)]
+    public void Constructor_NullParameters_ThrowsArgumentException(
+        string? nodeId,
+        string? studioId,
+        string? environment)
+    {
+        // Act
+        var act = () => new GridContext(nodeId!, studioId!, environment!);
+
+        // Assert
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void IsInitialized_BeforeInitialize_ReturnsFalse()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act & Assert
+        context.IsInitialized.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsInitialized_AfterInitialize_ReturnsTrue()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        context.Initialize("corr-123");
+
+        // Assert
+        context.IsInitialized.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Initialize_ValidParameters_InitializesContext()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized(
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
+
+        // Act
+        context.Initialize(correlationId: "corr-123");
+
+        // Assert
+        context.IsInitialized.Should().BeTrue();
         context.CorrelationId.Should().Be("corr-123");
         context.NodeId.Should().Be("test-node");
         context.StudioId.Should().Be("test-studio");
@@ -27,33 +99,33 @@ public class GridContextTests
     }
 
     [Fact]
-    public void Constructor_WithOptionalParameters_CreatesContext()
+    public void Initialize_WithOptionalParameters_InitializesContext()
     {
         // Arrange
         var baggage = new Dictionary<string, string> { ["key1"] = "value1" };
         using var cts = new CancellationTokenSource();
-        var createdAt = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var context = GridContextTestHelper.CreateUninitialized();
 
         // Act
-        var context = new GridContext(
+        context.Initialize(
             correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
             causationId: "cause-456",
+            tenantId: "tenant-789",
+            projectId: "proj-abc",
             baggage: baggage,
-            cancellation: cts.Token,
-            createdAtUtc: createdAt);
+            cancellation: cts.Token);
 
         // Assert
+        context.CorrelationId.Should().Be("corr-123");
         context.CausationId.Should().Be("cause-456");
+        context.TenantId.Should().Be("tenant-789");
+        context.ProjectId.Should().Be("proj-abc");
         context.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
         context.Cancellation.Should().Be(cts.Token);
-        context.CreatedAtUtc.Should().Be(createdAt);
     }
 
     [Fact]
-    public void Constructor_WithMultipleBaggageItems_CreatesContextWithAllItems()
+    public void Initialize_WithMultipleBaggageItems_InitializesContextWithAllItems()
     {
         // Arrange
         var baggage = new Dictionary<string, string>
@@ -62,14 +134,10 @@ public class GridContextTests
             ["key2"] = "value2",
             ["key3"] = "value3"
         };
+        var context = GridContextTestHelper.CreateUninitialized();
 
         // Act
-        var context = new GridContext(
-            correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
-            baggage: baggage);
+        context.Initialize(correlationId: "corr-123", baggage: baggage);
 
         // Assert
         context.Baggage.Should().HaveCount(3);
@@ -79,15 +147,13 @@ public class GridContextTests
     }
 
     [Fact]
-    public void Constructor_WithNullBaggage_CreatesContextWithEmptyBaggage()
+    public void Initialize_WithNullBaggage_InitializesContextWithEmptyBaggage()
     {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
         // Act
-        var context = new GridContext(
-            correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
-            baggage: null);
+        context.Initialize(correlationId: "corr-123", baggage: null);
 
         // Assert
         context.Baggage.Should().NotBeNull();
@@ -95,168 +161,267 @@ public class GridContextTests
     }
 
     [Theory]
-    [InlineData("", "node", "studio", "env")]
-    [InlineData("corr", "", "studio", "env")]
-    [InlineData("corr", "node", "", "env")]
-    [InlineData("corr", "node", "studio", "")]
-    public void Constructor_NullOrWhitespaceParameters_ThrowsArgumentException(
-        string correlationId,
-        string nodeId,
-        string studioId,
-        string environment)
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Initialize_NullOrWhitespaceCorrelationId_ThrowsArgumentException(string correlationId)
     {
-        // Act
-        var act = () => new GridContext(correlationId, nodeId, studioId, environment);
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
 
-        // Assert
-        act.Should().Throw<ArgumentException>();
-    }
-
-    [Theory]
-    [InlineData(null, "node", "studio", "env")]
-    [InlineData("corr", null, "studio", "env")]
-    [InlineData("corr", "node", null, "env")]
-    [InlineData("corr", "node", "studio", null)]
-    public void Constructor_NullParameters_ThrowsArgumentException(
-        string? correlationId,
-        string? nodeId,
-        string? studioId,
-        string? environment)
-    {
         // Act
-        var act = () => new GridContext(correlationId!, nodeId!, studioId!, environment!);
+        var act = () => context.Initialize(correlationId);
 
         // Assert
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void BeginScope_ReturnsDisposable()
+    public void Initialize_NullCorrelationId_ThrowsArgumentException()
     {
         // Arrange
-        var context = new GridContext("corr", "node", "studio", "env");
+        var context = GridContextTestHelper.CreateUninitialized();
 
         // Act
-        var scope = context.BeginScope();
+        var act = () => context.Initialize(null!);
 
         // Assert
-        scope.Should().NotBeNull();
-        scope.Should().BeAssignableTo<IDisposable>();
-
-        // Should not throw
-        scope.Dispose();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void BeginScope_CanBeCalledMultipleTimes()
+    public void Initialize_CalledTwice_ThrowsInvalidOperationException()
     {
         // Arrange
-        var context = new GridContext("corr", "node", "studio", "env");
+        var context = GridContextTestHelper.CreateUninitialized();
+        context.Initialize("corr-123");
 
         // Act
-        var scope1 = context.BeginScope();
-        var scope2 = context.BeginScope();
-        var scope3 = context.BeginScope();
+        var act = () => context.Initialize("corr-456");
 
         // Assert
-        scope1.Should().NotBeNull();
-        scope2.Should().NotBeNull();
-        scope3.Should().NotBeNull();
-
-        // Should not throw
-        scope1.Dispose();
-        scope2.Dispose();
-        scope3.Dispose();
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*already been initialized*");
     }
 
     [Fact]
-    public void BeginScope_DisposeCanBeCalledMultipleTimes()
-    {
-        // Arrange
-        var context = new GridContext("corr", "node", "studio", "env");
-        var scope = context.BeginScope();
-
-        // Act & Assert - should not throw
-        scope.Dispose();
-        scope.Dispose();
-        scope.Dispose();
-    }
-
-    [Fact]
-    public void WithBaggage_AddsNewBaggage()
-    {
-        // Arrange
-        var context = new GridContext("corr", "node", "studio", "env");
-
-        // Act
-        var newContext = context.WithBaggage("new-key", "new-value");
-
-        // Assert
-        newContext.Baggage.Should().ContainKey("new-key").WhoseValue.Should().Be("new-value");
-        newContext.CorrelationId.Should().Be(context.CorrelationId);
-        newContext.NodeId.Should().Be(context.NodeId);
-    }
-
-    [Fact]
-    public void WithBaggage_UpdatesExistingBaggage()
-    {
-        // Arrange
-        var context = new GridContext(
-            "corr",
-            "node",
-            "studio",
-            "env",
-            baggage: new Dictionary<string, string> { ["key"] = "old-value" });
-
-        // Act
-        var newContext = context.WithBaggage("key", "new-value");
-
-        // Assert
-        newContext.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("new-value");
-        context.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("old-value"); // Original unchanged
-    }
-
-    [Fact]
-    public void WithBaggage_PreservesAllContextProperties()
+    public void Initialize_WithCancelledToken_StoresCancellation()
     {
         // Arrange
         using var cts = new CancellationTokenSource();
-        var createdAt = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        var context = new GridContext(
-            correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
-            causationId: "cause-456",
-            baggage: new Dictionary<string, string> { ["existing"] = "value" },
-            cancellation: cts.Token,
-            createdAtUtc: createdAt);
+        cts.Cancel();
+        var context = GridContextTestHelper.CreateUninitialized();
 
         // Act
-        var newContext = context.WithBaggage("new-key", "new-value");
+        context.Initialize("corr-123", cancellation: cts.Token);
 
         // Assert
-        newContext.CorrelationId.Should().Be("corr-123");
-        newContext.NodeId.Should().Be("test-node");
-        newContext.StudioId.Should().Be("test-studio");
-        newContext.Environment.Should().Be("test-env");
-        newContext.CausationId.Should().Be("cause-456");
-        newContext.Cancellation.Should().Be(cts.Token);
-        newContext.CreatedAtUtc.Should().Be(createdAt);
-        newContext.Baggage.Should().HaveCount(2);
-        newContext.Baggage.Should().ContainKey("existing").WhoseValue.Should().Be("value");
-        newContext.Baggage.Should().ContainKey("new-key").WhoseValue.Should().Be("new-value");
+        context.Cancellation.IsCancellationRequested.Should().BeTrue();
     }
 
     [Fact]
-    public void WithBaggage_PreservesExistingBaggageItems()
+    public void CorrelationId_BeforeInitialize_ThrowsInvalidOperationException()
     {
         // Arrange
-        var context = new GridContext(
-            "corr",
-            "node",
-            "studio",
-            "env",
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.CorrelationId;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void CausationId_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.CausationId;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void NodeId_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.NodeId;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void StudioId_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.StudioId;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void Environment_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.Environment;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void TenantId_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.TenantId;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void ProjectId_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.ProjectId;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void Cancellation_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.Cancellation;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void Baggage_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.Baggage;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void CreatedAtUtc_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.CreatedAtUtc;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void AddBaggage_AddsNewBaggage()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr",
+            nodeId: "node",
+            studioId: "studio",
+            environment: "env");
+
+        // Act
+        context.AddBaggage("new-key", "new-value");
+
+        // Assert
+        context.Baggage.Should().ContainKey("new-key").WhoseValue.Should().Be("new-value");
+    }
+
+    [Fact]
+    public void AddBaggage_UpdatesExistingBaggage()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr",
+            nodeId: "node",
+            studioId: "studio",
+            environment: "env",
+            baggage: new Dictionary<string, string> { ["key"] = "old-value" });
+
+        // Act
+        context.AddBaggage("key", "new-value");
+
+        // Assert
+        context.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("new-value");
+    }
+
+    [Fact]
+    public void AddBaggage_MutatesInPlace()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr",
+            nodeId: "node",
+            studioId: "studio",
+            environment: "env");
+
+        // Act
+        context.AddBaggage("key1", "value1");
+        context.AddBaggage("key2", "value2");
+
+        // Assert - Same context instance has both items
+        context.Baggage.Should().HaveCount(2);
+        context.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
+        context.Baggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
+    }
+
+    [Fact]
+    public void AddBaggage_PreservesExistingBaggageItems()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr",
+            nodeId: "node",
+            studioId: "studio",
+            environment: "env",
             baggage: new Dictionary<string, string>
             {
                 ["key1"] = "value1",
@@ -264,47 +429,25 @@ public class GridContextTests
             });
 
         // Act
-        var newContext = context.WithBaggage("key3", "value3");
+        context.AddBaggage("key3", "value3");
 
         // Assert
-        newContext.Baggage.Should().HaveCount(3);
-        newContext.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
-        newContext.Baggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
-        newContext.Baggage.Should().ContainKey("key3").WhoseValue.Should().Be("value3");
-    }
-
-    [Fact]
-    public void WithBaggage_DoesNotModifyOriginalContext()
-    {
-        // Arrange
-        var originalBaggage = new Dictionary<string, string> { ["key1"] = "value1" };
-        var context = new GridContext(
-            "corr",
-            "node",
-            "studio",
-            "env",
-            baggage: originalBaggage);
-
-        // Act
-        var newContext = context.WithBaggage("key2", "value2");
-
-        // Assert
-        context.Baggage.Should().HaveCount(1);
+        context.Baggage.Should().HaveCount(3);
         context.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
-        context.Baggage.Should().NotContainKey("key2");
-        newContext.Baggage.Should().HaveCount(2);
+        context.Baggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
+        context.Baggage.Should().ContainKey("key3").WhoseValue.Should().Be("value3");
     }
 
     [Theory]
     [InlineData("", "value")]
     [InlineData("key", "")]
-    public void WithBaggage_NullOrWhitespaceParameters_ThrowsArgumentException(string key, string value)
+    public void AddBaggage_NullOrWhitespaceParameters_ThrowsArgumentException(string key, string value)
     {
         // Arrange
-        var context = new GridContext("corr", "node", "studio", "env");
+        var context = GridContextTestHelper.CreateDefault();
 
         // Act
-        var act = () => context.WithBaggage(key, value);
+        var act = () => context.AddBaggage(key, value);
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -313,29 +456,39 @@ public class GridContextTests
     [Theory]
     [InlineData(null, "value")]
     [InlineData("key", null)]
-    public void WithBaggage_NullParameters_ThrowsArgumentException(string? key, string? value)
+    public void AddBaggage_NullParameters_ThrowsArgumentException(string? key, string? value)
     {
         // Arrange
-        var context = new GridContext("corr", "node", "studio", "env");
+        var context = GridContextTestHelper.CreateDefault();
 
         // Act
-        var act = () => context.WithBaggage(key!, value!);
+        var act = () => context.AddBaggage(key!, value!);
 
         // Assert
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void Baggage_IsImmutable()
+    public void AddBaggage_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Act
+        var act = () => context.AddBaggage("key", "value");
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been initialized*");
+    }
+
+    [Fact]
+    public void Baggage_ModifyingOriginalDictionary_DoesNotAffectContext()
     {
         // Arrange
         var baggageDict = new Dictionary<string, string> { ["key"] = "value" };
-        var context = new GridContext(
-            "corr",
-            "node",
-            "studio",
-            "env",
-            baggage: baggageDict);
+        var context = GridContextTestHelper.CreateUninitialized();
+        context.Initialize(correlationId: "corr", baggage: baggageDict);
 
         // Act - Modify the original dictionary
         baggageDict["key"] = "modified";
@@ -348,14 +501,14 @@ public class GridContextTests
     }
 
     [Fact]
-    public void Constructor_WithTenantId_StoresTenantId()
+    public void Initialize_WithTenantId_StoresTenantId()
     {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
         // Act
-        var context = new GridContext(
+        context.Initialize(
             correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
             tenantId: "tenant-456");
 
         // Assert
@@ -363,14 +516,14 @@ public class GridContextTests
     }
 
     [Fact]
-    public void Constructor_WithProjectId_StoresProjectId()
+    public void Initialize_WithProjectId_StoresProjectId()
     {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
         // Act
-        var context = new GridContext(
+        context.Initialize(
             correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
             projectId: "project-789");
 
         // Assert
@@ -378,14 +531,14 @@ public class GridContextTests
     }
 
     [Fact]
-    public void Constructor_WithTenantAndProject_StoresBoth()
+    public void Initialize_WithTenantAndProject_StoresBoth()
     {
+        // Arrange
+        var context = GridContextTestHelper.CreateUninitialized();
+
         // Act
-        var context = new GridContext(
+        context.Initialize(
             correlationId: "corr-123",
-            nodeId: "test-node",
-            studioId: "test-studio",
-            environment: "test-env",
             tenantId: "tenant-456",
             projectId: "project-789");
 
@@ -395,41 +548,64 @@ public class GridContextTests
     }
 
     [Fact]
-    public void WithBaggage_PreservesTenantAndProjectIds()
+    public void AddBaggage_DoesNotAffectTenantAndProjectIds()
     {
         // Arrange
-        var context = new GridContext(
-            "corr",
-            "node",
-            "studio",
-            "env",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr",
+            nodeId: "node",
+            studioId: "studio",
+            environment: "env",
             tenantId: "tenant-123",
             projectId: "project-456");
 
         // Act
-        var newContext = context.WithBaggage("key", "value");
+        context.AddBaggage("key", "value");
 
         // Assert
-        newContext.TenantId.Should().Be("tenant-123");
-        newContext.ProjectId.Should().Be("project-456");
+        context.TenantId.Should().Be("tenant-123");
+        context.ProjectId.Should().Be("project-456");
     }
 
     [Fact]
-    public void Constructor_WithCancelledToken_StoresCancellation()
+    public void CreateInitialized_ReturnsInitializedContext()
     {
-        // Arrange
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
-
         // Act
-        var context = new GridContext(
-            "corr",
-            "node",
-            "studio",
-            "env",
-            cancellation: cts.Token);
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         // Assert
-        context.Cancellation.IsCancellationRequested.Should().BeTrue();
+        context.IsInitialized.Should().BeTrue();
+        context.CorrelationId.Should().Be("corr-123");
+        context.NodeId.Should().Be("test-node");
+        context.StudioId.Should().Be("test-studio");
+        context.Environment.Should().Be("test-env");
+    }
+
+    [Fact]
+    public void CreateDefault_ReturnsInitializedContextWithDefaultValues()
+    {
+        // Act
+        var context = GridContextTestHelper.CreateDefault();
+
+        // Assert
+        context.IsInitialized.Should().BeTrue();
+        context.CorrelationId.Should().Be("test-correlation-id");
+        context.NodeId.Should().Be("test-node");
+        context.StudioId.Should().Be("test-studio");
+        context.Environment.Should().Be("test-env");
+    }
+
+    [Fact]
+    public void CreateUninitialized_ReturnsUninitializedContext()
+    {
+        // Act
+        var context = GridContextTestHelper.CreateUninitialized();
+
+        // Assert
+        context.IsInitialized.Should().BeFalse();
     }
 }

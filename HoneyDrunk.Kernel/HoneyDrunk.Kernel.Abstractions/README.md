@@ -1,4 +1,4 @@
-﻿# HoneyDrunk.Kernel.Abstractions
+# HoneyDrunk.Kernel.Abstractions
 
 [![NuGet](https://img.shields.io/nuget/v/HoneyDrunk.Kernel.Abstractions.svg)](https://www.nuget.org/packages/HoneyDrunk.Kernel.Abstractions/)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
@@ -53,6 +53,9 @@ All IDs are **validated at construction time** and designed for safe serializati
 - `IGridContext` - Per-operation envelope that crosses Node boundaries
   - Carries `CorrelationId` (trace-id), `CausationId` (parent-span-id), `NodeId`, `StudioId`, `Environment`
   - Baggage for metadata propagation
+  - **v0.4.0:** `AddBaggage()` replaces `WithBaggage()` (mutates in-place, returns void)
+  - **v0.4.0:** `IsInitialized` property for two-phase initialization checking
+  - **v0.4.0:** `BeginScope()` removed (was a no-op)
   - `CreateChildContext()` for causality tracking
 
 **Node Context (Static):**
@@ -67,9 +70,10 @@ All IDs are **validated at construction time** and designed for safe serializati
   - Metadata tags
 
 **Accessors & Factories:**
-- `IGridContextAccessor` - Ambient context access (AsyncLocal-based)
+- `IGridContextAccessor` - **v0.4.0:** Read-only, non-nullable `GridContext` property (no setter)
 - `IOperationContextAccessor` - Ambient operation context
 - `IOperationContextFactory` - Creates operation contexts from Grid context
+- **v0.4.0:** `IGridContextFactory.CreateRoot()` removed; only `CreateChild()` remains
 
 ### ⚙️ Configuration & Secrets
 **Hierarchical configuration abstractions:**
@@ -154,7 +158,7 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.3.0" />
+  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.4.0" />
 </ItemGroup>
 ```
 
@@ -174,7 +178,7 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 - ✅ **You need concrete implementations** (GridContext, NodeContext, OperationContext)
 - ✅ **You need middleware** (UseGridContext, lifecycle orchestration)
 - ✅ **You need transport binders** (HTTP, messaging, jobs)
-- ✅ **You need bootstrapping helpers** (AddHoneyDrunkGrid, ValidateHoneyDrunkServices)
+- ✅ **You need bootstrapping helpers** (AddHoneyDrunkNode, ValidateHoneyDrunkServices)
 
 ## 🎨 Design Philosophy
 

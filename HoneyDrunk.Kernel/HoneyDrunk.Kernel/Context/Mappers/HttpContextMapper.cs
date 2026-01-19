@@ -4,87 +4,81 @@ using Microsoft.AspNetCore.Http;
 namespace HoneyDrunk.Kernel.Context.Mappers;
 
 /// <summary>
-/// Maps HTTP request context to GridContext.
+/// Maps HTTP request headers to GridContext initialization parameters.
 /// </summary>
 /// <remarks>
-/// Extracts correlation/causation IDs from HTTP headers and creates GridContext.
+/// <para>
+/// This mapper extracts correlation, causation, tenant, project, and baggage values from HTTP headers.
+/// It is used by middleware to initialize the scoped GridContext.
+/// </para>
+/// <para>
 /// Standard headers:
-/// - X-Correlation-Id or traceparent.
-/// - X-Causation-Id.
-/// - X-Studio-Id.
-/// - X-Tenant-Id (optional, identity only).
-/// - X-Project-Id (optional, identity only).
+/// </para>
+/// <list type="bullet">
+/// <item>X-Correlation-Id or traceparent → CorrelationId</item>
+/// <item>X-Causation-Id → CausationId</item>
+/// <item>X-Tenant-Id → TenantId (identity only)</item>
+/// <item>X-Project-Id → ProjectId (identity only)</item>
+/// <item>baggage, X-Baggage-* → Baggage</item>
+/// </list>
 /// </remarks>
 public sealed class HttpContextMapper
 {
-    private const string CorrelationIdHeader = "X-Correlation-Id";
-    private const string CausationIdHeader = "X-Causation-Id";
-    private const string StudioIdHeader = "X-Studio-Id";
-    private const string TenantIdHeader = "X-Tenant-Id";
-    private const string ProjectIdHeader = "X-Project-Id";
-    private const string TraceParentHeader = "traceparent";
-
-    private readonly string _nodeId;
-    private readonly string _defaultStudioId;
-    private readonly string _environment;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpContextMapper"/> class.
+    /// Extracts GridContext initialization values from an HTTP request.
     /// </summary>
-    /// <param name="nodeId">The Node identifier.</param>
-    /// <param name="defaultStudioId">The default Studio identifier.</param>
-    /// <param name="environment">The environment name.</param>
-    public HttpContextMapper(string nodeId, string defaultStudioId, string environment)
+    /// <param name="httpContext">The HTTP context.</param>
+    /// <returns>Values needed to initialize a GridContext.</returns>
+    public static GridContextInitValues ExtractFromHttpContext(HttpContext httpContext)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(nodeId, nameof(nodeId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(defaultStudioId, nameof(defaultStudioId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(environment, nameof(environment));
+        ArgumentNullException.ThrowIfNull(httpContext);
 
-        _nodeId = nodeId;
-        _defaultStudioId = defaultStudioId;
-        _environment = environment;
+        var correlationId = ExtractCorrelationId(httpContext);
+        var causationId = ExtractHeader(httpContext, GridHeaderNames.CausationId);
+        var tenantId = ExtractHeader(httpContext, GridHeaderNames.TenantId);
+        var projectId = ExtractHeader(httpContext, GridHeaderNames.ProjectId);
+        var baggage = ExtractBaggage(httpContext);
+
+        return new GridContextInitValues(
+            correlationId,
+            causationId,
+            tenantId,
+            projectId,
+            baggage,
+            httpContext.RequestAborted);
     }
 
     /// <summary>
-    /// Creates a GridContext from an HTTP context.
+    /// Initializes an existing GridContext from HTTP request headers.
     /// </summary>
-    /// <param name="httpContext">The HTTP context.</param>
-    /// <returns>A GridContext populated from HTTP headers.</returns>
-    public IGridContext MapFromHttpContext(HttpContext httpContext)
+    /// <param name="context">The GridContext to initialize.</param>
+    /// <param name="httpContext">The HTTP context containing headers.</param>
+    public static void InitializeFromHttpContext(GridContext context, HttpContext httpContext)
     {
-        ArgumentNullException.ThrowIfNull(httpContext, nameof(httpContext));
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(httpContext);
 
-        var correlationId = ExtractCorrelationId(httpContext);
-        var causationId = ExtractHeader(httpContext, CausationIdHeader);
-        var studioId = ExtractHeader(httpContext, StudioIdHeader) ?? _defaultStudioId;
-        var tenantId = ExtractHeader(httpContext, TenantIdHeader);
-        var projectId = ExtractHeader(httpContext, ProjectIdHeader);
-
-        var baggage = ExtractBaggage(httpContext);
-
-        return new GridContext(
-            correlationId: correlationId,
-            nodeId: _nodeId,
-            studioId: studioId,
-            environment: _environment,
-            causationId: causationId,
-            tenantId: tenantId,
-            projectId: projectId,
-            baggage: baggage,
-            cancellation: httpContext.RequestAborted);
+        var values = ExtractFromHttpContext(httpContext);
+        context.Initialize(
+            values.CorrelationId,
+            values.CausationId,
+            values.TenantId,
+            values.ProjectId,
+            values.Baggage,
+            values.Cancellation);
     }
 
     private static string ExtractCorrelationId(HttpContext httpContext)
     {
         // Try X-Correlation-Id header first
-        var correlationId = ExtractHeader(httpContext, CorrelationIdHeader);
+        var correlationId = ExtractHeader(httpContext, GridHeaderNames.CorrelationId);
         if (!string.IsNullOrWhiteSpace(correlationId))
         {
             return correlationId;
         }
 
         // Fall back to W3C traceparent
-        var traceParent = ExtractHeader(httpContext, TraceParentHeader);
+        var traceParent = ExtractHeader(httpContext, GridHeaderNames.TraceParent);
         if (!string.IsNullOrWhiteSpace(traceParent))
         {
             // traceparent format: version-traceid-spanid-flags
@@ -114,7 +108,7 @@ public sealed class HttpContextMapper
         var baggage = new Dictionary<string, string>();
 
         // Extract from W3C baggage header (baggage: key1=value1;metadata,key2=value2)
-        if (httpContext.Request.Headers.TryGetValue("baggage", out var baggageHeader))
+        if (httpContext.Request.Headers.TryGetValue(GridHeaderNames.Baggage, out var baggageHeader))
         {
             var baggageString = baggageHeader.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(baggageString))

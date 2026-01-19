@@ -219,7 +219,7 @@ public interface ILogScopeFactory
 
 #### DI Registration and Lifetime
 
-**ITelemetryContext Requirement:** `ILogScopeFactory` expects `ITelemetryContext` to be registered as **scoped** in DI. This is automatically handled by Node bootstrap when you call `AddHoneyDrunkGrid()` or `AddHoneyDrunkNode()`.
+**ITelemetryContext Requirement:** `ILogScopeFactory` expects `ITelemetryContext` to be registered as **scoped** in DI. This is automatically handled by Node bootstrap when you call `AddHoneyDrunkNode()` or `AddHoneyDrunkNode()`.
 
 **Typical Registration:**
 ```csharp
@@ -552,7 +552,7 @@ public sealed class TelemetryContext(
 
 #### How It Works
 
-**In standard Nodes**, `ITelemetryContext` is registered as **scoped** when you call `AddHoneyDrunkGrid()` or `AddHoneyDrunkNode()`. The factory below illustrates how it is constructed from the current `Activity` and `IGridContext`.
+**In standard Nodes**, `ITelemetryContext` is registered as **scoped** when you call `AddHoneyDrunkNode()` or `AddHoneyDrunkNode()`. The factory below illustrates how it is constructed from the current `Activity` and `IGridContext`.
 
 `ITelemetryContext` is automatically created for each request/operation by Node middleware or message handlers:
 
@@ -576,7 +576,7 @@ public sealed class TelemetryContext(
 If you are hosting outside the standard Node bootstrap, here's how to manually register `ITelemetryContext`:
 
 ```csharp
-// Example factory for custom hosting scenarios (not needed with AddHoneyDrunkGrid)
+// Example factory for custom hosting scenarios (not needed with AddHoneyDrunkNode)
 builder.Services.AddScoped<ITelemetryContext>(sp =>
 {
     var gridContext = sp.GetRequiredService<IGridContextAccessor>().GridContext
@@ -634,7 +634,7 @@ public class OrderService(ITelemetryContext telemetryContext, ILogger<OrderServi
 var builder = WebApplication.CreateBuilder(args);
 
 // Register Node with Grid (includes ITelemetryContext as scoped)
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = "payment-node";
     options.StudioId = "demo-studio";

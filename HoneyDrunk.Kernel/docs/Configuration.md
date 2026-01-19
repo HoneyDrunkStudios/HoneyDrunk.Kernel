@@ -520,7 +520,7 @@ Like a configuration manager that checks both a config file and a password vault
 
 ```csharp
 // Registration
-builder.Services.AddHoneyDrunkGridConfiguration(builder.Configuration);
+builder.Services.AddHoneyDrunkNodeConfiguration(builder.Configuration);
 
 builder.Services.AddSingleton<IStudioConfiguration>(sp =>
 {
@@ -609,12 +609,12 @@ Like a helper that reads your config file and automatically sets up all the conf
 
 ### Methods
 
-#### AddHoneyDrunkGridConfiguration
+#### AddHoneyDrunkNodeConfiguration
 
 Binds `HoneyDrunkGridOptions` from `IConfiguration` and registers it in DI.
 
 ```csharp
-public static IServiceCollection AddHoneyDrunkGridConfiguration(
+public static IServiceCollection AddHoneyDrunkNodeConfiguration(
     this IServiceCollection services,
     IConfiguration configuration,
     string sectionName = "HoneyDrunk:Grid")
@@ -644,7 +644,7 @@ public static IHoneyDrunkBuilder AddGridConfiguration(
 // Standard approach
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHoneyDrunkGridConfiguration(
+builder.Services.AddHoneyDrunkNodeConfiguration(
     builder.Configuration,
     sectionName: "HoneyDrunk:Grid"); // Optional, this is the default
 
@@ -694,7 +694,7 @@ services.AddSingleton(options);                                    // Direct acc
 services.AddSingleton<IOptions<HoneyDrunkGridOptions>>(/* ... */); // Options pattern
 ```
 
-**Important:** Once `AddHoneyDrunkGridConfiguration` is used, `HoneyDrunkGridOptions` should always be resolved from DI. Avoid manually constructing separate instances - this ensures a single source of truth for `StudioId` and `Environment`, otherwise you risk diverging values between different parts of the app.
+**Important:** Once `AddHoneyDrunkNodeConfiguration` is used, `HoneyDrunkGridOptions` should always be resolved from DI. Avoid manually constructing separate instances - this ensures a single source of truth for `StudioId` and `Environment`, otherwise you risk diverging values between different parts of the app.
 
 ### Dependency Injection Usage
 
@@ -720,7 +720,7 @@ Here's how to wire everything together using `HoneyDrunkGridOptions` as the sing
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Register Grid configuration (validates and registers HoneyDrunkGridOptions)
-builder.Services.AddHoneyDrunkGridConfiguration(builder.Configuration);
+builder.Services.AddHoneyDrunkNodeConfiguration(builder.Configuration);
 
 // 2. Register secrets source (optional, composite with fallback)
 builder.Services.AddSingleton<ISecretsSource>(sp =>

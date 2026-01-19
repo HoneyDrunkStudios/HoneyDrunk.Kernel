@@ -1,4 +1,4 @@
-﻿# 🚀 Bootstrapping - Node Initialization and Registration
+# 🚀 Bootstrapping - Node Initialization and Registration
 
 [← Back to File Guide](FILE_GUIDE.md)
 
@@ -7,7 +7,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [AddHoneyDrunkGrid](#addhoneydrunkgrid)
+- [AddHoneyDrunkNode](#AddHoneyDrunkNode)
 - [GridOptions](#gridoptions)
 - [Basic Usage](#basic-usage)
 - [Service Validation](#service-validation)
@@ -27,16 +27,14 @@ Bootstrapping provides a unified, opinionated way to configure HoneyDrunk Nodes 
 **Location:** `HoneyDrunk.Kernel/Hosting/`
 
 **Key Concepts:**
-- **Unified Registration** - Single `AddHoneyDrunkGrid()` call registers all services
+- **Unified Registration** - Single `AddHoneyDrunkNode()` call registers all services
 - **Service Validation** - Built-in validation ensures required services are present
 - **Middleware Helpers** - Easy middleware registration with `UseGridContext()`
 - **String-Based Configuration** - Runtime uses plain strings for performance (no value objects)
 
-**Design Note:** The method is called `AddHoneyDrunkGrid()` (not `AddHoneyDrunkNode`) for historical reasons. It registers all core Grid services needed for a Node to participate in the Grid. Think of it as "add this Node to the Grid."
-
 ---
 
-## AddHoneyDrunkGrid
+## AddHoneyDrunkNode
 
 ### What it is
 The primary bootstrapping method that registers all HoneyDrunk Kernel services in a single call.
@@ -44,10 +42,33 @@ The primary bootstrapping method that registers all HoneyDrunk Kernel services i
 ### Real-world analogy
 Like a "turnkey solution" for a house - walls, plumbing, electricity, and HVAC all installed with one contract, guaranteed to work together.
 
+### v0.4.0 Registration Guard
+
+**Breaking Change:** `AddHoneyDrunkNode()` now includes a **registration guard** that prevents duplicate registration:
+
+```csharp
+// First call - registers all services
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = "payment-service";
+    options.StudioId = "honeycomb";
+    options.Environment = "production";
+});
+
+// Second call - throws InvalidOperationException!
+builder.Services.AddHoneyDrunkNode(options =>
+{
+    options.NodeId = "other-node"; // ERROR: Already registered
+    // ...
+});
+```
+
+**Rationale:** Previously, calling `AddHoneyDrunkNode()` multiple times would silently replace services, leading to unpredictable behavior. Now you get a clear exception at startup.
+
 ### Method Signature
 
 ```csharp
-public static IServiceCollection AddHoneyDrunkGrid(
+public static IServiceCollection AddHoneyDrunkNode(
     this IServiceCollection services,
     Action<GridOptions> configure)
 ```
@@ -126,7 +147,7 @@ using HoneyDrunk.Kernel.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Register Grid services (core only)
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = "payment-service";
     options.StudioId = "honeycomb";
@@ -149,7 +170,7 @@ app.Run();
 ### Full Configuration
 
 ```csharp
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     // Required: Node identity
     options.NodeId = "payment-service";
@@ -229,7 +250,7 @@ app.Run();
 ```
 Service validation failed:
 Required HoneyDrunk services are not registered:
-  - INodeContext is missing. Register via: AddHoneyDrunkGrid()
+  - INodeContext is missing. Register via: AddHoneyDrunkNode()
   - IGridContextAccessor is missing. Register via: services.AddSingleton<IGridContextAccessor, GridContextAccessor>()
 ```
 
@@ -239,15 +260,41 @@ Required HoneyDrunk services are not registered:
 
 ### UseGridContext
 
-Registers the GridContext middleware that extracts correlation/causation/studio headers from incoming requests and establishes Grid context.
+Registers the GridContext middleware that initializes Grid context for incoming requests.
 
 ```csharp
 public static IApplicationBuilder UseGridContext(this IApplicationBuilder app)
 ```
 
-**What It Does:**
-1. Extracts Grid context from request headers (`X-Correlation-Id`, `X-Causation-Id`, etc.)
-2. Creates a `GridContext` for the request
+### v0.4.0 Two-Phase Initialization
+
+**Breaking Change:** In v0.4.0, `GridContext` uses a **two-phase initialization** pattern:
+
+1. **DI creates GridContext** - Constructor sets `NodeId`, `StudioId`, `Environment` from `INodeContext`
+2. **Middleware initializes it** - Calls `Initialize()` to set `CorrelationId`, `CausationId`, `Baggage` from HTTP headers
+
+The middleware no longer creates a new context; it **initializes the existing scoped context**:
+
+```csharp
+// Middleware behavior (conceptual):
+public async Task InvokeAsync(HttpContext httpContext, IGridContext gridContext, ...)
+{
+    // GridContext is already created by DI, but not initialized
+    // Middleware extracts headers and initializes it:
+    var correlationId = httpContext.Request.Headers[GridHeaderNames.CorrelationId].FirstOrDefault()
+                        ?? Ulid.NewUlid().ToString();
+    var causationId = httpContext.Request.Headers[GridHeaderNames.CausationId].FirstOrDefault();
+    
+    // Initialize the existing context with request-specific values
+    gridContext.Initialize(correlationId, causationId, baggage);
+    
+    await _next(httpContext);
+}
+```
+
+### What It Does:
+1. **Extracts** correlation/causation/baggage from request headers
+2. **Initializes** the existing `IGridContext` (already resolved from DI)
 3. Sets `IGridContextAccessor.GridContext` (available to all downstream services)
 4. Echoes `X-Correlation-Id` and `X-Node-Id` to response headers
 5. Cleans up ambient context when request completes
@@ -292,11 +339,11 @@ app.Run();
 
 ### Chaining Configuration
 
-The `AddHoneyDrunkGrid()` method returns `IServiceCollection` for fluent configuration:
+The `AddHoneyDrunkNode()` method returns `IServiceCollection` for fluent configuration:
 
 ```csharp
 builder.Services
-    .AddHoneyDrunkGrid(options =>
+    .AddHoneyDrunkNode(options =>
     {
         options.NodeId = "payment-service";
         options.StudioId = "honeycomb";
@@ -327,7 +374,7 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure HoneyDrunk Grid
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = "payment-service";
     options.StudioId = builder.Configuration["Grid:StudioId"] ?? "honeycomb";
@@ -494,7 +541,7 @@ public class PaymentsController(
 ### Loading from Configuration
 
 ```csharp
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     var gridConfig = builder.Configuration.GetSection("Grid");
     
@@ -516,17 +563,17 @@ builder.Services.AddHoneyDrunkGrid(options =>
 
 ## Testing
 
-### Unit Testing with AddHoneyDrunkGrid
+### Unit Testing with AddHoneyDrunkNode
 
 ```csharp
 [Fact]
-public void AddHoneyDrunkGrid_RegistersRequiredServices()
+public void AddHoneyDrunkNode_RegistersRequiredServices()
 {
     // Arrange
     var services = new ServiceCollection();
     
     // Act
-    services.AddHoneyDrunkGrid(options =>
+    services.AddHoneyDrunkNode(options =>
     {
         options.NodeId = "test-node";
         options.StudioId = "test-studio";
@@ -559,7 +606,7 @@ public void ValidateHoneyDrunkServices_SucceedsWhenAllServicesRegistered()
 {
     // Arrange
     var services = new ServiceCollection();
-    services.AddHoneyDrunkGrid(options =>
+    services.AddHoneyDrunkNode(options =>
     {
         options.NodeId = "test-node";
         options.StudioId = "test-studio";
@@ -619,7 +666,7 @@ public class PaymentServiceIntegrationTests : IClassFixture<WebApplicationFactor
 
 | Component | Purpose | Signature |
 |-----------|---------|-----------|
-| **AddHoneyDrunkGrid** | Unified service registration | `IServiceCollection AddHoneyDrunkGrid(this IServiceCollection, Action<GridOptions>)` |
+| **AddHoneyDrunkNode** | Unified service registration | `IServiceCollection AddHoneyDrunkNode(this IServiceCollection, Action<GridOptions>)` |
 | **GridOptions** | Node configuration | String-based (NodeId, StudioId, Environment, Version, Tags) |
 | **ValidateHoneyDrunkServices** | Service validation | `void ValidateHoneyDrunkServices(this IServiceProvider)` |
 | **UseGridContext** | Middleware registration | `IApplicationBuilder UseGridContext(this IApplicationBuilder)` |
@@ -639,7 +686,7 @@ public class PaymentServiceIntegrationTests : IClassFixture<WebApplicationFactor
 - Register additional services (context accessors, lifecycle) explicitly
 
 **Current State (v0.3.0):**
-- `AddHoneyDrunkGrid()` registers core services (`INodeContext`, scoped `IGridContext`, `IMetricsCollector`, `NodeLifecycleHost`)
+- `AddHoneyDrunkNode()` registers core services (`INodeContext`, scoped `IGridContext`, `IMetricsCollector`, `NodeLifecycleHost`)
 - Additional services (context accessors, lifecycle manager, transport binders) are registered separately
 - Future versions may consolidate all registrations into a single bootstrap call
 

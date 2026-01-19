@@ -1,203 +1,166 @@
+// Copyright (c) HoneyDrunk Studios. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+
 using FluentAssertions;
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HoneyDrunk.Kernel.Tests.Context;
 
+/// <summary>
+/// Tests for <see cref="GridContextAccessor"/>.
+/// </summary>
+/// <remarks>
+/// GridContextAccessor retrieves the GridContext from HttpContext.RequestServices,
+/// making it a read-only accessor that delegates to the DI container.
+/// </remarks>
 public class GridContextAccessorTests
 {
     [Fact]
-    public void GridContext_WhenNotSet_ReturnsNull()
+    public void Constructor_WithNullHttpContextAccessor_ThrowsArgumentNullException()
     {
-        // Arrange
-        var accessor = new GridContextAccessor();
-
         // Act
-        var context = accessor.GridContext;
+        var act = () => new GridContextAccessor(null!);
 
         // Assert
-        context.Should().BeNull();
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("httpContextAccessor");
     }
 
     [Fact]
-    public void GridContext_WhenSet_ReturnsSetValue()
+    public void GridContext_WhenHttpContextIsNull_ThrowsInvalidOperationException()
     {
         // Arrange
-        var accessor = new GridContextAccessor();
-        var gridContext = new GridContext("corr", "node", "studio", "env");
+        var httpContextAccessor = new TestHttpContextAccessor { HttpContext = null };
+        var accessor = new GridContextAccessor(httpContextAccessor);
 
         // Act
-        accessor.GridContext = gridContext;
+        var act = () => accessor.GridContext;
 
         // Assert
-        accessor.GridContext.Should().BeSameAs(gridContext);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*outside of an HTTP request scope*");
     }
 
     [Fact]
-    public void GridContext_WhenSetToNull_ReturnsNull()
+    public void GridContext_WhenServiceNotRegistered_ThrowsInvalidOperationException()
     {
         // Arrange
-        var accessor = new GridContextAccessor();
-        var gridContext = new GridContext("corr", "node", "studio", "env");
-        accessor.GridContext = gridContext;
+        var services = new ServiceCollection();
+        var serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
+        var httpContextAccessor = new TestHttpContextAccessor { HttpContext = httpContext };
+
+        var accessor = new GridContextAccessor(httpContextAccessor);
 
         // Act
-        accessor.GridContext = null;
+        var act = () => accessor.GridContext;
 
         // Assert
-        accessor.GridContext.Should().BeNull();
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not registered in the service container*");
     }
 
     [Fact]
-    public async Task GridContext_IsIsolatedPerAsyncContext()
+    public void GridContext_WhenServiceRegistered_ReturnsContextFromRequestServices()
     {
         // Arrange
-        var accessor = new GridContextAccessor();
-        var context1 = new GridContext("corr1", "node1", "studio1", "env1");
-        var context2 = new GridContext("corr2", "node2", "studio2", "env2");
-        IGridContext? task1Result = null;
-        IGridContext? task2Result = null;
-
-        // Act
-        var task1 = Task.Run(() =>
-        {
-            accessor.GridContext = context1;
-            Thread.Sleep(50);
-            task1Result = accessor.GridContext;
-        });
-
-        var task2 = Task.Run(() =>
-        {
-            accessor.GridContext = context2;
-            Thread.Sleep(50);
-            task2Result = accessor.GridContext;
-        });
-
-        await Task.WhenAll(task1, task2);
-
-        // Assert
-        task1Result.Should().BeSameAs(context1);
-        task2Result.Should().BeSameAs(context2);
-        task1Result.Should().NotBeSameAs(context2);
-    }
-
-    [Fact]
-    public async Task GridContext_FlowsAcrossAsyncContinuations()
-    {
-        // Arrange
-        var accessor = new GridContextAccessor();
-        var context = new GridContext("corr", "node", "studio", "env");
-        accessor.GridContext = context;
-
-        // Act
-        await Task.Delay(10);
-        var afterDelay = accessor.GridContext;
-
-        await Task.Run(async () =>
-        {
-            await Task.Delay(10);
-        });
-
-        var afterTaskRun = accessor.GridContext;
-
-        // Assert
-        afterDelay.Should().BeSameAs(context);
-        afterTaskRun.Should().BeSameAs(context);
-    }
-
-    [Fact]
-    public void GridContext_CanBeReplacedMultipleTimes()
-    {
-        // Arrange
-        var accessor = new GridContextAccessor();
-        var context1 = new GridContext("corr1", "node", "studio", "env");
-        var context2 = new GridContext("corr2", "node", "studio", "env");
-        var context3 = new GridContext("corr3", "node", "studio", "env");
-
-        // Act & Assert
-        accessor.GridContext = context1;
-        accessor.GridContext.Should().BeSameAs(context1);
-
-        accessor.GridContext = context2;
-        accessor.GridContext.Should().BeSameAs(context2);
-
-        accessor.GridContext = context3;
-        accessor.GridContext.Should().BeSameAs(context3);
-
-        accessor.GridContext = null;
-        accessor.GridContext.Should().BeNull();
-    }
-
-    [Fact]
-    public void GridContext_PreservesContextProperties()
-    {
-        // Arrange
-        var accessor = new GridContextAccessor();
-        var baggage = new Dictionary<string, string>
-        {
-            ["key1"] = "value1",
-            ["key2"] = "value2"
-        };
-        var context = new GridContext(
+        var expectedContext = GridContextTestHelper.CreateInitialized(
             correlationId: "test-correlation",
             nodeId: "test-node",
             studioId: "test-studio",
-            environment: "test-env",
-            causationId: "test-causation",
-            baggage: baggage);
+            environment: "test-env");
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IGridContext>(expectedContext);
+        var serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
+        var httpContextAccessor = new TestHttpContextAccessor { HttpContext = httpContext };
+
+        var accessor = new GridContextAccessor(httpContextAccessor);
 
         // Act
-        accessor.GridContext = context;
-        var retrieved = accessor.GridContext;
+        var result = accessor.GridContext;
 
         // Assert
-        retrieved.Should().NotBeNull();
-        retrieved!.CorrelationId.Should().Be("test-correlation");
-        retrieved.NodeId.Should().Be("test-node");
-        retrieved.StudioId.Should().Be("test-studio");
-        retrieved.Environment.Should().Be("test-env");
-        retrieved.CausationId.Should().Be("test-causation");
-        retrieved.Baggage.Should().HaveCount(2);
-        retrieved.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
-        retrieved.Baggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
+        result.Should().BeSameAs(expectedContext);
     }
 
     [Fact]
-    public async Task GridContext_IndependentAcrossSeparateAsyncTasks()
+    public void GridContext_PreservesAllContextProperties()
     {
         // Arrange
-        var accessor = new GridContextAccessor();
-        var context1 = new GridContext("corr1", "node", "studio", "env");
-        var context2 = new GridContext("corr2", "node", "studio", "env");
-        var context3 = new GridContext("corr3", "node", "studio", "env");
+        var baggage = new Dictionary<string, string> { ["key"] = "value" };
+        var expectedContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "node-1",
+            studioId: "studio-1",
+            environment: "production",
+            causationId: "cause-456",
+            tenantId: "tenant-1",
+            projectId: "project-1",
+            baggage: baggage);
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IGridContext>(expectedContext);
+        var serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
+        var httpContextAccessor = new TestHttpContextAccessor { HttpContext = httpContext };
+
+        var accessor = new GridContextAccessor(httpContextAccessor);
 
         // Act
-        var task1 = Task.Run(async () =>
-        {
-            accessor.GridContext = context1;
-            await Task.Delay(20);
-            return accessor.GridContext;
-        });
-
-        var task2 = Task.Run(async () =>
-        {
-            accessor.GridContext = context2;
-            await Task.Delay(20);
-            return accessor.GridContext;
-        });
-
-        var task3 = Task.Run(async () =>
-        {
-            accessor.GridContext = context3;
-            await Task.Delay(20);
-            return accessor.GridContext;
-        });
-
-        var results = await Task.WhenAll(task1, task2, task3);
+        var result = accessor.GridContext;
 
         // Assert
-        results[0].Should().BeSameAs(context1);
-        results[1].Should().BeSameAs(context2);
-        results[2].Should().BeSameAs(context3);
+        result.CorrelationId.Should().Be("corr-123");
+        result.NodeId.Should().Be("node-1");
+        result.StudioId.Should().Be("studio-1");
+        result.Environment.Should().Be("production");
+        result.CausationId.Should().Be("cause-456");
+        result.TenantId.Should().Be("tenant-1");
+        result.ProjectId.Should().Be("project-1");
+        result.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("value");
+    }
+
+    [Fact]
+    public void GridContext_MultipleAccesses_ReturnsSameInstance()
+    {
+        // Arrange
+        var expectedContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "test-correlation",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IGridContext>(expectedContext);
+        var serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
+        var httpContextAccessor = new TestHttpContextAccessor { HttpContext = httpContext };
+
+        var accessor = new GridContextAccessor(httpContextAccessor);
+
+        // Act
+        var result1 = accessor.GridContext;
+        var result2 = accessor.GridContext;
+
+        // Assert
+        result1.Should().BeSameAs(result2);
+    }
+
+    /// <summary>
+    /// Simple test double for IHttpContextAccessor.
+    /// </summary>
+    private sealed class TestHttpContextAccessor : IHttpContextAccessor
+    {
+        public HttpContext? HttpContext { get; set; }
     }
 }

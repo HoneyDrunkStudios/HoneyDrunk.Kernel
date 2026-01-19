@@ -2,6 +2,8 @@
 
 This is a minimal HoneyDrunk Node demonstrating the unified bootstrapper and basic Grid integration.
 
+> **v0.4.0 Note:** This sample demonstrates the current API including two-phase `GridContext` initialization, registration guard preventing duplicate `AddHoneyDrunkNode()` calls, and static context mappers.
+
 ## What It Demonstrates
 
 - **Unified Bootstrapper** - `AddHoneyDrunkNode()` registers all core services
@@ -28,7 +30,7 @@ curl http://localhost:5000/
 {
   "message": "HoneyDrunk Minimal Node",
   "node": {
-    "nodeId": "HoneyDrunk.Core.MinimalNode",
+    "nodeId": "minimal-node",
     "version": "1.0.0",
     "studioId": "demo-studio",
     "environment": "development",
@@ -38,7 +40,7 @@ curl http://localhost:5000/
   "request": {
     "correlationId": "01HQXZ8K4TJ9X5B3N2YGF7WDCQ",
     "causationId": null,
-    "nodeId": "HoneyDrunk.Core.MinimalNode",
+    "nodeId": "minimal-node",
     "createdAtUtc": "2025-01-11T10:30:15Z"
   }
 }
@@ -51,24 +53,26 @@ curl http://localhost:5000/health
 
 The `AddHoneyDrunkNode()` call automatically registers:
 
-- `INodeContext` - Process-scoped Node identity
+- `INodeContext` - Process-scoped Node identity (singleton)
 - `INodeDescriptor` - Node descriptor with capabilities
-- `IGridContextAccessor` - Ambient Grid context accessor
+- `IGridContext` - Scoped Grid context (two-phase init: created by DI, initialized by middleware)
+- `IGridContextAccessor` - Reads `IGridContext` from `HttpContext.RequestServices` (v0.4.0: no AsyncLocal)
 - `IOperationContextAccessor` - Ambient operation context accessor
 - `IOperationContextFactory` - Factory for creating operation contexts
 - `IErrorClassifier` - Error classification for transport mapping
 - `ITransportEnvelopeBinder` (3x) - HTTP, Message, Job envelope binders
-- Scoped `IGridContext` factory
+- `IHttpContextAccessor` - Required by GridContextAccessor
 
 ## Middleware
 
-The `UseGridContext()` middleware:
+The `UseGridContext()` middleware (v0.4.0 behavior):
 
-- Extracts `X-Correlation-ID`, `X-Causation-ID`, `X-Studio-ID`, `X-Baggage-*` headers
-- Creates a `GridContext` for the request
+- Resolves `IGridContext` from the request's DI scope (already created, not initialized)
+- Extracts `X-Correlation-ID`, `X-Causation-ID`, `X-Tenant-ID`, `X-Project-ID`, `X-Baggage-*` headers
+- Calls `Initialize()` on the existing GridContext with extracted values
 - Creates an `OperationContext` to track timing and outcome
 - Echoes correlation and node IDs to response headers
-- Cleans up ambient context after request completes
+- Context disposal is handled by DI scope (not middleware)
 
 ## Code Walkthrough
 

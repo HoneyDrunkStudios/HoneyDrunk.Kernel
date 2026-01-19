@@ -1,6 +1,6 @@
 using FluentAssertions;
 using HoneyDrunk.Kernel.AgentsInterop;
-using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 
 namespace HoneyDrunk.Kernel.Tests.AgentsInterop;
 
@@ -17,7 +17,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_ValidContext_ReturnsJsonString()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -31,7 +35,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_IncludesAllRequiredFields()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -44,11 +52,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_WithCausationId_IncludesCausation()
     {
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             causationId: "cause-456");
 
         var json = GridContextSerializer.Serialize(context);
@@ -59,7 +67,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_WithoutCausationId_IncludesNullCausation()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -76,11 +88,11 @@ public class GridContextSerializerTests
             ["password"] = "secret-pass",
             ["safe-value"] = "visible"
         };
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             baggage: baggage);
 
         var json = GridContextSerializer.Serialize(context, includeFullBaggage: false);
@@ -100,11 +112,11 @@ public class GridContextSerializerTests
             ["api-key"] = "secret-key",
             ["safe-value"] = "visible"
         };
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             baggage: baggage);
 
         var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);
@@ -126,11 +138,11 @@ public class GridContextSerializerTests
             ["app-secret"] = "secret",
             ["safe-data"] = "visible"
         };
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             baggage: baggage);
 
         var json = GridContextSerializer.Serialize(context, includeFullBaggage: false);
@@ -146,7 +158,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_UsesCamelCase()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -284,11 +300,11 @@ public class GridContextSerializerTests
     [Fact]
     public void SerializeDeserialize_RoundTrip_PreservesData()
     {
-        var original = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var original = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             causationId: "cause-456",
             baggage: new Dictionary<string, string>
             {
@@ -311,7 +327,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_EmptyBaggage_SerializesEmptyObject()
     {
-        var context = new GridContext("corr-123", "test-node", "test-studio", "production");
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production");
 
         var json = GridContextSerializer.Serialize(context);
 
@@ -343,11 +363,11 @@ public class GridContextSerializerTests
     [Fact]
     public void Serialize_WithTenantAndProjectIds_IncludesIdentifiers()
     {
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             tenantId: "tenant-789",
             projectId: "project-012");
 
@@ -385,11 +405,11 @@ public class GridContextSerializerTests
             ["key-with-newline"] = "value\nwith\nnewlines",
             ["key-with-backslash"] = "value\\with\\backslash"
         };
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             baggage: baggage);
 
         var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);
@@ -424,11 +444,11 @@ public class GridContextSerializerTests
     {
         var largeBaggage = Enumerable.Range(0, 100)
             .ToDictionary(i => $"key-{i}", i => $"value-{i}");
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             baggage: largeBaggage);
 
         var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);
@@ -446,11 +466,11 @@ public class GridContextSerializerTests
             ["UserId"] = "user-123",
             ["SESSION_ID"] = "session-456"
         };
-        var context = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "production",
+        var context = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "production",
             baggage: baggage);
 
         var json = GridContextSerializer.Serialize(context, includeFullBaggage: true);

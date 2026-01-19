@@ -1,6 +1,6 @@
 using FluentAssertions;
 using HoneyDrunk.Kernel.Abstractions.Context;
-using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 using HoneyDrunk.Kernel.Transport;
 
 namespace HoneyDrunk.Kernel.Tests.Transport;
@@ -42,7 +42,11 @@ public class MessagePropertiesBinderTests
     {
         var binder = new MessagePropertiesBinder();
         var properties = new Dictionary<string, object>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(properties, gridContext);
 
@@ -61,7 +65,12 @@ public class MessagePropertiesBinderTests
     {
         var binder = new MessagePropertiesBinder();
         var properties = new Dictionary<string, object>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", "cause-456");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            causationId: "cause-456");
 
         binder.Bind(properties, gridContext);
 
@@ -74,7 +83,11 @@ public class MessagePropertiesBinderTests
     {
         var binder = new MessagePropertiesBinder();
         var properties = new Dictionary<string, object>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(properties, gridContext);
 
@@ -91,7 +104,12 @@ public class MessagePropertiesBinderTests
             ["tenant_id"] = "tenant-123",
             ["user_id"] = "user-456"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            baggage: baggage);
 
         binder.Bind(properties, gridContext);
 
@@ -106,7 +124,11 @@ public class MessagePropertiesBinderTests
     {
         var binder = new MessagePropertiesBinder();
         var properties = new Dictionary<string, object>();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(properties, gridContext);
 
@@ -118,7 +140,11 @@ public class MessagePropertiesBinderTests
     public void Bind_WithNullEnvelope_ThrowsArgumentNullException()
     {
         var binder = new MessagePropertiesBinder();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         var act = () => binder.Bind(null!, gridContext);
 
@@ -143,7 +169,11 @@ public class MessagePropertiesBinderTests
     {
         var binder = new MessagePropertiesBinder();
         var notDictionary = new object();
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         var act = () => binder.Bind(notDictionary, gridContext);
 
@@ -157,8 +187,16 @@ public class MessagePropertiesBinderTests
     {
         var binder = new MessagePropertiesBinder();
         var properties = new Dictionary<string, object>();
-        var gridContext1 = new GridContext("corr-123", "node-1", "studio", "env");
-        var gridContext2 = new GridContext("corr-456", "node-2", "studio", "env");
+        var gridContext1 = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "node-1",
+            studioId: "studio",
+            environment: "env");
+        var gridContext2 = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-456",
+            nodeId: "node-2",
+            studioId: "studio",
+            environment: "env");
 
         binder.Bind(properties, gridContext1);
         binder.Bind(properties, gridContext2);
@@ -178,7 +216,12 @@ public class MessagePropertiesBinderTests
             ["key2"] = "value2",
             ["key3"] = "value3"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env", baggage: baggage);
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env",
+            baggage: baggage);
 
         binder.Bind(properties, gridContext);
 
@@ -195,7 +238,11 @@ public class MessagePropertiesBinderTests
         {
             ["CustomProperty"] = "custom-value"
         };
-        var gridContext = new GridContext("corr-123", "test-node", "test-studio", "test-env");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test-env");
 
         binder.Bind(properties, gridContext);
 

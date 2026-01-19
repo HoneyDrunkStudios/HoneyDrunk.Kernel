@@ -166,7 +166,7 @@ public static class ModuleExtensions
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Register Node with Grid
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = "payment-node";
     options.StudioId = "honeycomb";

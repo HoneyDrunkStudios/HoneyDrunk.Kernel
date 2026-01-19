@@ -30,10 +30,22 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
     /// <param name="services">The DI service collection.</param>
     /// <param name="configure">Delegate to configure <see cref="HoneyDrunkNodeOptions"/>.</param>
     /// <returns>An <see cref="IHoneyDrunkBuilder"/> for optional chained configuration.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if AddHoneyDrunkNode has already been called.</exception>
     public static IHoneyDrunkBuilder AddHoneyDrunkNode(this IServiceCollection services, Action<HoneyDrunkNodeOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
+
+        // Guard: Prevent double registration
+        if (services.Any(sd => sd.ServiceType == typeof(KernelRegistrationMarker)))
+        {
+            throw new InvalidOperationException(
+                "AddHoneyDrunkNode() has already been called. " +
+                "HoneyDrunk Kernel can only be registered once per service collection. " +
+                "Remove duplicate AddHoneyDrunkNode() calls from your startup code.");
+        }
+
+        services.AddSingleton<KernelRegistrationMarker>();
 
         var options = new HoneyDrunkNodeOptions();
         configure(options);
@@ -79,11 +91,33 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
             return descriptor;
         });
 
-        // Ambient accessors + factories.
+        // HTTP context accessor (required for GridContextAccessor)
+        services.AddHttpContextAccessor();
+
+        // GridContext: Single scoped instance per request/scope.
+        // This is THE source of truth for Grid context within a scope.
+        services.AddScoped<GridContext>(sp =>
+        {
+            var nc = sp.GetRequiredService<INodeContext>();
+            return new GridContext(nc.NodeId, nc.StudioId, nc.Environment);
+        });
+
+        // IGridContext resolves to the same scoped GridContext instance.
+        services.AddScoped<IGridContext>(sp => sp.GetRequiredService<GridContext>());
+
+        // GridContextAccessor: Ambient access to the scoped GridContext.
+        // Returns the same instance as DI - never diverges.
         services.AddSingleton<IGridContextAccessor, GridContextAccessor>();
+
+        // ScopedGridContextAccessor: For non-HTTP scenarios (background services).
+        services.AddSingleton<ScopedGridContextAccessor>();
+
+        // Operation context accessor and factory.
         services.AddSingleton<IOperationContextAccessor, OperationContextAccessor>();
-        services.AddSingleton<IGridContextFactory, GridContextFactory>();
         services.AddScoped<IOperationContextFactory, OperationContextFactory>();
+
+        // GridContextFactory: For creating child contexts (cross-node propagation only).
+        services.AddSingleton<IGridContextFactory, GridContextFactory>();
 
         // Agent execution context factory.
         services.AddScoped<IAgentExecutionContextFactory, AgentExecutionContextFactory>();
@@ -98,17 +132,6 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
         services.AddSingleton<ITransportEnvelopeBinder, HttpResponseBinder>();
         services.AddSingleton<ITransportEnvelopeBinder, MessagePropertiesBinder>();
         services.AddSingleton<ITransportEnvelopeBinder, JobMetadataBinder>();
-
-        // Default GridContext factory (scoped); downstream middleware will override correlation/causation.
-        services.AddScoped<IGridContext>(sp =>
-        {
-            var nc = sp.GetRequiredService<INodeContext>();
-            var factory = sp.GetRequiredService<IGridContextFactory>();
-            return factory.CreateRoot(
-                nodeId: nc.NodeId,
-                studioId: nc.StudioId,
-                environment: nc.Environment);
-        });
 
         // Lifecycle coordination (startup/shutdown hooks, health/readiness aggregation).
         services.AddSingleton<NodeLifecycleManager>(sp =>
@@ -130,6 +153,14 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
     private sealed class HoneyDrunkBuilder(IServiceCollection services) : IHoneyDrunkBuilder
     {
         public IServiceCollection Services { get; } = services;
+    }
+
+    /// <summary>
+    /// Marker service to detect duplicate registration.
+    /// </summary>
+    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Instantiated via DI as a marker service")]
+    private sealed class KernelRegistrationMarker
+    {
     }
 
     /// <summary>

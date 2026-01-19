@@ -49,15 +49,15 @@ public static class HoneyDrunkServiceCollectionExtensions
 
         services.AddSingleton<IMetricsCollector, NoOpMetricsCollector>();
 
-        services.AddScoped<IGridContext>(sp =>
+        // Register concrete GridContext as scoped (starts uninitialized)
+        services.AddScoped<GridContext>(sp =>
         {
             var nodeContext = sp.GetRequiredService<INodeContext>();
-            return new GridContext(
-                correlationId: Ulid.NewUlid().ToString(),
-                nodeId: nodeContext.NodeId,
-                studioId: nodeContext.StudioId,
-                environment: nodeContext.Environment);
+            return new GridContext(nodeContext.NodeId, nodeContext.StudioId, nodeContext.Environment);
         });
+
+        // IGridContext resolves to the same scoped instance
+        services.AddScoped<IGridContext>(sp => sp.GetRequiredService<GridContext>());
 
         services.AddHostedService<NodeLifecycleHost>();
 

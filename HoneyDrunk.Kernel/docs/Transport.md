@@ -1,4 +1,4 @@
-﻿# 🚚 Transport - Context Propagation Across Boundaries
+# 🚚 Transport - Context Propagation Across Boundaries
 
 [← Back to File Guide](FILE_GUIDE.md)
 
@@ -26,6 +26,13 @@
 Transport abstractions enable automatic GridContext propagation across different transport mechanisms (HTTP, messaging, background jobs) without coupling to specific transport implementations.
 
 **What Transport Does:** Kernel transport binders handle **outbound context propagation** (writing GridContext into envelopes). **Inbound extraction** is handled by context factories and middleware (see [Context.md](Context.md) and [Hosting.md](Hosting.md)).
+
+**v0.4.0 Note:** Inbound extraction now uses **static mapper classes** that initialize an existing `GridContext` rather than creating new instances:
+- `HttpContextMapper.InitializeFromHttpContext(gridContext, httpContext)`
+- `MessagingContextMapper.InitializeFromMessage(gridContext, messageProperties)`
+- `JobContextMapper.InitializeFromMetadata(gridContext, metadata)`
+
+See [Implementations.md](Implementations.md) for details on the static mapper pattern.
 
 **Location:** `HoneyDrunk.Kernel.Abstractions/Transport/`
 
@@ -255,23 +262,28 @@ public class OrderEventPublisher(
 }
 ```
 
-**Consumer Receives Context:**
+**Consumer Receives Context (v0.4.0):**
 
 ```csharp
-public class OrderEventConsumer(IGridContextAccessor contextAccessor)
+public class OrderEventConsumer(IServiceScopeFactory scopeFactory)
 {
     public async Task HandleAsync(BasicDeliverEventArgs ea)
     {
-        // Extract context from message headers (inbound extraction, not handled by binder)
-        var correlationId = ea.BasicProperties.Headers[GridHeaderNames.CorrelationId]?.ToString();
-        var nodeId = ea.BasicProperties.Headers[GridHeaderNames.NodeId]?.ToString();
-        // ... extract other properties
+        // Create a new DI scope for the message
+        using var scope = scopeFactory.CreateScope();
         
-        var gridContext = new GridContext(correlationId, nodeId, studioId, environment);
-        contextAccessor.GridContext = gridContext;
+        // Get the GridContext from the scope (created by DI, not initialized)
+        var gridContext = scope.ServiceProvider.GetRequiredService<IGridContext>();
         
+        // Use static mapper to initialize from message properties
+        var messageProperties = ea.BasicProperties.Headers
+            .ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value?.ToString());
+        MessagingContextMapper.InitializeFromMessage(gridContext, messageProperties);
+        
+        // Now gridContext is fully initialized
         // Process message with context available
-        await ProcessOrderCreatedAsync(ea.Body);
+        var processor = scope.ServiceProvider.GetRequiredService<IOrderProcessor>();
+        await processor.ProcessOrderCreatedAsync(ea.Body, gridContext);
     }
 }
 ```
@@ -341,23 +353,19 @@ public class ReportGenerator(
         string reportId,
         Dictionary<string, string> metadata)
     {
-        // Reconstruct Grid context from metadata (inbound extraction)
-        var correlationId = metadata[GridHeaderNames.CorrelationId];
-        var nodeId = metadata[GridHeaderNames.NodeId];
-        var studioId = metadata[GridHeaderNames.StudioId];
-        var environment = metadata[GridHeaderNames.Environment];
+        // Create a DI scope for the job
+        using var scope = _scopeFactory.CreateScope();
         
-        var baggage = metadata
-            .Where(kvp => kvp.Key.StartsWith(GridHeaderNames.BaggagePrefix))
-            .ToDictionary(
-                kvp => kvp.Key.Replace(GridHeaderNames.BaggagePrefix, ""),
-                kvp => kvp.Value);
+        // Get GridContext from scope (created by DI, not initialized)
+        var gridContext = scope.ServiceProvider.GetRequiredService<IGridContext>();
         
-        var gridContext = new GridContext(
-            correlationId, nodeId, studioId, environment,
-            baggage: baggage);
+        // Use static mapper to initialize from job metadata (v0.4.0)
+        var metadataDict = metadata.ToDictionary(
+            kvp => kvp.Key, 
+            kvp => (object?)kvp.Value);
+        JobContextMapper.InitializeFromMetadata(gridContext, metadataDict);
         
-        // Process with context available
+        // Process with fully initialized context
         await GenerateReportInternalAsync(reportId, gridContext);
     }
 }

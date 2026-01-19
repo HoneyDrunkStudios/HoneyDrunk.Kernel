@@ -5,20 +5,42 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// Node identity, and propagated metadata across the entire HoneyDrunk.OS Grid.
 /// </summary>
 /// <remarks>
+/// <para>
 /// GridContext is the fundamental OS-level primitive that flows through every operation
 /// in the HoneyDrunk ecosystem. It carries:
-/// - Correlation ID (Trace ID): Groups related operations across Nodes (constant per request)
-/// - Causation ID (Parent Span ID): Tracks which operation triggered this one
-/// - Node Identity: Which Node is executing this operation
-/// - Studio Context: Which Studio owns this execution
-/// - Environment: Which environment (production, staging, development, etc.)
-/// - Baggage: User-defined metadata that propagates with the context
-/// - Cancellation: Cooperative cancellation for the entire operation chain.
+/// </para>
+/// <list type="bullet">
+/// <item>Correlation ID (Trace ID): Groups related operations across Nodes (constant per request)</item>
+/// <item>Causation ID (Parent Span ID): Tracks which operation triggered this one</item>
+/// <item>Node Identity: Which Node is executing this operation</item>
+/// <item>Studio Context: Which Studio owns this execution</item>
+/// <item>Environment: Which environment (production, staging, development, etc.)</item>
+/// <item>Baggage: User-defined metadata that propagates with the context</item>
+/// <item>Cancellation: Cooperative cancellation for the entire operation chain</item>
+/// </list>
+/// <para>
 /// The CorrelationId and CausationId align with W3C Trace Context and OpenTelemetry standards.
 /// OperationId (Span ID) is owned by IOperationContext, not GridContext.
+/// </para>
+/// <para>
+/// <strong>Ownership model:</strong> Exactly one GridContext instance exists per DI scope.
+/// That instance is created by DI and enriched by middleware/mappers. IGridContextAccessor
+/// provides ambient access to the same scoped instance. Code must not create additional
+/// GridContext instances within a scope.
+/// </para>
 /// </remarks>
 public interface IGridContext
 {
+    /// <summary>
+    /// Gets a value indicating whether this context has been initialized with request-specific data.
+    /// </summary>
+    /// <remarks>
+    /// A context is considered initialized after middleware or a mapper has populated it with
+    /// correlation, causation, and other request-specific identifiers. Accessing properties
+    /// on an uninitialized context throws <see cref="InvalidOperationException"/>.
+    /// </remarks>
+    bool IsInitialized { get; }
+
     /// <summary>
     /// Gets the correlation identifier (trace ID) that groups related operations across the Grid.
     /// This ID remains constant as work flows through multiple Nodes within a single user request.
@@ -85,18 +107,10 @@ public interface IGridContext
     DateTimeOffset CreatedAtUtc { get; }
 
     /// <summary>
-    /// Begins a new logical scope for the context.
-    /// Used for nested operations within the same Node.
-    /// </summary>
-    /// <returns>A disposable object that ends the scope when disposed.</returns>
-    IDisposable BeginScope();
-
-    /// <summary>
     /// Adds or updates baggage that will propagate to downstream operations.
-    /// Returns a new context instance with the updated baggage.
+    /// Mutates the current context instance.
     /// </summary>
     /// <param name="key">The baggage key.</param>
     /// <param name="value">The baggage value.</param>
-    /// <returns>A new GridContext with the updated baggage.</returns>
-    IGridContext WithBaggage(string key, string value);
+    void AddBaggage(string key, string value);
 }

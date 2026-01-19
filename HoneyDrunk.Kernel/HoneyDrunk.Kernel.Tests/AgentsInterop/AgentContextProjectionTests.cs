@@ -3,6 +3,7 @@ using HoneyDrunk.Kernel.Abstractions.Agents;
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.AgentsInterop;
 using HoneyDrunk.Kernel.Context;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 
 namespace HoneyDrunk.Kernel.Tests.AgentsInterop;
 
@@ -159,7 +160,7 @@ public class AgentContextProjectionTests
 
     private static GridContext CreateTestGridContext()
     {
-        return new GridContext(
+        return GridContextTestHelper.CreateInitialized(
             correlationId: "corr-123",
             nodeId: "test-node",
             studioId: "test-studio",

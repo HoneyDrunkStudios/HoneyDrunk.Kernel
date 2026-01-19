@@ -1,39 +1,22 @@
 namespace HoneyDrunk.Kernel.Abstractions.Context;
 
 /// <summary>
-/// Factory for creating IGridContext instances with proper causation tracking.
+/// Factory for creating child GridContext instances for cross-node propagation.
 /// </summary>
 /// <remarks>
-/// This factory is responsible for composing new GridContext instances, particularly
-/// for child contexts where the causation chain must reference the parent operation's OperationId.
-/// GridContext itself is a pure value object and does not create its own children.
+/// <para>
+/// This factory creates child contexts when work crosses node boundaries (e.g., sending a message
+/// to another service, making an outbound HTTP call). It establishes proper causation tracking
+/// by setting the child's CausationId to the parent operation's OperationId.
+/// </para>
+/// <para>
+/// <strong>Note:</strong> This factory does NOT create root contexts. Root context creation
+/// is handled by DI scope initialization. Use this factory only when propagating context
+/// to external systems or spawning tracked background work.
+/// </para>
 /// </remarks>
 public interface IGridContextFactory
 {
-    /// <summary>
-    /// Creates a root Grid context (no parent operation).
-    /// </summary>
-    /// <param name="nodeId">The Node identifier.</param>
-    /// <param name="studioId">The Studio identifier.</param>
-    /// <param name="environment">The environment name.</param>
-    /// <param name="correlationId">Optional correlation identifier; generates new ULID if not provided.</param>
-    /// <param name="causationId">Optional causation identifier (typically null for root contexts).</param>
-    /// <param name="tenantId">Optional tenant identifier.</param>
-    /// <param name="projectId">Optional project identifier.</param>
-    /// <param name="baggage">Optional baggage dictionary.</param>
-    /// <param name="cancellation">Optional cancellation token.</param>
-    /// <returns>A new root GridContext.</returns>
-    IGridContext CreateRoot(
-        string nodeId,
-        string studioId,
-        string environment,
-        string? correlationId = null,
-        string? causationId = null,
-        string? tenantId = null,
-        string? projectId = null,
-        IReadOnlyDictionary<string, string>? baggage = null,
-        CancellationToken cancellation = default);
-
     /// <summary>
     /// Creates a child Grid context from a parent context and the current operation.
     /// </summary>
@@ -43,13 +26,21 @@ public interface IGridContextFactory
     /// <param name="extraBaggage">Optional additional baggage to merge with parent's baggage.</param>
     /// <returns>A new child GridContext with causationId set to the operation's OperationId.</returns>
     /// <remarks>
+    /// <para>
     /// The child context preserves:
-    /// - CorrelationId (same as parent - constant across trace).
-    /// - TenantId (same as parent).
-    /// - ProjectId (same as parent).
-    /// - Baggage (parent's baggage + extraBaggage).
+    /// </para>
+    /// <list type="bullet">
+    /// <item>CorrelationId (same as parent - constant across trace)</item>
+    /// <item>TenantId (same as parent)</item>
+    /// <item>ProjectId (same as parent)</item>
+    /// <item>Baggage (parent's baggage merged with extraBaggage)</item>
+    /// </list>
+    /// <para>
     /// The child context sets:
-    /// - CausationId to operation.OperationId (forms parent-child chain).
+    /// </para>
+    /// <list type="bullet">
+    /// <item>CausationId to operation.OperationId (forms parent-child chain)</item>
+    /// </list>
     /// </remarks>
     IGridContext CreateChild(
         IGridContext parent,

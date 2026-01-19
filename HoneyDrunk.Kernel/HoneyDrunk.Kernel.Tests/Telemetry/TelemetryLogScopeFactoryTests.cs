@@ -1,6 +1,6 @@
 using FluentAssertions;
-using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Telemetry;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -146,7 +146,11 @@ public class TelemetryLogScopeFactoryTests
     {
         var testLogger = new TestLogger();
         var factory = new TelemetryLogScopeFactory(testLogger);
-        var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test");
         var telemetryContext = new TelemetryContext(
             gridContext,
             "trace-id",
@@ -163,11 +167,11 @@ public class TelemetryLogScopeFactoryTests
     {
         var testLogger = new TestLogger();
         var factory = new TelemetryLogScopeFactory(testLogger);
-        var gridContext = new GridContext(
-            "corr-123",
-            "test-node",
-            "test-studio",
-            "test",
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test",
             causationId: "cause-456");
         var telemetryContext = new TelemetryContext(gridContext, "trace-id", "span-id");
 
@@ -178,7 +182,11 @@ public class TelemetryLogScopeFactoryTests
 
     private static TelemetryContext CreateTestTelemetryContext()
     {
-        var gridContext = new GridContext("corr-123", "op-456", "test-node", "test-studio", "test");
+        var gridContext = GridContextTestHelper.CreateInitialized(
+            correlationId: "corr-123",
+            nodeId: "test-node",
+            studioId: "test-studio",
+            environment: "test");
         return new TelemetryContext(gridContext, "trace-id", "span-id");
     }
 

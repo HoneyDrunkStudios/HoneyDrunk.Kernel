@@ -1,4 +1,4 @@
-﻿# 📊 OpenTelemetry Integration - Distributed Tracing with Activity API
+# 📊 OpenTelemetry Integration - Distributed Tracing with Activity API
 
 [← Back to File Guide](FILE_GUIDE.md)
 

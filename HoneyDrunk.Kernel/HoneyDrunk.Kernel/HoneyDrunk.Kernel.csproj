@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Production-ready runtime implementations for HoneyDrunk.OS Grid. Provides GridContext, NodeContext, OperationContext implementations, transport binders (HTTP/messaging/jobs), context mappers, GridContextMiddleware, lifecycle orchestration, AgentsInterop, telemetry (GridActivitySource), and unified bootstrapping (AddHoneyDrunkGrid).</Description>
-    <PackageReleaseNotes>v0.3.0: Added transport binders (HTTP/messaging/jobs), enhanced context mappers, GridContextMiddleware, AgentsInterop helpers, GridActivitySource for OpenTelemetry, unified bootstrapping (AddHoneyDrunkGrid, UseGridContext, ValidateHoneyDrunkServices), DefaultErrorClassifier, and multi-tenant context support. Complete documentation rewrite. See CHANGELOG.md for details.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.4.0: BREAKING CHANGES - Two-phase GridContext initialization (constructor + Initialize()), AddBaggage() replaces WithBaggage() (void return, mutates in-place), BeginScope() removed, IGridContextAccessor now read-only non-nullable (reads from HttpContext.RequestServices), IGridContextFactory.CreateRoot() removed, static mapper classes (HttpContextMapper, MessagingContextMapper, JobContextMapper), registration guard prevents duplicate AddHoneyDrunkGrid() calls. See CHANGELOG.md for migration guide.</PackageReleaseNotes>
     <PackageTags>kernel;runtime;grid;context;lifecycle;hosting;telemetry;mappers;transport;middleware;opentelemetry;agents;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -28,6 +28,9 @@
     
     <!-- Suppress CA1873 - False positive for structured logging with simple property access -->
     <NoWarn>$(NoWarn);CA1873</NoWarn>
+    
+    <!-- Suppress NU1510 - Package reference suggestions that don't apply when using FrameworkReference -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,11 +44,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Framework reference for ASP.NET Core types (IHttpContextAccessor, HttpContextAccessor, etc.) -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="HoneyDrunk.Standards" Version="0.2.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />

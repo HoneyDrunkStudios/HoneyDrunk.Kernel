@@ -42,7 +42,7 @@ This guide is organized into focused documents by domain:
 | Document | Description |
 |----------|-------------|
 | [Implementations.md](Implementations.md) | Runtime implementations of all abstractions |
-| [Bootstrapping.md](Bootstrapping.md) | Unified Node initialization with AddHoneyDrunkGrid() |
+| [Bootstrapping.md](Bootstrapping.md) | Unified Node initialization with AddHoneyDrunkNode() |
 | [OpenTelemetry.md](OpenTelemetry.md) | Distributed tracing with GridActivitySource and Activity API (infrastructure-facing) |
 
 ### 🧪 HoneyDrunk.Kernel.Tests
@@ -101,7 +101,7 @@ using HoneyDrunk.Kernel.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Register Grid services for this Node
-builder.Services.AddHoneyDrunkGrid(options =>
+builder.Services.AddHoneyDrunkNode(options =>
 {
     options.NodeId = "my-node";
     options.StudioId = "my-studio";

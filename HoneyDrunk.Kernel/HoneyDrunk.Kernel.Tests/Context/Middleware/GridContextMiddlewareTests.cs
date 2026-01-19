@@ -2,259 +2,516 @@ using FluentAssertions;
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Context.Middleware;
+using HoneyDrunk.Kernel.Tests.TestHelpers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HoneyDrunk.Kernel.Tests.Context.Middleware;
 
+/// <summary>
+/// Tests for <see cref="GridContextMiddleware"/>.
+/// </summary>
+/// <remarks>
+/// The middleware architecture (v0.3.0):
+/// <list type="bullet">
+/// <item>Constructor takes RequestDelegate (next) and ILogger.</item>
+/// <item>InvokeAsync takes only HttpContext - resolves services from RequestServices.</item>
+/// <item>Calls gridContext.Initialize() with values extracted from HTTP headers.</item>
+/// <item>Calls gridContext.MarkDisposed() in finally block.</item>
+/// <item>Does NOT create GridContext - expects DI to have already created the scoped instance.</item>
+/// </list>
+/// </remarks>
 public class GridContextMiddlewareTests
 {
+    private const string TestNodeId = "test-node";
+    private const string TestStudioId = "test-studio";
+    private const string TestEnvironment = "test-env";
+
     [Fact]
-    public async Task InvokeAsync_WithValidRequest_CreatesGridContext()
+    public async Task InvokeAsync_WithValidRequest_InitializesGridContext()
     {
-        var httpContext = new DefaultHttpContext();
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         httpContext.Request.Headers[GridHeaderNames.CorrelationId] = "test-corr-123";
         httpContext.Request.Method = "GET";
         httpContext.Request.Path = "/api/test";
 
-        var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var opFactory = CreateTestOperationContextFactory();
-        IGridContext? capturedContext = null;
+        bool? capturedIsInitialized = null;
+        string? capturedCorrelationId = null;
+        string? capturedNodeId = null;
+        string? capturedStudioId = null;
+        string? capturedEnvironment = null;
 
         var middleware = new GridContextMiddleware(
             next: async _ =>
             {
-                capturedContext = gridAccessor.GridContext;
+                capturedIsInitialized = gridContext.IsInitialized;
+                capturedCorrelationId = gridContext.CorrelationId;
+                capturedNodeId = gridContext.NodeId;
+                capturedStudioId = gridContext.StudioId;
+                capturedEnvironment = gridContext.Environment;
                 await Task.CompletedTask;
             },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        capturedContext.Should().NotBeNull();
-        capturedContext!.CorrelationId.Should().Be("test-corr-123");
-        capturedContext.NodeId.Should().Be("test-node");
-        capturedContext.StudioId.Should().Be("test-studio");
-        capturedContext.Environment.Should().Be("test");
+        // Assert
+        capturedIsInitialized.Should().BeTrue();
+        capturedCorrelationId.Should().Be("test-corr-123");
+        capturedNodeId.Should().Be(TestNodeId);
+        capturedStudioId.Should().Be(TestStudioId);
+        capturedEnvironment.Should().Be(TestEnvironment);
     }
 
     [Fact]
     public async Task InvokeAsync_WithoutCorrelationHeader_GeneratesNewCorrelation()
     {
-        var httpContext = new DefaultHttpContext();
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         httpContext.Request.Method = "POST";
         httpContext.Request.Path = "/api/orders";
 
-        var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var opFactory = CreateTestOperationContextFactory();
-        IGridContext? capturedContext = null;
+        bool? capturedIsInitialized = null;
+        string? capturedCorrelationId = null;
+        string? capturedNodeId = null;
 
         var middleware = new GridContextMiddleware(
             next: async _ =>
             {
-                capturedContext = gridAccessor.GridContext;
+                capturedIsInitialized = gridContext.IsInitialized;
+                capturedCorrelationId = gridContext.CorrelationId;
+                capturedNodeId = gridContext.NodeId;
                 await Task.CompletedTask;
             },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        capturedContext.Should().NotBeNull();
-        capturedContext!.CorrelationId.Should().NotBeNullOrWhiteSpace();
-        capturedContext.NodeId.Should().Be("test-node");
+        // Assert
+        capturedIsInitialized.Should().BeTrue();
+        capturedCorrelationId.Should().NotBeNullOrWhiteSpace();
+        capturedNodeId.Should().Be(TestNodeId);
     }
 
     [Fact]
     public async Task InvokeAsync_CreatesOperationContextWithMetadata()
     {
-        var httpContext = new DefaultHttpContext();
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         httpContext.Request.Method = "PUT";
         httpContext.Request.Path = "/api/users/123";
         httpContext.TraceIdentifier = "trace-456";
-
-        var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var testOpFactory = new TestOperationContextFactory();
 
         var middleware = new GridContextMiddleware(
             next: async _ => await Task.CompletedTask,
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, testOpFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        testOpFactory.LastCreatedOperationName.Should().Be("HttpRequest");
-        testOpFactory.LastCreatedMetadata.Should().ContainKey("http.method");
-        testOpFactory.LastCreatedMetadata!["http.method"].Should().Be("PUT");
-        testOpFactory.LastCreatedMetadata.Should().ContainKey("http.path");
-        testOpFactory.LastCreatedMetadata["http.path"].Should().Be("/api/users/123");
-        testOpFactory.LastCreatedMetadata.Should().ContainKey("http.request_id");
-        testOpFactory.LastCreatedMetadata["http.request_id"].Should().Be("trace-456");
+        // Assert
+        opFactory.LastCreatedOperationName.Should().Be("HttpRequest");
+        opFactory.LastCreatedMetadata.Should().ContainKey("http.method");
+        opFactory.LastCreatedMetadata!["http.method"].Should().Be("PUT");
+        opFactory.LastCreatedMetadata.Should().ContainKey("http.path");
+        opFactory.LastCreatedMetadata["http.path"].Should().Be("/api/users/123");
+        opFactory.LastCreatedMetadata.Should().ContainKey("http.request_id");
+        opFactory.LastCreatedMetadata["http.request_id"].Should().Be("trace-456");
     }
 
     [Fact]
     public async Task InvokeAsync_WhenNextThrows_FailsOperationAndRethrows()
     {
+        // Arrange
         var expectedException = new InvalidOperationException("Test error");
-        var httpContext = new DefaultHttpContext();
-
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
         var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var testOpFactory = new TestOperationContextFactory();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
 
         var middleware = new GridContextMiddleware(
             next: _ => throw expectedException,
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        var act = async () => await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, testOpFactory);
+        // Act
+        var act = async () => await middleware.InvokeAsync(httpContext);
 
+        // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
-        testOpFactory.LastCreatedOperation.Should().NotBeNull();
-        testOpFactory.LastCreatedOperation!.IsSuccess.Should().BeFalse();
-        testOpFactory.LastCreatedOperation.ErrorMessage.Should().Be("Unhandled exception");
+        opFactory.LastCreatedOperation.Should().NotBeNull();
+        opFactory.LastCreatedOperation!.IsSuccess.Should().BeFalse();
+        opFactory.LastCreatedOperation.ErrorMessage.Should().Be("Unhandled exception");
     }
 
     [Fact]
-    public async Task InvokeAsync_ClearsAmbientContextsAfterRequest()
+    public async Task InvokeAsync_MarksGridContextDisposedAfterRequest()
     {
-        var httpContext = new DefaultHttpContext();
-
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
         var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var opFactory = CreateTestOperationContextFactory();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
 
         var middleware = new GridContextMiddleware(
             next: async _ => await Task.CompletedTask,
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        gridAccessor.GridContext.Should().BeNull();
+        // Assert
+        gridContext.IsDisposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ClearsOperationContextAccessorAfterRequest()
+    {
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
+
+        var middleware = new GridContextMiddleware(
+            next: async _ => await Task.CompletedTask,
+            logger: NullLogger<GridContextMiddleware>.Instance);
+
+        // Act
+        await middleware.InvokeAsync(httpContext);
+
+        // Assert
         opAccessor.Current.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_MarksGridContextDisposedEvenOnException()
+    {
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
+
+        var middleware = new GridContextMiddleware(
+            next: _ => throw new InvalidOperationException("Test error"),
+            logger: NullLogger<GridContextMiddleware>.Instance);
+
+        // Act
+        try
+        {
+            await middleware.InvokeAsync(httpContext);
+        }
+        catch (InvalidOperationException)
+        {
+            // Expected
+        }
+
+        // Assert
+        gridContext.IsDisposed.Should().BeTrue();
     }
 
     [Fact]
     public async Task InvokeAsync_WithVeryLongHeaders_TruncatesToMaxLength()
     {
-        var httpContext = new DefaultHttpContext();
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         var longValue = new string('x', 300);
         httpContext.Request.Headers[GridHeaderNames.CorrelationId] = longValue;
 
-        var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var capturedContext = (IGridContext?)null;
-        var opFactory = new TestOperationContextFactory();
+        int? capturedCorrelationIdLength = null;
 
         var middleware = new GridContextMiddleware(
             next: async _ =>
             {
-                capturedContext = gridAccessor.GridContext;
+                capturedCorrelationIdLength = gridContext.CorrelationId.Length;
                 await Task.CompletedTask;
             },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        capturedContext.Should().NotBeNull();
-        capturedContext!.CorrelationId.Length.Should().BeLessThanOrEqualTo(256);
+        // Assert
+        capturedCorrelationIdLength.Should().BeLessThanOrEqualTo(256);
     }
 
     [Fact]
     public async Task InvokeAsync_WithCausationHeader_PropagatesCausationId()
     {
-        var httpContext = new DefaultHttpContext();
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         httpContext.Request.Headers[GridHeaderNames.CorrelationId] = "corr-123";
         httpContext.Request.Headers[GridHeaderNames.CausationId] = "cause-456";
 
-        var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var capturedContext = (IGridContext?)null;
-        var opFactory = new TestOperationContextFactory();
+        string? capturedCorrelationId = null;
+        string? capturedCausationId = null;
 
         var middleware = new GridContextMiddleware(
             next: async _ =>
             {
-                capturedContext = gridAccessor.GridContext;
+                capturedCorrelationId = gridContext.CorrelationId;
+                capturedCausationId = gridContext.CausationId;
                 await Task.CompletedTask;
             },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        capturedContext.Should().NotBeNull();
-        capturedContext!.CorrelationId.Should().Be("corr-123");
-        capturedContext.CausationId.Should().Be("cause-456");
+        // Assert
+        capturedCorrelationId.Should().Be("corr-123");
+        capturedCausationId.Should().Be("cause-456");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithTenantAndProjectHeaders_PropagatesIdentifiers()
+    {
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
+        httpContext.Request.Headers[GridHeaderNames.CorrelationId] = "corr-123";
+        httpContext.Request.Headers[GridHeaderNames.TenantId] = "tenant-abc";
+        httpContext.Request.Headers[GridHeaderNames.ProjectId] = "project-xyz";
+
+        string? capturedTenantId = null;
+        string? capturedProjectId = null;
+
+        var middleware = new GridContextMiddleware(
+            next: async _ =>
+            {
+                capturedTenantId = gridContext.TenantId;
+                capturedProjectId = gridContext.ProjectId;
+                await Task.CompletedTask;
+            },
+            logger: NullLogger<GridContextMiddleware>.Instance);
+
+        // Act
+        await middleware.InvokeAsync(httpContext);
+
+        // Assert
+        capturedTenantId.Should().Be("tenant-abc");
+        capturedProjectId.Should().Be("project-xyz");
     }
 
     [Fact]
     public async Task InvokeAsync_SuccessfulRequest_CompletesOperation()
     {
-        var httpContext = new DefaultHttpContext();
-
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
         var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var testOpFactory = new TestOperationContextFactory();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
 
         var middleware = new GridContextMiddleware(
             next: async _ => await Task.CompletedTask,
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, testOpFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        testOpFactory.LastCreatedOperation.Should().NotBeNull();
-        testOpFactory.LastCreatedOperation!.IsSuccess.Should().BeTrue();
-        testOpFactory.LastCreatedOperation.CompletedAtUtc.Should().NotBeNull();
+        // Assert
+        opFactory.LastCreatedOperation.Should().NotBeNull();
+        opFactory.LastCreatedOperation!.IsSuccess.Should().BeTrue();
+        opFactory.LastCreatedOperation.CompletedAtUtc.Should().NotBeNull();
     }
 
     [Fact]
     public async Task InvokeAsync_WithBaggageHeaders_PropagatesBaggage()
     {
-        var httpContext = new DefaultHttpContext();
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         httpContext.Request.Headers[$"{GridHeaderNames.BaggagePrefix}tenant-id"] = "tenant-123";
         httpContext.Request.Headers[$"{GridHeaderNames.BaggagePrefix}user-id"] = "user-456";
 
-        var nodeContext = CreateTestNodeContext();
-        var gridAccessor = new GridContextAccessor();
-        var opAccessor = new OperationContextAccessor();
-        var capturedContext = (IGridContext?)null;
-        var opFactory = new TestOperationContextFactory();
+        IReadOnlyDictionary<string, string>? capturedBaggage = null;
 
         var middleware = new GridContextMiddleware(
             next: async _ =>
             {
-                capturedContext = gridAccessor.GridContext;
+                capturedBaggage = new Dictionary<string, string>(gridContext.Baggage);
                 await Task.CompletedTask;
             },
             logger: NullLogger<GridContextMiddleware>.Instance);
 
-        await middleware.InvokeAsync(httpContext, nodeContext, gridAccessor, opAccessor, opFactory);
+        // Act
+        await middleware.InvokeAsync(httpContext);
 
-        capturedContext.Should().NotBeNull();
-        capturedContext!.Baggage.Should().ContainKey("tenant-id").WhoseValue.Should().Be("tenant-123");
-        capturedContext.Baggage.Should().ContainKey("user-id").WhoseValue.Should().Be("user-456");
+        // Assert
+        capturedBaggage.Should().ContainKey("tenant-id").WhoseValue.Should().Be("tenant-123");
+        capturedBaggage.Should().ContainKey("user-id").WhoseValue.Should().Be("user-456");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithW3CBaggageHeader_ParsesBaggage()
+    {
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
+        httpContext.Request.Headers[GridHeaderNames.Baggage] = "key1=value1,key2=value2";
+
+        IReadOnlyDictionary<string, string>? capturedBaggage = null;
+
+        var middleware = new GridContextMiddleware(
+            next: async _ =>
+            {
+                capturedBaggage = new Dictionary<string, string>(gridContext.Baggage);
+                await Task.CompletedTask;
+            },
+            logger: NullLogger<GridContextMiddleware>.Instance);
+
+        // Act
+        await middleware.InvokeAsync(httpContext);
+
+        // Assert
+        capturedBaggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
+        capturedBaggage.Should().ContainKey("key2").WhoseValue.Should().Be("value2");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithTraceparentHeader_ExtractsCorrelationId()
+    {
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
+
+        // W3C traceparent format: version-trace_id-span_id-trace_flags
+        httpContext.Request.Headers[GridHeaderNames.TraceParent] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+
+        string? capturedCorrelationId = null;
+
+        var middleware = new GridContextMiddleware(
+            next: async _ =>
+            {
+                capturedCorrelationId = gridContext.CorrelationId;
+                await Task.CompletedTask;
+            },
+            logger: NullLogger<GridContextMiddleware>.Instance);
+
+        // Act
+        await middleware.InvokeAsync(httpContext);
+
+        // Assert - trace_id is extracted as correlation id
+        capturedCorrelationId.Should().Be("4bf92f3577b34da6a3ce929d0e0e4736");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_CorrelationIdHeaderTakesPrecedenceOverTraceparent()
+    {
+        // Arrange
+        var gridContext = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
+        var nodeContext = CreateTestNodeContext();
+        var opAccessor = new TestOperationContextAccessor();
+        var opFactory = new TestOperationContextFactory();
+
+        var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
+        httpContext.Request.Headers[GridHeaderNames.CorrelationId] = "explicit-corr-id";
+        httpContext.Request.Headers[GridHeaderNames.TraceParent] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+
+        string? capturedCorrelationId = null;
+
+        var middleware = new GridContextMiddleware(
+            next: async _ =>
+            {
+                capturedCorrelationId = gridContext.CorrelationId;
+                await Task.CompletedTask;
+            },
+            logger: NullLogger<GridContextMiddleware>.Instance);
+
+        // Act
+        await middleware.InvokeAsync(httpContext);
+
+        // Assert - X-Correlation-Id takes precedence
+        capturedCorrelationId.Should().Be("explicit-corr-id");
+    }
+
+    private static DefaultHttpContext CreateHttpContextWithServices(
+        GridContext gridContext,
+        INodeContext nodeContext,
+        IOperationContextAccessor opAccessor,
+        IOperationContextFactory opFactory)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(gridContext);
+        services.AddSingleton(nodeContext);
+        services.AddSingleton(opAccessor);
+        services.AddSingleton(opFactory);
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = serviceProvider,
+        };
+
+        return httpContext;
     }
 
     private static TestNodeContext CreateTestNodeContext()
     {
         return new TestNodeContext
         {
-            NodeId = "test-node",
+            NodeId = TestNodeId,
             Version = "1.0.0",
-            StudioId = "test-studio",
-            Environment = "test",
+            StudioId = TestStudioId,
+            Environment = TestEnvironment,
         };
     }
-
-    private static TestOperationContextFactory CreateTestOperationContextFactory() => new();
 
     private sealed class TestNodeContext : INodeContext
     {
@@ -282,6 +539,11 @@ public class GridContextMiddlewareTests
         }
     }
 
+    private sealed class TestOperationContextAccessor : IOperationContextAccessor
+    {
+        public IOperationContext? Current { get; set; }
+    }
+
     private sealed class TestOperationContextFactory : IOperationContextFactory
     {
         public string? LastCreatedOperationName { get; private set; }
@@ -295,8 +557,8 @@ public class GridContextMiddlewareTests
             LastCreatedOperationName = operationName;
             LastCreatedMetadata = metadata;
 
-            // GridContext no longer takes operationId parameter
-            var gridContext = new GridContext("test-corr", "test-node", "test-studio", "test-env");
+            // Create a minimal GridContext for the operation context
+            var gridContext = GridContextTestHelper.CreateDefault();
 
             // Generate operationId for OperationContext (which now owns it)
             var operationId = Ulid.NewUlid().ToString();
@@ -313,10 +575,8 @@ public class GridContextMiddlewareTests
 
         public string OperationName { get; } = operationName;
 
-        // OperationId is now stored directly on OperationContext (v0.3.0)
-        public string OperationId { get; } = operationId; // Now owned by OperationContext, not GridContext
+        public string OperationId { get; } = operationId;
 
-        // Convenience properties that pass through to GridContext
         public string CorrelationId => GridContext.CorrelationId;
 
         public string? CausationId => GridContext.CausationId;
@@ -370,10 +630,5 @@ public class GridContextMiddlewareTests
                 Complete();
             }
         }
-    }
-
-    private sealed class OperationContextAccessor : IOperationContextAccessor
-    {
-        public IOperationContext? Current { get; set; }
     }
 }
