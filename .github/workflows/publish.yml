@@ -43,6 +43,11 @@ jobs:
   release:
     name: Build, Pack & Publish
     needs: prepare
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      security-events: write
     uses: HoneyDrunkStudios/HoneyDrunk.Actions/.github/workflows/release.yml@main
     with:
       dotnet-version: '10.0.x'
@@ -65,59 +70,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout Actions
+        uses: actions/checkout@v4
+        with:
+          repository: HoneyDrunkStudios/HoneyDrunk.Actions
+          ref: main
+          path: .actions
+
+      - name: Generate Release Notes
+        id: notes
+        uses: ./.actions/.github/actions/release/generate-notes
+        with:
+          version: ${{ needs.prepare.outputs.version }}
+          product-name: HoneyDrunk.Kernel
+          product-description: 'Semantic OS layer for HoneyDrunk.OS providing context propagation, lifecycle orchestration, and configuration management for .NET 10.'
+          nuget-packages: |
+            HoneyDrunk.Kernel.Abstractions
+            HoneyDrunk.Kernel
+          docs-url: 'https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel#readme'
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.version-tag }}
           name: HoneyDrunk.Kernel ${{ needs.prepare.outputs.version-tag }}
-          body: |
-            ## HoneyDrunk.Kernel ${{ needs.prepare.outputs.version-tag }}
-
-            Semantic OS layer for HoneyDrunk.OS providing context propagation, lifecycle orchestration, and configuration management for .NET 10.
-
-            ### 📦 Packages
-
-            **HoneyDrunk.Kernel.Abstractions** - Core contracts and interfaces
-
-            ```xml
-            <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="${{ needs.prepare.outputs.version }}" />
-            ```
-
-            **HoneyDrunk.Kernel** - Runtime implementations
-
-            ```xml
-            <PackageReference Include="HoneyDrunk.Kernel" Version="${{ needs.prepare.outputs.version }}" />
-            ```
-
-            ### 🔗 Links
-            - [NuGet: HoneyDrunk.Kernel.Abstractions](https://www.nuget.org/packages/HoneyDrunk.Kernel.Abstractions/${{ needs.prepare.outputs.version }})
-            - [NuGet: HoneyDrunk.Kernel](https://www.nuget.org/packages/HoneyDrunk.Kernel/${{ needs.prepare.outputs.version }})
-            - [Documentation](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel#readme)
-
-            ### 🚀 Quick Start
-
-            ```csharp
-            using HoneyDrunk.Kernel.Context;
-            using HoneyDrunk.Kernel.DependencyInjection;
-
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add Kernel services with Grid context
-            builder.Services.AddHoneyDrunkKernel(options =>
-            {
-                options.StudioId = "my-studio";
-                options.Environment = "production";
-            });
-
-            var app = builder.Build();
-
-            // Access Grid context in your handlers
-            app.MapGet("/", (IGridContext gridContext) => 
-            {
-                return new { correlationId = gridContext.CorrelationId };
-            });
-
-            app.Run();
-            ```
+          body: ${{ steps.notes.outputs.body }}
+          generate_release_notes: ${{ steps.notes.outputs.has-changelog == 'false' }}
           draft: false
           prerelease: false
