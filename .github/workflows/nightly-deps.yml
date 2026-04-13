@@ -1,0 +1,25 @@
+name: Nightly Dependencies
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  nightly-deps:
+    name: Nightly Dependencies
+    uses: HoneyDrunkStudios/HoneyDrunk.Actions/.github/workflows/nightly-deps.yml@main
+    with:
+      dotnet-version: '10.0.x'
+      runs-on: 'ubuntu-latest'
+      working-directory: 'HoneyDrunk.Kernel'
+      project-path: 'HoneyDrunk.Kernel.slnx'
+      actions-ref: 'main'
+      check-dotnet-deps: true
+      create-update-prs: false
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}

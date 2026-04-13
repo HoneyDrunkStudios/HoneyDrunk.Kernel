@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Docs/">
     <File Path="../README.md" />
+    <File Path="CHANGELOG.md" />
   </Folder>
   <Folder Name="/Docs/Copilot/">
     <File Path="../.github/copilot-instructions.md" />
@@ -31,7 +32,7 @@
   </Folder>
   <Folder Name="/Pipelines/">
     <File Path="../.github/workflows/publish.yml" />
-    <File Path="../.github/workflows/validate-pr.yml" />
+    <File Path="../.github/workflows/pr.yml" />
   </Folder>
   <Project Path="HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj" Id="262bb60d-6df6-4639-831d-2fdede62bccc" />
   <Project Path="HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj" />

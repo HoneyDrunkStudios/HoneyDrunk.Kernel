@@ -1,4 +1,4 @@
-name: PR Validation
+name: PR
 
 on:
   pull_request:
@@ -7,6 +7,7 @@ on:
       - '**.cs'
       - '**.csproj'
       - '**.sln'
+      - '**.slnx'
       - '**.props'
       - '**.targets'
       - '**/.editorconfig'
@@ -15,16 +16,18 @@ on:
 permissions:
   contents: read
   checks: write
-  pull-requests: write  # This allows posting PR comments
+  pull-requests: write
 
 jobs:
-  pr-validation:
+  pr-core:
+    name: PR Core
     uses: HoneyDrunkStudios/HoneyDrunk.Actions/.github/workflows/pr-core.yml@main
     with:
       dotnet-version: '10.0.x'
       configuration: 'Release'
       runs-on: 'ubuntu-latest'
       working-directory: 'HoneyDrunk.Kernel'
+      project-path: 'HoneyDrunk.Kernel.slnx'
       enable-secret-scan: true
       enable-accessibility-check: false
       post-pr-summary: true
