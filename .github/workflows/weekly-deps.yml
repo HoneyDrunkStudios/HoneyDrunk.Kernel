@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
   weekly-deps:
@@ -19,6 +20,6 @@ jobs:
       project-path: 'HoneyDrunk.Kernel.slnx'
       actions-ref: 'main'
       check-dotnet-deps: true
-      create-update-prs: false
+      create-update-prs: true
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
