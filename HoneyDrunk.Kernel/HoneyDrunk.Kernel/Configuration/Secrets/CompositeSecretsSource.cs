@@ -32,23 +32,10 @@ public sealed class CompositeSecretsSource(IEnumerable<ISecretsSource> sources) 
         {
             return source.TryGetSecret(key, out value);
         }
-        catch (ArgumentException)
+        catch (Exception)
         {
-        }
-        catch (FormatException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (IOException)
-        {
-        }
-        catch (NotSupportedException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
+            // Preserve the composite contract by skipping any failing source.
+            // A future logger can be added here if source-level diagnostics are needed.
         }
 
         value = null;
