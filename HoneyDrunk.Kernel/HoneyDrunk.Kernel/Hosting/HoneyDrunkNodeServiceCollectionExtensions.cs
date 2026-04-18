@@ -64,7 +64,8 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
             var opts = sp.GetRequiredService<HoneyDrunkNodeOptions>();
             var gridRoot = sp.GetService<IOptions<HoneyDrunkGridOptions>>()?.Value;
             var studio = !string.IsNullOrWhiteSpace(opts.StudioId) ? opts.StudioId : gridRoot?.StudioId ?? string.Empty;
-            var environment = opts.EnvironmentId?.Value ?? gridRoot?.Environment ?? string.Empty;
+            var environmentId = opts.EnvironmentId ?? throw new InvalidOperationException("EnvironmentId is required.");
+            var environment = environmentId.Value;
 
             return new NodeContext(
                 nodeId: opts.NodeId!.Value,

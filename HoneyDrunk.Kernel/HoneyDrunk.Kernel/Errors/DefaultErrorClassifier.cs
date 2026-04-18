@@ -23,30 +23,20 @@ internal sealed class DefaultErrorClassifier : IErrorClassifier
         }
 
         // Explicit Kernel exception hierarchy first.
-        if (exception is ValidationException ve)
+        switch (exception)
         {
-            return Create(400, ve.Message, ve.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/validation");
-        }
-        else if (exception is NotFoundException nf)
-        {
-            return Create(404, nf.Message, nf.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/not-found");
-        }
-        else if (exception is SecurityException se)
-        {
-            return Create(403, se.Message, se.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/security");
-        }
-        else if (exception is ConcurrencyException cc)
-        {
-            return Create(409, cc.Message, cc.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/concurrency");
-        }
-        else if (exception is DependencyFailureException df)
-        {
-            return Create(502, df.Message, df.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/dependency-failure");
-        }
-        else if (exception is HoneyDrunkException hd)
-        {
-            // Generic HoneyDrunkException fallback (unclassified) -> 500.
-            return Create(500, hd.Message, hd.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/internal");
+            case ValidationException validation:
+                return Create(400, validation.Message, validation.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/validation");
+            case NotFoundException notFound:
+                return Create(404, notFound.Message, notFound.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/not-found");
+            case SecurityException security:
+                return Create(403, security.Message, security.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/security");
+            case ConcurrencyException concurrency:
+                return Create(409, concurrency.Message, concurrency.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/concurrency");
+            case DependencyFailureException dependencyFailure:
+                return Create(502, dependencyFailure.Message, dependencyFailure.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/dependency-failure");
+            case HoneyDrunkException honeyDrunk:
+                return Create(500, honeyDrunk.Message, honeyDrunk.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/internal");
         }
 
         // Map common BCL exceptions to validation semantics where helpful.

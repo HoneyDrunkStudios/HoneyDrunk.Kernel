@@ -73,13 +73,10 @@ public readonly record struct ErrorCode
                 return false;
             }
 
-            foreach (var ch in segment)
+            if (segment.Any(static ch => !(ch is >= 'a' and <= 'z') && !(ch is >= '0' and <= '9') && ch != '-'))
             {
-                if (!(ch is >= 'a' and <= 'z') && !(ch is >= '0' and <= '9') && ch != '-')
-                {
-                    errorMessage = "Segments must be lowercase alphanumeric and hyphens only (kebab-case).";
-                    return false;
-                }
+                errorMessage = "Segments must be lowercase alphanumeric and hyphens only (kebab-case).";
+                return false;
             }
         }
 

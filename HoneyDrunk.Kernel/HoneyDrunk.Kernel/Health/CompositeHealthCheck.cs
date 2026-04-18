@@ -47,7 +47,35 @@ public sealed class CompositeHealthCheck(IEnumerable<IHealthCheck> checks) : IHe
         {
             throw;
         }
-        catch
+        catch (ArgumentException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (FormatException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (ObjectDisposedException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (InvalidOperationException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (IOException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (NotSupportedException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (TimeoutException)
+        {
+            return HealthStatus.Unhealthy;
+        }
+        catch (UnauthorizedAccessException)
         {
             return HealthStatus.Unhealthy;
         }

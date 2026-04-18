@@ -558,16 +558,10 @@ public class GridActivitySourceTests
             environment: "test-env");
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
 
-        try
-        {
-            throw new InvalidOperationException("Test error");
-        }
-        catch (Exception ex)
-        {
-            GridActivitySource.RecordException(activity, ex);
+        var ex = CaptureThrownException();
+        GridActivitySource.RecordException(activity, ex);
 
-            activity!.Tags.Should().Contain(t => t.Key == "exception.stacktrace");
-        }
+        activity!.Tags.Should().Contain(t => t.Key == "exception.stacktrace");
     }
 
     [Fact]
@@ -617,5 +611,17 @@ public class GridActivitySourceTests
 
         activity.Should().NotBeNull();
         activity!.Kind.Should().Be(ActivityKind.Consumer);
+    }
+
+    private static InvalidOperationException CaptureThrownException()
+    {
+        try
+        {
+            throw new InvalidOperationException("Test error");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ex;
+        }
     }
 }

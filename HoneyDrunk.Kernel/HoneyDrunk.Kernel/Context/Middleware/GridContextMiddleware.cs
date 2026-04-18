@@ -76,7 +76,7 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
             ["http.path"] = httpContext.Request.Path.ToString(),
             ["http.request_id"] = httpContext.TraceIdentifier,
         };
-        var operation = opFactory.Create("HttpRequest", metadata);
+        using var operation = opFactory.Create("HttpRequest", metadata);
         opAccessor.Current = operation;
 
         // Capture values for response headers BEFORE disposal
@@ -120,7 +120,6 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         {
             // Clear operation context accessor
             opAccessor.Current = null;
-            operation.Dispose();
 
             // Mark the GridContext as disposed to catch fire-and-forget misuse
             gridContext.MarkDisposed();
@@ -171,28 +170,27 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
             var baggageString = baggageHeader.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(baggageString))
             {
-                foreach (var item in baggageString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                var items = baggageString
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(ParseBaggageItem)
+                    .Where(static parsed => parsed.HasValue)
+                    .Select(static parsed => parsed.GetValueOrDefault());
+
+                foreach (var (key, value) in items)
                 {
-                    var parsed = ParseBaggageItem(item);
-                    if (parsed.HasValue)
-                    {
-                        baggage[parsed.Value.key] = parsed.Value.value;
-                    }
+                    baggage[key] = value;
                 }
             }
         }
 
         // Extract from X-Baggage-* headers
-        foreach (var header in httpContext.Request.Headers)
+        foreach (var header in httpContext.Request.Headers.Where(static header => header.Key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase)))
         {
-            if (header.Key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase))
+            var key = header.Key[GridHeaderNames.BaggagePrefix.Length..];
+            var value = header.Value.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(value))
             {
-                var key = header.Key[GridHeaderNames.BaggagePrefix.Length..];
-                var value = header.Value.FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    baggage[key] = value;
-                }
+                baggage[key] = value;
             }
         }
 

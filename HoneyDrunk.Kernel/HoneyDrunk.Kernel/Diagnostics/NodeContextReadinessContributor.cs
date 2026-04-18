@@ -29,31 +29,34 @@ public sealed class NodeContextReadinessContributor(INodeContext nodeContext) : 
         // Check that Node context has valid data
         if (string.IsNullOrWhiteSpace(_nodeContext.NodeId))
         {
-            return Task.FromResult((false, (string?)"NodeId is not set"));
+            return CreateResult(false, "NodeId is not set");
         }
 
         if (string.IsNullOrWhiteSpace(_nodeContext.Version))
         {
-            return Task.FromResult((false, (string?)"Version is not set"));
+            return CreateResult(false, "Version is not set");
         }
 
         if (string.IsNullOrWhiteSpace(_nodeContext.StudioId))
         {
-            return Task.FromResult((false, (string?)"StudioId is not set"));
+            return CreateResult(false, "StudioId is not set");
         }
 
         // Check that Node is in an appropriate stage for readiness
         var stage = _nodeContext.LifecycleStage;
         if (stage is NodeLifecycleStage.Initializing or NodeLifecycleStage.Starting)
         {
-            return Task.FromResult((false, (string?)$"Node is still {stage}"));
+            return CreateResult(false, $"Node is still {stage}");
         }
 
         if (stage is NodeLifecycleStage.Failed or NodeLifecycleStage.Stopped or NodeLifecycleStage.Stopping)
         {
-            return Task.FromResult((false, (string?)$"Node is {stage}"));
+            return CreateResult(false, $"Node is {stage}");
         }
 
-        return Task.FromResult((true, (string?)null));
+        return CreateResult(true, null);
     }
+
+    private static Task<(bool isReady, string? reason)> CreateResult(bool isReady, string? reason)
+        => Task.FromResult((isReady, reason));
 }

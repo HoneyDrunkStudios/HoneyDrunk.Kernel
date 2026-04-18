@@ -305,7 +305,7 @@ public class NodeLifecycleManagerTests
         var manager = CreateManager();
 
         // Implementation catches and handles cancellation, doesn't rethrow
-        var (status, details) = await manager.CheckHealthAsync(cts.Token);
+        var (status, _) = await manager.CheckHealthAsync(cts.Token);
 
         // Should return results even with cancelled token
         status.Should().Be(HealthStatus.Healthy);
@@ -331,7 +331,7 @@ public class NodeLifecycleManagerTests
         var manager = CreateManager();
 
         // Implementation catches and handles cancellation, doesn't rethrow
-        var (isReady, details) = await manager.CheckReadinessAsync(cts.Token);
+        var (isReady, _) = await manager.CheckReadinessAsync(cts.Token);
 
         // Should return results even with cancelled token
         isReady.Should().BeTrue();
@@ -698,7 +698,7 @@ public class NodeLifecycleManagerTests
         public Task<(bool isReady, string? reason)> CheckReadinessAsync(CancellationToken cancellationToken = default)
         {
             WasCancellationTokenPassed = cancellationToken == _expectedToken;
-            return Task.FromResult((isReady: true, reason: (string?)null));
+            return Task.FromResult((true, (string?)null));
         }
     }
 }

@@ -31,14 +31,17 @@ public sealed class NodeLifecycleHealthContributor(INodeContext nodeContext) : I
 
         return stage switch
         {
-            NodeLifecycleStage.Ready => Task.FromResult((status: HealthStatus.Healthy, message: (string?)"Node is ready")),
-            NodeLifecycleStage.Degraded => Task.FromResult((status: HealthStatus.Degraded, message: (string?)"Node is degraded")),
-            NodeLifecycleStage.Failed => Task.FromResult((status: HealthStatus.Unhealthy, message: (string?)"Node has failed")),
-            NodeLifecycleStage.Stopping => Task.FromResult((status: HealthStatus.Unhealthy, message: (string?)"Node is stopping")),
-            NodeLifecycleStage.Stopped => Task.FromResult((status: HealthStatus.Unhealthy, message: (string?)"Node is stopped")),
-            NodeLifecycleStage.Initializing => Task.FromResult((status: HealthStatus.Degraded, message: (string?)"Node is initializing")),
-            NodeLifecycleStage.Starting => Task.FromResult((status: HealthStatus.Degraded, message: (string?)"Node is starting")),
-            _ => Task.FromResult((status: HealthStatus.Degraded, message: (string?)$"Node is in {stage} stage"))
+            NodeLifecycleStage.Ready => CreateResult(HealthStatus.Healthy, "Node is ready"),
+            NodeLifecycleStage.Degraded => CreateResult(HealthStatus.Degraded, "Node is degraded"),
+            NodeLifecycleStage.Failed => CreateResult(HealthStatus.Unhealthy, "Node has failed"),
+            NodeLifecycleStage.Stopping => CreateResult(HealthStatus.Unhealthy, "Node is stopping"),
+            NodeLifecycleStage.Stopped => CreateResult(HealthStatus.Unhealthy, "Node is stopped"),
+            NodeLifecycleStage.Initializing => CreateResult(HealthStatus.Degraded, "Node is initializing"),
+            NodeLifecycleStage.Starting => CreateResult(HealthStatus.Degraded, "Node is starting"),
+            _ => CreateResult(HealthStatus.Degraded, $"Node is in {stage} stage")
         };
     }
+
+    private static Task<(HealthStatus status, string? message)> CreateResult(HealthStatus status, string? message)
+        => Task.FromResult((status, message));
 }
