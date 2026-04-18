@@ -135,13 +135,10 @@ public sealed class JobContextMapper
 
         // Extract baggage from prefixed keys
         var baggage = new Dictionary<string, string>();
-        foreach (var kvp in metadata)
+        foreach (var kvp in metadata.Where(static kvp => kvp.Key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase)))
         {
-            if (kvp.Key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                var key = kvp.Key[GridHeaderNames.BaggagePrefix.Length..];
-                baggage[key] = kvp.Value;
-            }
+            var key = kvp.Key[GridHeaderNames.BaggagePrefix.Length..];
+            baggage[key] = kvp.Value;
         }
 
         context.Initialize(

@@ -110,12 +110,6 @@ public sealed class GridContextSerializer
                 }
             }
 
-            DateTimeOffset? createdAtUtc = null;
-            if (root.TryGetProperty("createdAtUtc", out var createdAtElement))
-            {
-                createdAtUtc = createdAtElement.GetDateTimeOffset();
-            }
-
             // Create and initialize a new GridContext for deserialization scenarios
             // This is used when receiving context from external sources (e.g., agent results)
             var gridContext = new Context.GridContext(

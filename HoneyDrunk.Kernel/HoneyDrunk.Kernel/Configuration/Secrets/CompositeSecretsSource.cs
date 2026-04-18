@@ -16,17 +16,39 @@ public sealed class CompositeSecretsSource(IEnumerable<ISecretsSource> sources) 
     {
         foreach (var source in this.sources)
         {
-            try
+            if (TryGetSecret(source, key, out value))
             {
-                if (source.TryGetSecret(key, out value))
-                {
-                    return true;
-                }
+                return true;
             }
-            catch
-            {
-                // Skip sources that throw exceptions and continue to the next source
-            }
+        }
+
+        value = null;
+        return false;
+    }
+
+    private static bool TryGetSecret(ISecretsSource source, string key, out string? value)
+    {
+        try
+        {
+            return source.TryGetSecret(key, out value);
+        }
+        catch (ArgumentException)
+        {
+        }
+        catch (FormatException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (IOException)
+        {
+        }
+        catch (NotSupportedException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
 
         value = null;

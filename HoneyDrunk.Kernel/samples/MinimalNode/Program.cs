@@ -14,14 +14,14 @@ builder.Services.AddHoneyDrunkNode(options =>
     options.NodeId = new("minimal-node");
     options.SectorId = Sectors.Core;
     options.EnvironmentId = GridEnvironments.Development;
-    
+
     // Version from configuration or assembly (avoid hardcoding in production)
-    options.Version = builder.Configuration["Version"] 
-        ?? typeof(Program).Assembly.GetName().Version?.ToString() 
+    options.Version = builder.Configuration["Version"]
+        ?? typeof(Program).Assembly.GetName().Version?.ToString()
         ?? "1.0.0";
-    
+
     options.StudioId = builder.Configuration["Grid:StudioId"] ?? "demo-studio";
-    
+
     // Metadata tags for observability
     options.Tags["region"] = "local";
     options.Tags["sample"] = "true";
@@ -61,10 +61,10 @@ app.MapGet("/", (INodeContext nodeContext, IGridContext gridContext) =>
 });
 
 // Health endpoint (standard Grid endpoint)
-app.MapGet("/health", () => Results.Ok(new 
-{ 
+app.MapGet("/health", () => Results.Ok(new
+{
     Status = "Healthy",
-    Timestamp = DateTimeOffset.UtcNow 
+    Timestamp = DateTimeOffset.UtcNow
 }));
 
 app.Run();

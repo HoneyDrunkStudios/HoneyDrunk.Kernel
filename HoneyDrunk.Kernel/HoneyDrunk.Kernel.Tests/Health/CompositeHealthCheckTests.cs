@@ -169,7 +169,7 @@ public class CompositeHealthCheckTests
 
         await composite.CheckAsync(cts.Token);
 
-        ((CancellationAwareHealthCheck)checks[0]).ReceivedToken.Should().Be(cts.Token);
+        checks[0].ReceivedToken.Should().Be(cts.Token);
     }
 
     [Fact]

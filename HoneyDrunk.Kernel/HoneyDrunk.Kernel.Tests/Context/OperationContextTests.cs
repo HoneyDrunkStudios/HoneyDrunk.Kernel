@@ -240,15 +240,19 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = GridContextTestHelper.CreateDefault();
-        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
-        opContext.Complete();
-        var completedAt = opContext.CompletedAtUtc;
+        OperationContext? opContext;
+        DateTimeOffset? completedAt;
 
         // Act
-        opContext.Dispose();
+        using (var context = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString()))
+        {
+            opContext = context;
+            context.Complete();
+            completedAt = context.CompletedAtUtc;
+        }
 
         // Assert
-        opContext.CompletedAtUtc.Should().Be(completedAt);
+        opContext!.CompletedAtUtc.Should().Be(completedAt);
     }
 
     [Fact]
@@ -256,7 +260,7 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = GridContextTestHelper.CreateDefault();
-        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
+        using var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Act & Assert - Should not throw
         opContext.Dispose();
@@ -462,15 +466,19 @@ public class OperationContextTests
     {
         // Arrange
         var gridContext = GridContextTestHelper.CreateDefault();
-        var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
-        opContext.Fail("Error occurred");
-        var failedAt = opContext.CompletedAtUtc;
+        OperationContext? opContext;
+        DateTimeOffset? failedAt;
 
         // Act
-        opContext.Dispose();
+        using (var context = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString()))
+        {
+            opContext = context;
+            context.Fail("Error occurred");
+            failedAt = context.CompletedAtUtc;
+        }
 
         // Assert
-        opContext.IsSuccess.Should().BeFalse();
+        opContext!.IsSuccess.Should().BeFalse();
         opContext.CompletedAtUtc.Should().Be(failedAt);
     }
 }

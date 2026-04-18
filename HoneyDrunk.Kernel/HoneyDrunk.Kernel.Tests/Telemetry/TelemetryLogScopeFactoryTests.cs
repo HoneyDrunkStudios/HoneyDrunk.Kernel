@@ -128,17 +128,13 @@ public class TelemetryLogScopeFactoryTests
         var factory = new TelemetryLogScopeFactory(NullLogger.Instance);
         var telemetryContext = CreateTestTelemetryContext();
 
-        var scope1 = factory.CreateScope(telemetryContext);
-        var scope2 = factory.CreateScope(telemetryContext);
-        var scope3 = factory.CreateScope(telemetryContext);
+        using var scope1 = factory.CreateScope(telemetryContext);
+        using var scope2 = factory.CreateScope(telemetryContext);
+        using var scope3 = factory.CreateScope(telemetryContext);
 
         scope1.Should().NotBeNull();
         scope2.Should().NotBeNull();
         scope3.Should().NotBeNull();
-
-        scope1.Dispose();
-        scope2.Dispose();
-        scope3.Dispose();
     }
 
     [Fact]
