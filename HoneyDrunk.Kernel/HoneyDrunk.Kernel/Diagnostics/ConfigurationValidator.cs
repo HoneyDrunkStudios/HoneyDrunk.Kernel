@@ -54,12 +54,10 @@ public sealed class ConfigurationValidator(ILogger<ConfigurationValidator> logge
         }
 
         // Validate dependencies
-        if (descriptor.Dependencies != null)
+        var emptyDependencyCount = descriptor.Dependencies.Count(static dependency => string.IsNullOrWhiteSpace(dependency));
+        for (var i = 0; i < emptyDependencyCount; i++)
         {
-            foreach (var dependency in descriptor.Dependencies.Where(static dependency => string.IsNullOrWhiteSpace(dependency)))
-            {
-                errors.Add("Dependency cannot be empty");
-            }
+            errors.Add("Dependency cannot be empty");
         }
 
         if (errors.Count > 0)
