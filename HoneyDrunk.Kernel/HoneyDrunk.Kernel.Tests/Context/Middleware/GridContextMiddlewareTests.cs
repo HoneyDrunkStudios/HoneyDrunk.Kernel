@@ -1,5 +1,6 @@
 using FluentAssertions;
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Context.Middleware;
 using HoneyDrunk.Kernel.Tests.TestHelpers;
@@ -311,7 +312,7 @@ public class GridContextMiddlewareTests
 
         var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
         httpContext.Request.Headers[GridHeaderNames.CorrelationId] = "corr-123";
-        httpContext.Request.Headers[GridHeaderNames.TenantId] = "tenant-abc";
+        httpContext.Request.Headers[GridHeaderNames.TenantId] = "01ARZ3NDEKTSV4RRFFQ69G5FAZ";
         httpContext.Request.Headers[GridHeaderNames.ProjectId] = "project-xyz";
 
         string? capturedTenantId = null;
@@ -330,7 +331,7 @@ public class GridContextMiddlewareTests
         await middleware.InvokeAsync(httpContext);
 
         // Assert
-        capturedTenantId.Should().Be("tenant-abc");
+        capturedTenantId.Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAZ");
         capturedProjectId.Should().Be("project-xyz");
     }
 
@@ -368,7 +369,7 @@ public class GridContextMiddlewareTests
         var opFactory = new TestOperationContextFactory();
 
         var httpContext = CreateHttpContextWithServices(gridContext, nodeContext, opAccessor, opFactory);
-        httpContext.Request.Headers[$"{GridHeaderNames.BaggagePrefix}tenant-id"] = "tenant-123";
+        httpContext.Request.Headers[$"{GridHeaderNames.BaggagePrefix}tenant-id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX";
         httpContext.Request.Headers[$"{GridHeaderNames.BaggagePrefix}user-id"] = "user-456";
 
         IReadOnlyDictionary<string, string>? capturedBaggage = null;
@@ -385,7 +386,7 @@ public class GridContextMiddlewareTests
         await middleware.InvokeAsync(httpContext);
 
         // Assert
-        capturedBaggage.Should().ContainKey("tenant-id").WhoseValue.Should().Be("tenant-123");
+        capturedBaggage.Should().ContainKey("tenant-id").WhoseValue.Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         capturedBaggage.Should().ContainKey("user-id").WhoseValue.Should().Be("user-456");
     }
 
@@ -581,7 +582,7 @@ public class GridContextMiddlewareTests
 
         public string? CausationId => GridContext.CausationId;
 
-        public string? TenantId => GridContext.TenantId;
+        public TenantId TenantId => GridContext.TenantId;
 
         public string? ProjectId => GridContext.ProjectId;
 

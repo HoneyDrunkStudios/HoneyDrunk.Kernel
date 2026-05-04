@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 
 namespace HoneyDrunk.Kernel.Context;
 
@@ -109,7 +110,7 @@ public sealed class GridContext : IGridContext
     }
 
     /// <inheritdoc />
-    public string? TenantId
+    public TenantId TenantId
     {
         get
         {
@@ -171,7 +172,7 @@ public sealed class GridContext : IGridContext
     /// </summary>
     /// <param name="correlationId">The correlation identifier (trace-id).</param>
     /// <param name="causationId">Optional causation identifier (parent-span-id).</param>
-    /// <param name="tenantId">Optional tenant identifier.</param>
+    /// <param name="tenantId">Tenant identifier; defaults to <see cref="TenantId.Internal"/>.</param>
     /// <param name="projectId">Optional project identifier.</param>
     /// <param name="baggage">Optional baggage dictionary.</param>
     /// <param name="cancellation">Optional cancellation token.</param>
@@ -179,7 +180,7 @@ public sealed class GridContext : IGridContext
     public void Initialize(
         string correlationId,
         string? causationId = null,
-        string? tenantId = null,
+        TenantId? tenantId = null,
         string? projectId = null,
         IReadOnlyDictionary<string, string>? baggage = null,
         CancellationToken cancellation = default)
@@ -198,7 +199,7 @@ public sealed class GridContext : IGridContext
 
         CorrelationId = correlationId;
         CausationId = causationId;
-        TenantId = tenantId;
+        TenantId = tenantId ?? HoneyDrunk.Kernel.Abstractions.Identity.TenantId.Internal;
         ProjectId = projectId;
         Cancellation = cancellation;
         CreatedAtUtc = DateTimeOffset.UtcNow;

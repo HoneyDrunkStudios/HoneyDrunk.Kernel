@@ -97,7 +97,7 @@ public class GridActivitySourceTests
 
         var baggage = new Dictionary<string, string>
         {
-            ["tenant_id"] = "tenant-123",
+            ["tenant_id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX",
             ["user_id"] = "user-456"
         };
         var gridContext = GridContextTestHelper.CreateInitialized(
@@ -110,7 +110,7 @@ public class GridActivitySourceTests
         using var activity = GridActivitySource.StartActivity("TestOperation", gridContext);
 
         activity.Should().NotBeNull();
-        activity!.Tags.Should().Contain(t => t.Key == "hd.baggage.tenant_id" && t.Value == "tenant-123");
+        activity!.Tags.Should().Contain(t => t.Key == "hd.baggage.tenant_id" && t.Value == "01ARZ3NDEKTSV4RRFFQ69G5FAX");
         activity!.Tags.Should().Contain(t => t.Key == "hd.baggage.user_id" && t.Value == "user-456");
     }
 

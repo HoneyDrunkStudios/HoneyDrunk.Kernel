@@ -2,9 +2,12 @@ using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Diagnostics;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
 using HoneyDrunk.Kernel.Abstractions.Lifecycle;
+using HoneyDrunk.Kernel.Abstractions.Tenancy;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Diagnostics;
+using HoneyDrunk.Kernel.Tenancy;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace HoneyDrunk.Kernel.Hosting;
 
@@ -47,7 +50,9 @@ public static class HoneyDrunkServiceCollectionExtensions
                 options.Environment,
                 options.Tags));
 
-        services.AddSingleton<IMetricsCollector, NoOpMetricsCollector>();
+        services.TryAddSingleton<IMetricsCollector, NoOpMetricsCollector>();
+        services.TryAddSingleton<ITenantRateLimitPolicy, NoopTenantRateLimitPolicy>();
+        services.TryAddSingleton<IBillingEventEmitter, NoopBillingEventEmitter>();
 
         // Register concrete GridContext as scoped (starts uninitialized)
         services.AddScoped<GridContext>(sp =>

@@ -1,3 +1,5 @@
+using HoneyDrunk.Kernel.Abstractions.Identity;
+
 namespace HoneyDrunk.Kernel.Abstractions.Context;
 
 /// <summary>
@@ -46,10 +48,10 @@ public interface IOperationContext : IDisposable
 
     /// <summary>
     /// Gets the tenant identifier for multi-tenant isolation.
-    /// This is an identity attribute ONLY - not interpreted or enforced by Kernel.
+    /// This is an identity attribute ONLY - not authorized, rate-limited, or billed by Kernel.
     /// Convenience property that surfaces GridContext.TenantId.
     /// </summary>
-    string? TenantId { get; }
+    TenantId TenantId { get; }
 
     /// <summary>
     /// Gets the project identifier for project-level organization within a tenant.

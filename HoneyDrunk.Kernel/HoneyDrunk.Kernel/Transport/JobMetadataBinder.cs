@@ -43,6 +43,11 @@ public sealed class JobMetadataBinder : ITransportEnvelopeBinder
         metadata[GridHeaderNames.Environment] = context.Environment;
         metadata["CreatedAtUtc"] = context.CreatedAtUtc.ToString("O");
 
+        if (!context.TenantId.IsInternal)
+        {
+            metadata[GridHeaderNames.TenantId] = context.TenantId.ToString();
+        }
+
         // Bind baggage as prefixed metadata
         foreach (var (key, value) in context.Baggage)
         {

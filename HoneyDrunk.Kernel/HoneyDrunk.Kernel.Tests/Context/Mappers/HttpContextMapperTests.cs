@@ -114,11 +114,11 @@ public class HttpContextMapperTests
     public void ExtractFromHttpContext_WithTenantIdHeader_ExtractsTenantId()
     {
         var httpContext = CreateHttpContext();
-        httpContext.Request.Headers["X-Tenant-Id"] = "tenant-789";
+        httpContext.Request.Headers["X-Tenant-Id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
-        values.TenantId.Should().Be("tenant-789");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class HttpContextMapperTests
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
-        values.TenantId.Should().BeNull();
+        values.TenantId.IsInternal.Should().BeTrue();
     }
 
     [Fact]
@@ -156,12 +156,12 @@ public class HttpContextMapperTests
     public void ExtractFromHttpContext_WithTenantAndProjectHeaders_ExtractsBoth()
     {
         var httpContext = CreateHttpContext();
-        httpContext.Request.Headers["X-Tenant-Id"] = "tenant-789";
+        httpContext.Request.Headers["X-Tenant-Id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
         httpContext.Request.Headers["X-Project-Id"] = "project-012";
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
-        values.TenantId.Should().Be("tenant-789");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         values.ProjectId.Should().Be("project-012");
     }
 
@@ -281,13 +281,13 @@ public class HttpContextMapperTests
     public void ExtractFromHttpContext_WithXBaggagePrefixHeaders_ExtractsBaggage()
     {
         var httpContext = CreateHttpContext();
-        httpContext.Request.Headers["X-Baggage-tenant-id"] = "tenant-123";
+        httpContext.Request.Headers["X-Baggage-tenant-id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX";
         httpContext.Request.Headers["X-Baggage-user-id"] = "user-456";
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
         values.Baggage.Should().HaveCount(2);
-        values.Baggage["tenant-id"].Should().Be("tenant-123");
+        values.Baggage["tenant-id"].Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         values.Baggage["user-id"].Should().Be("user-456");
     }
 
@@ -374,7 +374,7 @@ public class HttpContextMapperTests
         var httpContext = CreateHttpContext();
         httpContext.Request.Headers["X-Correlation-Id"] = "corr-123";
         httpContext.Request.Headers["X-Causation-Id"] = "cause-456";
-        httpContext.Request.Headers["X-Tenant-Id"] = "tenant-789";
+        httpContext.Request.Headers["X-Tenant-Id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
         httpContext.Request.Headers["X-Project-Id"] = "project-012";
         httpContext.Request.Headers.Baggage = "userId=alice,sessionId=789";
 
@@ -382,7 +382,7 @@ public class HttpContextMapperTests
 
         values.CorrelationId.Should().Be("corr-123");
         values.CausationId.Should().Be("cause-456");
-        values.TenantId.Should().Be("tenant-789");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         values.ProjectId.Should().Be("project-012");
         values.Baggage.Should().HaveCount(2);
         values.Baggage["userId"].Should().Be("alice");
@@ -395,7 +395,7 @@ public class HttpContextMapperTests
         var httpContext = CreateHttpContext();
         httpContext.Request.Headers["X-Correlation-Id"] = "corr-123";
         httpContext.Request.Headers["X-Causation-Id"] = "cause-456";
-        httpContext.Request.Headers["X-Tenant-Id"] = "tenant-789";
+        httpContext.Request.Headers["X-Tenant-Id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
         httpContext.Request.Headers["X-Project-Id"] = "project-012";
         httpContext.Request.Headers.Baggage = "userId=alice";
 
@@ -405,7 +405,7 @@ public class HttpContextMapperTests
 
         context.CorrelationId.Should().Be("corr-123");
         context.CausationId.Should().Be("cause-456");
-        context.TenantId.Should().Be("tenant-789");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         context.ProjectId.Should().Be("project-012");
         context.Baggage["userId"].Should().Be("alice");
         context.NodeId.Should().Be(TestNodeId);
@@ -423,7 +423,7 @@ public class HttpContextMapperTests
 
         context.CorrelationId.Should().NotBeNullOrWhiteSpace();
         context.CausationId.Should().BeNull();
-        context.TenantId.Should().BeNull();
+        context.TenantId.IsInternal.Should().BeTrue();
         context.ProjectId.Should().BeNull();
         context.Baggage.Should().BeEmpty();
     }

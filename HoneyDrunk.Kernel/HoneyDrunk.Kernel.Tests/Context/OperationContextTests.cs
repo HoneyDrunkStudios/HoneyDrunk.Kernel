@@ -417,11 +417,11 @@ public class OperationContextTests
             nodeId: "node",
             studioId: "studio",
             environment: "env",
-            tenantId: "tenant-789");
+            tenantId: "01ARZ3NDEKTSV4RRFFQ69G5FAV");
         var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
         // Assert
-        opContext.TenantId.Should().Be("tenant-789");
+        opContext.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         opContext.TenantId.Should().Be(gridContext.TenantId);
     }
 

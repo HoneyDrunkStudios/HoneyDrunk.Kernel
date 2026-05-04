@@ -368,12 +368,12 @@ public class GridContextSerializerTests
             nodeId: "test-node",
             studioId: "test-studio",
             environment: "production",
-            tenantId: "tenant-789",
+            tenantId: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
             projectId: "project-012");
 
         var json = GridContextSerializer.Serialize(context);
 
-        json.Should().Contain("\"tenantId\":\"tenant-789\"");
+        json.Should().Contain("\"tenantId\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"");
         json.Should().Contain("\"projectId\":\"project-012\"");
     }
 
@@ -385,14 +385,14 @@ public class GridContextSerializerTests
             ""nodeId"": ""test-node"",
             ""studioId"": ""test-studio"",
             ""environment"": ""production"",
-            ""tenantId"": ""tenant-789"",
+            ""tenantId"": ""01ARZ3NDEKTSV4RRFFQ69G5FAV"",
             ""projectId"": ""project-012""
         }";
 
         var context = GridContextSerializer.Deserialize(json);
 
         context.Should().NotBeNull();
-        context!.TenantId.Should().Be("tenant-789");
+        context!.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         context.ProjectId.Should().Be("project-012");
     }
 

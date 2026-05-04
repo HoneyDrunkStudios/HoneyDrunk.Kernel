@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel</PackageId>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Production-ready runtime implementations for HoneyDrunk.OS Grid. Provides GridContext, NodeContext, OperationContext implementations, transport binders (HTTP/messaging/jobs), context mappers, GridContextMiddleware, lifecycle orchestration, AgentsInterop, telemetry (GridActivitySource), and unified bootstrapping (AddHoneyDrunkGrid).</Description>
-    <PackageReleaseNotes>v0.4.0: BREAKING CHANGES - Two-phase GridContext initialization (constructor + Initialize()), AddBaggage() replaces WithBaggage() (void return, mutates in-place), BeginScope() removed, IGridContextAccessor now read-only non-nullable (reads from HttpContext.RequestServices), IGridContextFactory.CreateRoot() removed, static mapper classes (HttpContextMapper, MessagingContextMapper, JobContextMapper), registration guard prevents duplicate AddHoneyDrunkGrid() calls. See CHANGELOG.md for migration guide.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.5.0: BREAKING CHANGES - GridContext tenant propagation now uses non-nullable TenantId with TenantId.Internal default. HTTP, messaging, job, serializer, and transport binders parse/emit strong tenant IDs. Added no-op tenant rate-limit and billing-event services. See CHANGELOG.md for migration guide.</PackageReleaseNotes>
     <PackageTags>kernel;runtime;grid;context;lifecycle;hosting;telemetry;mappers;transport;middleware;opentelemetry;agents;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

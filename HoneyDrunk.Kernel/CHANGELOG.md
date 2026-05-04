@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-05-04
+
+### ⚠️ BREAKING CHANGES
+
+ADR-0026 promotes tenant identity from string propagation to a first-class Grid primitive.
+
+- `IGridContext.TenantId` and `IOperationContext.TenantId` are now non-nullable `TenantId` values instead of `string?`.
+- HTTP, messaging, job, and serializer entry points now parse tenant wire values as ULIDs and reject malformed tenant IDs.
+- Missing tenant values default to `TenantId.Internal` (`00000000000000000000000000`) at Grid entry.
+
+### Added
+
+- `TenantId.Internal` and `TenantId.IsInternal` in `HoneyDrunk.Kernel.Abstractions.Identity`.
+- Tenancy contracts in `HoneyDrunk.Kernel.Abstractions.Tenancy`:
+  - `ITenantRateLimitPolicy`
+  - `TenantRateLimitDecision`
+  - `TenantRateLimitOutcome`
+  - `IBillingEventEmitter`
+  - `BillingEvent`
+- Default runtime implementations in `HoneyDrunk.Kernel.Tenancy`:
+  - `NoopTenantRateLimitPolicy`
+  - `NoopBillingEventEmitter`
+
+### Changed
+
+- `GridContext`, `OperationContext`, mappers, middleware, transport binders, and `GridContextSerializer` now use strong `TenantId` propagation.
+- Outbound transport binders omit `X-Tenant-Id` for `TenantId.Internal` and emit it for external tenants.
+- `AddHoneyDrunkNode()` registers no-op tenancy services by default while allowing consumer Nodes to override them.
+
+### Package Versions
+
+- `HoneyDrunk.Kernel.Abstractions` → `0.5.0`
+- `HoneyDrunk.Kernel` → `0.5.0`
+
+---
+
 ## [0.4.0] - 2026-01-19
 
 ### ⚠️ BREAKING CHANGES

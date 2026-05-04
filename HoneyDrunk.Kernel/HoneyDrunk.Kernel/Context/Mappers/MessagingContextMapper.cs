@@ -1,3 +1,6 @@
+using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
+
 namespace HoneyDrunk.Kernel.Context.Mappers;
 
 /// <summary>
@@ -39,9 +42,10 @@ public static class MessagingContextMapper
             ?? GetMetadata(metadata, "causation-id")
             ?? GetMetadata(metadata, "X-Causation-Id");
 
-        var tenantId = GetMetadata(metadata, "TenantId")
+        var tenantId = ParseTenantIdOrNull(
+            GetMetadata(metadata, "TenantId")
             ?? GetMetadata(metadata, "tenant-id")
-            ?? GetMetadata(metadata, "X-Tenant-Id");
+            ?? GetMetadata(metadata, GridHeaderNames.TenantId));
 
         var projectId = GetMetadata(metadata, "ProjectId")
             ?? GetMetadata(metadata, "project-id")
@@ -87,9 +91,10 @@ public static class MessagingContextMapper
             ?? GetMetadata(metadata, "causation-id")
             ?? GetMetadata(metadata, "X-Causation-Id");
 
-        var tenantId = GetMetadata(metadata, "TenantId")
+        var tenantId = ParseTenantIdOrNull(
+            GetMetadata(metadata, "TenantId")
             ?? GetMetadata(metadata, "tenant-id")
-            ?? GetMetadata(metadata, "X-Tenant-Id");
+            ?? GetMetadata(metadata, GridHeaderNames.TenantId));
 
         var projectId = GetMetadata(metadata, "ProjectId")
             ?? GetMetadata(metadata, "project-id")
@@ -110,6 +115,21 @@ public static class MessagingContextMapper
             TenantId: tenantId,
             ProjectId: projectId,
             Baggage: baggage);
+    }
+
+    private static TenantId? ParseTenantIdOrNull(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (TenantId.TryParse(value, out var tenantId))
+        {
+            return tenantId;
+        }
+
+        throw new FormatException($"Metadata {GridHeaderNames.TenantId} must be a valid ULID.");
     }
 
     private static string? GetMetadata(IReadOnlyDictionary<string, string> metadata, string key)

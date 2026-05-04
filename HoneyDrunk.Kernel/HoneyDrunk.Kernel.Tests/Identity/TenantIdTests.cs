@@ -69,6 +69,27 @@ public class TenantIdTests
     }
 
     [Fact]
+    public void Internal_ReturnsStableGridSentinel()
+    {
+        // Act
+        var tenantId = TenantId.Internal;
+
+        // Assert
+        tenantId.ToString().Should().Be("00000000000000000000000000");
+        tenantId.IsInternal.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsInternal_ForNewTenantId_ReturnsFalse()
+    {
+        // Act
+        var tenantId = TenantId.NewId();
+
+        // Assert
+        tenantId.IsInternal.Should().BeFalse();
+    }
+
+    [Fact]
     public void TryParse_ValidUlid_ReturnsTrue()
     {
         // Arrange

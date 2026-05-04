@@ -102,7 +102,7 @@ public class GridContextAccessorTests
             studioId: "studio-1",
             environment: "production",
             causationId: "cause-456",
-            tenantId: "tenant-1",
+            tenantId: "01ARZ3NDEKTSV4RRFFQ69G5FAY",
             projectId: "project-1",
             baggage: baggage);
 
@@ -124,7 +124,7 @@ public class GridContextAccessorTests
         result.StudioId.Should().Be("studio-1");
         result.Environment.Should().Be("production");
         result.CausationId.Should().Be("cause-456");
-        result.TenantId.Should().Be("tenant-1");
+        result.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAY");
         result.ProjectId.Should().Be("project-1");
         result.Baggage.Should().ContainKey("key").WhoseValue.Should().Be("value");
     }

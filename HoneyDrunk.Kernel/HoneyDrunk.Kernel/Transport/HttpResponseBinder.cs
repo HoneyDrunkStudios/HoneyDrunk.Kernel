@@ -35,6 +35,11 @@ public sealed class HttpResponseBinder : ITransportEnvelopeBinder
             response.Headers[GridHeaderNames.CausationId] = context.CausationId;
         }
 
+        if (!context.TenantId.IsInternal)
+        {
+            response.Headers[GridHeaderNames.TenantId] = context.TenantId.ToString();
+        }
+
         // Bind baggage (prefix to avoid conflicts)
         foreach (var (key, value) in context.Baggage)
         {

@@ -1,6 +1,7 @@
 // Copyright (c) HoneyDrunk Studios. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using HoneyDrunk.Kernel.Context;
 
 namespace HoneyDrunk.Kernel.Tests.TestHelpers;
@@ -42,7 +43,7 @@ public static class GridContextTestHelper
         context.Initialize(
             correlationId: correlationId,
             causationId: causationId,
-            tenantId: tenantId,
+            tenantId: tenantId is null ? null : new TenantId(tenantId),
             projectId: projectId,
             baggage: baggage,
             cancellation: cancellation);

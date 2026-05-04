@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -60,11 +61,19 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         tenantId = TruncateNullable(tenantId);
         projectId = TruncateNullable(projectId);
 
+        if (!TryParseTenantId(tenantId, out var parsedTenantId))
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await httpContext.Response.WriteAsync($"Header {GridHeaderNames.TenantId} must be a valid ULID.");
+            gridContext.MarkDisposed();
+            return;
+        }
+
         // Initialize the scoped GridContext (this throws if already initialized)
         gridContext.Initialize(
             correlationId: correlationId,
             causationId: causationId,
-            tenantId: tenantId,
+            tenantId: parsedTenantId,
             projectId: projectId,
             baggage: baggage,
             cancellation: httpContext.RequestAborted);
@@ -83,7 +92,7 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         // (OnStarting runs after finally block, so we can't access gridContext there)
         var responseCorrelationId = correlationId;
         var responseNodeId = nodeContext.NodeId;
-        var responseTenantId = tenantId;
+        var responseTenantId = parsedTenantId;
         var responseProjectId = projectId;
 
         // Echo correlation + node id for client trace continuity
@@ -92,9 +101,9 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
             httpContext.Response.Headers[GridHeaderNames.CorrelationId] = responseCorrelationId;
             httpContext.Response.Headers[GridHeaderNames.NodeId] = responseNodeId;
 
-            if (!string.IsNullOrWhiteSpace(responseTenantId))
+            if (!responseTenantId.IsInternal)
             {
-                httpContext.Response.Headers[GridHeaderNames.TenantId] = responseTenantId;
+                httpContext.Response.Headers[GridHeaderNames.TenantId] = responseTenantId.ToString();
             }
 
             if (!string.IsNullOrWhiteSpace(responseProjectId))
@@ -124,6 +133,17 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
             // Mark the GridContext as disposed to catch fire-and-forget misuse
             gridContext.MarkDisposed();
         }
+    }
+
+    private static bool TryParseTenantId(string? value, out TenantId tenantId)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            tenantId = TenantId.Internal;
+            return true;
+        }
+
+        return TenantId.TryParse(value, out tenantId);
     }
 
     private static string ExtractCorrelationId(HttpContext httpContext)

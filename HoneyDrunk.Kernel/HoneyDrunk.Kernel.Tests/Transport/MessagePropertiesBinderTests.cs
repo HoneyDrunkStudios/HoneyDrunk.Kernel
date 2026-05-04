@@ -101,7 +101,7 @@ public class MessagePropertiesBinderTests
         var properties = new Dictionary<string, object>();
         var baggage = new Dictionary<string, string>
         {
-            ["tenant_id"] = "tenant-123",
+            ["tenant_id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX",
             ["user_id"] = "user-456"
         };
         var gridContext = GridContextTestHelper.CreateInitialized(
@@ -114,7 +114,7 @@ public class MessagePropertiesBinderTests
         binder.Bind(properties, gridContext);
 
         properties.Should().ContainKey($"{GridHeaderNames.BaggagePrefix}tenant_id");
-        properties[$"{GridHeaderNames.BaggagePrefix}tenant_id"].Should().Be("tenant-123");
+        properties[$"{GridHeaderNames.BaggagePrefix}tenant_id"].Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         properties.Should().ContainKey($"{GridHeaderNames.BaggagePrefix}user_id");
         properties[$"{GridHeaderNames.BaggagePrefix}user_id"].Should().Be("user-456");
     }

@@ -120,7 +120,7 @@ public class JobMetadataBinderTests
         var metadata = new Dictionary<string, string>();
         var baggage = new Dictionary<string, string>
         {
-            ["tenant_id"] = "tenant-123",
+            ["tenant_id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX",
             ["user_id"] = "user-456"
         };
         var gridContext = GridContextTestHelper.CreateInitialized(
@@ -133,7 +133,7 @@ public class JobMetadataBinderTests
         binder.Bind(metadata, gridContext);
 
         metadata.Should().ContainKey($"{GridHeaderNames.BaggagePrefix}tenant_id");
-        metadata[$"{GridHeaderNames.BaggagePrefix}tenant_id"].Should().Be("tenant-123");
+        metadata[$"{GridHeaderNames.BaggagePrefix}tenant_id"].Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         metadata.Should().ContainKey($"{GridHeaderNames.BaggagePrefix}user_id");
         metadata[$"{GridHeaderNames.BaggagePrefix}user_id"].Should().Be("user-456");
     }

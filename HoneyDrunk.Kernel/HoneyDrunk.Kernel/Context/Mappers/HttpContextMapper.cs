@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using Microsoft.AspNetCore.Http;
 
 namespace HoneyDrunk.Kernel.Context.Mappers;
@@ -35,7 +36,7 @@ public sealed class HttpContextMapper
 
         var correlationId = ExtractCorrelationId(httpContext);
         var causationId = ExtractHeader(httpContext, GridHeaderNames.CausationId);
-        var tenantId = ExtractHeader(httpContext, GridHeaderNames.TenantId);
+        var tenantId = ParseTenantIdOrInternal(ExtractHeader(httpContext, GridHeaderNames.TenantId));
         var projectId = ExtractHeader(httpContext, GridHeaderNames.ProjectId);
         var baggage = ExtractBaggage(httpContext);
 
@@ -91,6 +92,21 @@ public sealed class HttpContextMapper
 
         // Generate new correlation ID
         return Ulid.NewUlid().ToString();
+    }
+
+    private static TenantId ParseTenantIdOrInternal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return TenantId.Internal;
+        }
+
+        if (TenantId.TryParse(value, out var tenantId))
+        {
+            return tenantId;
+        }
+
+        throw new FormatException($"Header {GridHeaderNames.TenantId} must be a valid ULID.");
     }
 
     private static string? ExtractHeader(HttpContext httpContext, string headerName)
