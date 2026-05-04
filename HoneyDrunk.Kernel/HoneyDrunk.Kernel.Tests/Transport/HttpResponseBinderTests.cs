@@ -102,7 +102,7 @@ public class HttpResponseBinderTests
         var response = httpContext.Response;
         var baggage = new Dictionary<string, string>
         {
-            ["tenant_id"] = "tenant-123",
+            ["tenant_id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX",
             ["user_id"] = "user-456"
         };
         var gridContext = GridContextTestHelper.CreateInitialized(
@@ -115,7 +115,7 @@ public class HttpResponseBinderTests
         binder.Bind(response, gridContext);
 
         response.Headers.Should().ContainKey($"{GridHeaderNames.BaggagePrefix}tenant_id");
-        response.Headers[$"{GridHeaderNames.BaggagePrefix}tenant_id"].ToString().Should().Be("tenant-123");
+        response.Headers[$"{GridHeaderNames.BaggagePrefix}tenant_id"].ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         response.Headers.Should().ContainKey($"{GridHeaderNames.BaggagePrefix}user_id");
         response.Headers[$"{GridHeaderNames.BaggagePrefix}user_id"].ToString().Should().Be("user-456");
     }

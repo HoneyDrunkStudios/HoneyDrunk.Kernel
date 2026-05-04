@@ -78,7 +78,7 @@ public class JobContextMapperTests
         var context = GridContextTestHelper.CreateUninitialized(TestNodeId, TestStudioId, TestEnvironment);
         var parameters = new Dictionary<string, string>
         {
-            ["tenant-id"] = "tenant-123",
+            ["tenant-id"] = "01ARZ3NDEKTSV4RRFFQ69G5FAX",
             ["batch-size"] = "100"
         };
 
@@ -86,7 +86,7 @@ public class JobContextMapperTests
         JobContextMapper.InitializeForJob(context, "job-789", "BatchProcess", parameters);
 
         // Assert
-        context.Baggage.Should().ContainKey("job-param-tenant-id").WhoseValue.Should().Be("tenant-123");
+        context.Baggage.Should().ContainKey("job-param-tenant-id").WhoseValue.Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         context.Baggage.Should().ContainKey("job-param-batch-size").WhoseValue.Should().Be("100");
     }
 
@@ -412,14 +412,14 @@ public class JobContextMapperTests
         var metadata = new Dictionary<string, string>
         {
             [GridHeaderNames.CorrelationId] = "corr-123",
-            [GridHeaderNames.TenantId] = "tenant-789"
+            [GridHeaderNames.TenantId] = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
         };
 
         // Act
         JobContextMapper.InitializeFromMetadata(context, metadata);
 
         // Assert
-        context.TenantId.Should().Be("tenant-789");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
     }
 
     [Fact]
@@ -487,7 +487,7 @@ public class JobContextMapperTests
         {
             [GridHeaderNames.CorrelationId] = "full-corr-id",
             [GridHeaderNames.CausationId] = "parent-op-id",
-            [GridHeaderNames.TenantId] = "acme-corp",
+            [GridHeaderNames.TenantId] = "01ARZ3NDEKTSV4RRFFQ69G5FB2",
             [GridHeaderNames.ProjectId] = "project-x",
             [$"{GridHeaderNames.BaggagePrefix}custom-key"] = "custom-value"
         };
@@ -499,7 +499,7 @@ public class JobContextMapperTests
         context.IsInitialized.Should().BeTrue();
         context.CorrelationId.Should().Be("full-corr-id");
         context.CausationId.Should().Be("parent-op-id");
-        context.TenantId.Should().Be("acme-corp");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FB2");
         context.ProjectId.Should().Be("project-x");
         context.Baggage.Should().ContainKey("custom-key").WhoseValue.Should().Be("custom-value");
     }
@@ -544,7 +544,7 @@ public class JobContextMapperTests
         context.IsInitialized.Should().BeTrue();
         context.CorrelationId.Should().NotBeNullOrWhiteSpace();
         context.CausationId.Should().BeNull();
-        context.TenantId.Should().BeNull();
+        context.TenantId.IsInternal.Should().BeTrue();
         context.ProjectId.Should().BeNull();
     }
 

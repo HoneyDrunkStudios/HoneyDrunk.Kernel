@@ -4,6 +4,7 @@ using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Errors;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
 using HoneyDrunk.Kernel.Abstractions.Lifecycle;
+using HoneyDrunk.Kernel.Abstractions.Tenancy;
 using HoneyDrunk.Kernel.Abstractions.Transport;
 using HoneyDrunk.Kernel.AgentsInterop;
 using HoneyDrunk.Kernel.Context;
@@ -11,8 +12,10 @@ using HoneyDrunk.Kernel.DependencyInjection;
 using HoneyDrunk.Kernel.Errors;
 using HoneyDrunk.Kernel.Lifecycle;
 using HoneyDrunk.Kernel.Telemetry;
+using HoneyDrunk.Kernel.Tenancy;
 using HoneyDrunk.Kernel.Transport;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
@@ -125,6 +128,10 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
 
         // Error handling.
         services.AddSingleton<IErrorClassifier, DefaultErrorClassifier>();
+
+        // Tenancy primitives (replaceable by consumer Nodes).
+        services.TryAddSingleton<ITenantRateLimitPolicy, NoopTenantRateLimitPolicy>();
+        services.TryAddSingleton<IBillingEventEmitter, NoopBillingEventEmitter>();
 
         // Service validation.
         services.AddSingleton<IServiceProviderValidation, ServiceProviderValidation>();

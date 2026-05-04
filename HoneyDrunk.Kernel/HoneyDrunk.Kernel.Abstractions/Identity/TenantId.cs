@@ -9,6 +9,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// </remarks>
 public readonly record struct TenantId
 {
+    private const string InternalValue = "00000000000000000000000000";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantId"/> struct from a Ulid.
     /// </summary>
@@ -36,9 +38,19 @@ public readonly record struct TenantId
     }
 
     /// <summary>
+    /// Gets the well-known tenant sentinel used for non-multi-tenant Grid operations.
+    /// </summary>
+    public static TenantId Internal { get; } = new(Ulid.Parse(InternalValue, System.Globalization.CultureInfo.InvariantCulture));
+
+    /// <summary>
     /// Gets the Ulid value.
     /// </summary>
     public Ulid Value { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether this tenant is the Grid-internal sentinel.
+    /// </summary>
+    public bool IsInternal => this == Internal;
 
     /// <summary>
     /// Implicitly converts a TenantId to a string.

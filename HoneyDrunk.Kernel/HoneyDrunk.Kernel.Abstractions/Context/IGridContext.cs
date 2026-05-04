@@ -1,3 +1,5 @@
+using HoneyDrunk.Kernel.Abstractions.Identity;
+
 namespace HoneyDrunk.Kernel.Abstractions.Context;
 
 /// <summary>
@@ -76,11 +78,11 @@ public interface IGridContext
 
     /// <summary>
     /// Gets the tenant identifier for multi-tenant isolation.
-    /// This is an identity attribute ONLY - Kernel does not interpret, authorize, or enforce it.
+    /// This is an identity attribute ONLY - Kernel does not authorize, rate-limit, or bill from it.
     /// Used for propagation across nodes, logs, telemetry, and tracing.
-    /// Null if the operation is not tenant-scoped.
+    /// Defaults to <see cref="TenantId.Internal"/> when the operation is not tenant-scoped.
     /// </summary>
-    string? TenantId { get; }
+    TenantId TenantId { get; }
 
     /// <summary>
     /// Gets the project identifier for project-level organization within a tenant.

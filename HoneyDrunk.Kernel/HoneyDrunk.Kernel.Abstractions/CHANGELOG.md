@@ -5,6 +5,24 @@ All notable changes to HoneyDrunk.Kernel.Abstractions will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-04
+
+### ⚠️ Breaking Changes
+
+- **IGridContext.TenantId**: Promoted from `string?` to non-nullable `TenantId`.
+- **IOperationContext.TenantId**: Promoted from `string?` to non-nullable `TenantId`.
+- **Tenant propagation**: Malformed tenant IDs are now rejected at Grid-entry parsing instead of flowing as strings.
+
+### Added
+
+- **TenantId.Internal**: Stable Grid-internal sentinel (`00000000000000000000000000`) for non-multi-tenant operations.
+- **TenantId.IsInternal**: Predicate for downstream short-circuit logic without string comparisons.
+- **Tenancy contracts**: Added `ITenantRateLimitPolicy`, `TenantRateLimitDecision`, `TenantRateLimitOutcome`, `IBillingEventEmitter`, and `BillingEvent` under `HoneyDrunk.Kernel.Abstractions.Tenancy`.
+
+### Changed
+
+- **Tenant defaulting**: Missing tenant values now default to `TenantId.Internal` at Grid entry so consumers never handle null tenants.
+
 ## [0.4.0] - 2026-01-19
 
 ### ⚠️ Breaking Changes

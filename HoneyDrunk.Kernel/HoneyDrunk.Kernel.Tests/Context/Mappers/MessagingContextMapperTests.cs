@@ -114,14 +114,14 @@ public class MessagingContextMapperTests
         // Arrange
         var metadata = new Dictionary<string, string>
         {
-            ["TenantId"] = "test-tenant-789"
+            ["TenantId"] = "01ARZ3NDEKTSV4RRFFQ69G5FB0"
         };
 
         // Act
         var values = MessagingContextMapper.ExtractFromMessage(metadata);
 
         // Assert
-        values.TenantId.Should().Be("test-tenant-789");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FB0");
     }
 
     [Theory]
@@ -133,14 +133,14 @@ public class MessagingContextMapperTests
         // Arrange
         var metadata = new Dictionary<string, string>
         {
-            [key] = "test-tenant"
+            [key] = "01ARZ3NDEKTSV4RRFFQ69G5FB1"
         };
 
         // Act
         var values = MessagingContextMapper.ExtractFromMessage(metadata);
 
         // Assert
-        values.TenantId.Should().Be("test-tenant");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FB1");
     }
 
     [Fact]
@@ -259,7 +259,7 @@ public class MessagingContextMapperTests
         {
             ["CorrelationId"] = "corr-123",
             ["CausationId"] = "cause-456",
-            ["TenantId"] = "tenant-789",
+            ["TenantId"] = "01ARZ3NDEKTSV4RRFFQ69G5FAV",
             ["ProjectId"] = "project-101",
             ["baggage-key1"] = "value1",
             ["baggage-key2"] = "value2"
@@ -271,7 +271,7 @@ public class MessagingContextMapperTests
         // Assert
         values.CorrelationId.Should().Be("corr-123");
         values.CausationId.Should().Be("cause-456");
-        values.TenantId.Should().Be("tenant-789");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         values.ProjectId.Should().Be("project-101");
         values.Baggage.Should().HaveCount(2);
     }
@@ -339,7 +339,7 @@ public class MessagingContextMapperTests
         context.Environment.Should().Be("test-env");
         context.CorrelationId.Should().NotBeNullOrWhiteSpace();
         context.CausationId.Should().BeNull();
-        context.TenantId.Should().BeNull();
+        context.TenantId.IsInternal.Should().BeTrue();
         context.ProjectId.Should().BeNull();
         context.Baggage.Should().BeEmpty();
     }
@@ -403,7 +403,7 @@ public class MessagingContextMapperTests
         {
             ["CorrelationId"] = "corr-123",
             ["CausationId"] = "cause-456",
-            ["TenantId"] = "tenant-789",
+            ["TenantId"] = "01ARZ3NDEKTSV4RRFFQ69G5FAV",
             ["ProjectId"] = "project-101",
             ["baggage-key1"] = "value1",
             ["baggage-key2"] = "value2"
@@ -417,7 +417,7 @@ public class MessagingContextMapperTests
         context.IsInitialized.Should().BeTrue();
         context.CorrelationId.Should().Be("corr-123");
         context.CausationId.Should().Be("cause-456");
-        context.TenantId.Should().Be("tenant-789");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         context.ProjectId.Should().Be("project-101");
         context.NodeId.Should().Be("node");
         context.StudioId.Should().Be("studio");
@@ -476,14 +476,14 @@ public class MessagingContextMapperTests
         var context = GridContextTestHelper.CreateUninitialized();
         var metadata = new Dictionary<string, string>
         {
-            [key] = "test-tenant"
+            [key] = "01ARZ3NDEKTSV4RRFFQ69G5FB1"
         };
 
         // Act
         MessagingContextMapper.InitializeFromMessage(context, metadata, CancellationToken.None);
 
         // Assert
-        context.TenantId.Should().Be("test-tenant");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FB1");
     }
 
     [Theory]
@@ -574,7 +574,7 @@ public class MessagingContextMapperTests
         {
             ["CorrelationId"] = "corr",
             ["CausationId"] = "cause",
-            ["TenantId"] = "tenant",
+            ["TenantId"] = "01ARZ3NDEKTSV4RRFFQ69G5FB3",
             ["ProjectId"] = "project",
             ["baggage-key"] = "value"
         });
@@ -582,7 +582,7 @@ public class MessagingContextMapperTests
         // Assert
         values.CorrelationId.Should().Be("corr");
         values.CausationId.Should().Be("cause");
-        values.TenantId.Should().Be("tenant");
+        values.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FB3");
         values.ProjectId.Should().Be("project");
         values.Baggage.Should().ContainKey("key");
     }

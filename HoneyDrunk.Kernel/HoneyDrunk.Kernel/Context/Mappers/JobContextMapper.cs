@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 
 namespace HoneyDrunk.Kernel.Context.Mappers;
 
@@ -130,7 +131,9 @@ public sealed class JobContextMapper
 
         var correlationId = metadata.TryGetValue(GridHeaderNames.CorrelationId, out var corr) ? corr : Ulid.NewUlid().ToString();
         var causationId = metadata.TryGetValue(GridHeaderNames.CausationId, out var cause) ? cause : null;
-        var tenantId = metadata.TryGetValue(GridHeaderNames.TenantId, out var tenant) ? tenant : null;
+        var tenantId = metadata.TryGetValue(GridHeaderNames.TenantId, out var tenant)
+            ? ParseTenantId(tenant)
+            : (TenantId?)null;
         var projectId = metadata.TryGetValue(GridHeaderNames.ProjectId, out var project) ? project : null;
 
         // Extract baggage from prefixed keys
@@ -148,5 +151,15 @@ public sealed class JobContextMapper
             projectId: projectId,
             baggage: baggage,
             cancellation: cancellationToken);
+    }
+
+    private static TenantId ParseTenantId(string value)
+    {
+        if (TenantId.TryParse(value, out var tenantId))
+        {
+            return tenantId;
+        }
+
+        throw new FormatException($"Metadata {GridHeaderNames.TenantId} must be a valid ULID.");
     }
 }

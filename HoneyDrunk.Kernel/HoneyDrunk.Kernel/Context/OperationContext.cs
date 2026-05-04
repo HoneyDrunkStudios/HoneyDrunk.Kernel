@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using Microsoft.Extensions.Logging;
 
 namespace HoneyDrunk.Kernel.Context;
@@ -64,7 +65,7 @@ public sealed class OperationContext : IOperationContext
     public string? CausationId => GridContext.CausationId;
 
     /// <inheritdoc />
-    public string? TenantId => GridContext.TenantId;
+    public TenantId TenantId => GridContext.TenantId;
 
     /// <inheritdoc />
     public string? ProjectId => GridContext.ProjectId;

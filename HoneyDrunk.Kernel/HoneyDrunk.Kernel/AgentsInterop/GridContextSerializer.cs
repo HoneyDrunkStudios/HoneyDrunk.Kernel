@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
@@ -35,7 +36,7 @@ public sealed class GridContextSerializer
             nodeId = context.NodeId,
             studioId = context.StudioId,
             environment = context.Environment,
-            tenantId = context.TenantId,
+            tenantId = context.TenantId.ToString(),
             projectId = context.ProjectId,
             createdAtUtc = context.CreatedAtUtc,
             baggage = includeFullBaggage ? context.Baggage : FilterSafeBaggage(context.Baggage),
@@ -85,10 +86,14 @@ public sealed class GridContextSerializer
                 causationId = causationElement.GetString();
             }
 
-            string? tenantId = null;
+            var tenantId = TenantId.Internal;
             if (root.TryGetProperty("tenantId", out var tenantElement))
             {
-                tenantId = tenantElement.GetString();
+                var tenantValue = tenantElement.GetString();
+                if (!string.IsNullOrWhiteSpace(tenantValue) && !TenantId.TryParse(tenantValue, out tenantId))
+                {
+                    return null;
+                }
             }
 
             string? projectId = null;

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using HoneyDrunk.Kernel.Abstractions.Identity;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Tests.TestHelpers;
 
@@ -110,7 +111,7 @@ public class GridContextTests
         context.Initialize(
             correlationId: "corr-123",
             causationId: "cause-456",
-            tenantId: "tenant-789",
+            tenantId: new TenantId("01ARZ3NDEKTSV4RRFFQ69G5FAV"),
             projectId: "proj-abc",
             baggage: baggage,
             cancellation: cts.Token);
@@ -118,7 +119,7 @@ public class GridContextTests
         // Assert
         context.CorrelationId.Should().Be("corr-123");
         context.CausationId.Should().Be("cause-456");
-        context.TenantId.Should().Be("tenant-789");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         context.ProjectId.Should().Be("proj-abc");
         context.Baggage.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
         context.Cancellation.Should().Be(cts.Token);
@@ -509,10 +510,10 @@ public class GridContextTests
         // Act
         context.Initialize(
             correlationId: "corr-123",
-            tenantId: "tenant-456");
+            tenantId: new TenantId("01ARZ3NDEKTSV4RRFFQ69G5FAW"));
 
         // Assert
-        context.TenantId.Should().Be("tenant-456");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAW");
     }
 
     [Fact]
@@ -539,11 +540,11 @@ public class GridContextTests
         // Act
         context.Initialize(
             correlationId: "corr-123",
-            tenantId: "tenant-456",
+            tenantId: new TenantId("01ARZ3NDEKTSV4RRFFQ69G5FAW"),
             projectId: "project-789");
 
         // Assert
-        context.TenantId.Should().Be("tenant-456");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAW");
         context.ProjectId.Should().Be("project-789");
     }
 
@@ -556,14 +557,14 @@ public class GridContextTests
             nodeId: "node",
             studioId: "studio",
             environment: "env",
-            tenantId: "tenant-123",
+            tenantId: "01ARZ3NDEKTSV4RRFFQ69G5FAX",
             projectId: "project-456");
 
         // Act
         context.AddBaggage("key", "value");
 
         // Assert
-        context.TenantId.Should().Be("tenant-123");
+        context.TenantId.ToString().Should().Be("01ARZ3NDEKTSV4RRFFQ69G5FAX");
         context.ProjectId.Should().Be("project-456");
     }
 

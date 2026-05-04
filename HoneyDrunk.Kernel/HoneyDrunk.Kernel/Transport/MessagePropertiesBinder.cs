@@ -42,6 +42,11 @@ public sealed class MessagePropertiesBinder : ITransportEnvelopeBinder
         properties[GridHeaderNames.StudioId] = context.StudioId;
         properties[GridHeaderNames.Environment] = context.Environment;
 
+        if (!context.TenantId.IsInternal)
+        {
+            properties[GridHeaderNames.TenantId] = context.TenantId.ToString();
+        }
+
         // Bind baggage as prefixed properties
         foreach (var (key, value) in context.Baggage)
         {
