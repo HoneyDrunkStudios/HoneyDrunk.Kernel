@@ -5,6 +5,16 @@ All notable changes to HoneyDrunk.Kernel.Abstractions will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-05-17
+
+### ⚠️ Breaking Changes
+
+- **WellKnownNodes canonical IDs**: Existing well-known Node IDs now use canonical `honeydrunk-*` values instead of short aliases. For example, `WellKnownNodes.Core.Kernel` is now `honeydrunk-kernel` and `WellKnownNodes.Ops.Pulse` is now `honeydrunk-pulse`.
+
+### Added
+
+- **Missing Grid Nodes**: Added well-known IDs for Vault.Rotation, Audit, Communications, Notify, Actions, Architecture, Studios, Lore, and the current AI-sector Nodes.
+
 ## [0.5.0] - 2026-05-04
 
 ### ⚠️ Breaking Changes
