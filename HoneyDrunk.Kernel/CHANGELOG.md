@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-05-17
+
+### ⚠️ BREAKING CHANGES
+
+- `WellKnownNodes` now exposes canonical `honeydrunk-*` Node IDs instead of short local aliases such as `kernel`, `transport`, `vault`, `auth`, `web-rest`, `data`, and `pulse`.
+- `WellKnownNodes.Ops.Pulse` now resolves to `honeydrunk-pulse`, matching deploy-time `HONEYDRUNK_NODE_ID` and App Configuration label usage.
+
+### Added
+
+- Added missing well-known Node IDs for Vault.Rotation, Audit, Communications, Notify, Actions, Architecture, Studios, Lore, and the current AI-sector Nodes.
+- Added tests that pin every well-known Node ID to its canonical Grid identity and verify uniqueness/validity.
+
+### Changed
+
+- Replaced deprecated `xunit` v2 package usage in the test project with `xunit.v3` and refreshed test infrastructure packages.
+
+### Package Versions
+
+- `HoneyDrunk.Kernel.Abstractions` → `0.6.0`
+- `HoneyDrunk.Kernel` → `0.6.0`
+
+---
+
 ## [0.5.0] - 2026-05-04
 
 ### ⚠️ BREAKING CHANGES

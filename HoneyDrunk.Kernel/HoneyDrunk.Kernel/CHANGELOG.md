@@ -5,6 +5,16 @@ All notable changes to HoneyDrunk.Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-05-17
+
+### ⚠️ Breaking Changes
+
+- **WellKnownNodes canonical IDs**: Runtime consumers using `WellKnownNodes` now receive canonical `honeydrunk-*` Node IDs instead of short aliases.
+
+### Changed
+
+- **Test infrastructure**: Replaced deprecated xUnit v2 package usage with `xunit.v3` and refreshed test infrastructure packages.
+
 ## [0.5.0] - 2026-05-04
 
 ### ⚠️ Breaking Changes
