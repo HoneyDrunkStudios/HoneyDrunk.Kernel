@@ -49,11 +49,11 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         var opFactory = httpContext.RequestServices.GetRequiredService<IOperationContextFactory>();
 
         // Extract values from headers and initialize the scoped context
-        var correlationId = ExtractCorrelationId(httpContext);
-        var causationId = ExtractHeader(httpContext, GridHeaderNames.CausationId);
-        var tenantId = ExtractHeader(httpContext, GridHeaderNames.TenantId);
-        var projectId = ExtractHeader(httpContext, GridHeaderNames.ProjectId);
-        var baggage = ExtractBaggage(httpContext);
+        var correlationId = HttpContextExtraction.ExtractCorrelationId(httpContext);
+        var causationId = HttpContextExtraction.ExtractHeader(httpContext, GridHeaderNames.CausationId);
+        var tenantId = HttpContextExtraction.ExtractHeader(httpContext, GridHeaderNames.TenantId);
+        var projectId = HttpContextExtraction.ExtractHeader(httpContext, GridHeaderNames.ProjectId);
+        var baggage = HttpContextExtraction.ExtractBaggage(httpContext);
 
         // Apply defensive truncation
         correlationId = Truncate(correlationId);
@@ -144,94 +144,6 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
         }
 
         return TenantId.TryParse(value, out tenantId);
-    }
-
-    private static string ExtractCorrelationId(HttpContext httpContext)
-    {
-        // Try X-Correlation-Id header first
-        var correlationId = ExtractHeader(httpContext, GridHeaderNames.CorrelationId);
-        if (!string.IsNullOrWhiteSpace(correlationId))
-        {
-            return correlationId;
-        }
-
-        // Fall back to W3C traceparent
-        var traceParent = ExtractHeader(httpContext, GridHeaderNames.TraceParent);
-        if (!string.IsNullOrWhiteSpace(traceParent))
-        {
-            var parts = traceParent.Split('-');
-            if (parts.Length >= 2)
-            {
-                return parts[1];
-            }
-        }
-
-        // Generate new correlation ID
-        return Ulid.NewUlid().ToString();
-    }
-
-    private static string? ExtractHeader(HttpContext httpContext, string headerName)
-    {
-        if (httpContext.Request.Headers.TryGetValue(headerName, out var values))
-        {
-            return values.FirstOrDefault();
-        }
-
-        return null;
-    }
-
-    private static Dictionary<string, string> ExtractBaggage(HttpContext httpContext)
-    {
-        var baggage = new Dictionary<string, string>();
-
-        // Extract from W3C baggage header
-        if (httpContext.Request.Headers.TryGetValue(GridHeaderNames.Baggage, out var baggageHeader))
-        {
-            var baggageString = baggageHeader.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(baggageString))
-            {
-                var items = baggageString
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Select(ParseBaggageItem)
-                    .Where(static parsed => parsed.HasValue)
-                    .Select(static parsed => parsed.GetValueOrDefault());
-
-                foreach (var (key, value) in items)
-                {
-                    baggage[key] = value;
-                }
-            }
-        }
-
-        // Extract from X-Baggage-* headers
-        foreach (var header in httpContext.Request.Headers.Where(static header => header.Key.StartsWith(GridHeaderNames.BaggagePrefix, StringComparison.OrdinalIgnoreCase)))
-        {
-            var key = header.Key[GridHeaderNames.BaggagePrefix.Length..];
-            var value = header.Value.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                baggage[key] = value;
-            }
-        }
-
-        return baggage;
-    }
-
-    private static (string key, string value)? ParseBaggageItem(string item)
-    {
-        var parts = item.Split(';', StringSplitOptions.TrimEntries);
-        if (parts.Length == 0)
-        {
-            return null;
-        }
-
-        var keyValue = parts[0].Split('=', 2, StringSplitOptions.TrimEntries);
-        if (keyValue.Length != 2 || string.IsNullOrWhiteSpace(keyValue[0]) || string.IsNullOrWhiteSpace(keyValue[1]))
-        {
-            return null;
-        }
-
-        return (keyValue[0].Trim(), Uri.UnescapeDataString(keyValue[1].Trim()));
     }
 
     private static string Truncate(string value) =>

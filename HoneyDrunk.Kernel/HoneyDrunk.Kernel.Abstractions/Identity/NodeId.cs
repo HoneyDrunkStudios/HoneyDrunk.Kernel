@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace HoneyDrunk.Kernel.Abstractions.Identity;
 
 /// <summary>
@@ -11,9 +9,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// No consecutive hyphens, and cannot start or end with a hyphen.
 /// Examples: "kernel", "transport", "payment-service", "api-v2".
 /// </remarks>
-public readonly partial record struct NodeId
+public readonly record struct NodeId
 {
-    private static readonly Regex ValidationPattern = ValidationRegex();
     private const int MinLength = 3;
     private const int MaxLength = 64;
 
@@ -51,29 +48,8 @@ public readonly partial record struct NodeId
     /// <param name="value">The value to validate.</param>
     /// <param name="errorMessage">The error message if validation fails.</param>
     /// <returns>True if valid; otherwise false.</returns>
-    public static bool IsValid(string value, out string? errorMessage)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errorMessage = "Node ID cannot be null or whitespace.";
-            return false;
-        }
-
-        if (value.Length < MinLength || value.Length > MaxLength)
-        {
-            errorMessage = $"Node ID must be between {MinLength} and {MaxLength} characters.";
-            return false;
-        }
-
-        if (!ValidationPattern.IsMatch(value))
-        {
-            errorMessage = "Node ID must be kebab-case: lowercase letters, digits, and hyphens only. Cannot have consecutive hyphens or start/end with hyphens.";
-            return false;
-        }
-
-        errorMessage = null;
-        return true;
-    }
+    public static bool IsValid(string value, out string? errorMessage) =>
+        KebabCaseIdentity.IsValid(value, "Node ID", MinLength, MaxLength, out errorMessage);
 
     /// <summary>
     /// Attempts to parse a string into a NodeId.
@@ -95,7 +71,4 @@ public readonly partial record struct NodeId
 
     /// <inheritdoc />
     public override string ToString() => Value;
-
-    [GeneratedRegex(@"^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled)]
-    private static partial Regex ValidationRegex();
 }

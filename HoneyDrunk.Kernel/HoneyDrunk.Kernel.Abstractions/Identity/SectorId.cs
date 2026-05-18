@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace HoneyDrunk.Kernel.Abstractions.Identity;
 
 /// <summary>
@@ -11,9 +9,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// separated by single hyphens) with a length between 2 and 32 characters.
 /// Examples: <c>core</c>, <c>ai</c>, <c>ops</c>, <c>creator</c>, <c>market</c>.
 /// </remarks>
-public readonly partial record struct SectorId
+public readonly record struct SectorId
 {
-    private static readonly Regex ValidationPattern = ValidationRegex();
     private const int MinLength = 2;
     private const int MaxLength = 32;
 
@@ -51,29 +48,8 @@ public readonly partial record struct SectorId
     /// <param name="value">The candidate value.</param>
     /// <param name="errorMessage">Populated with a descriptive error when validation fails.</param>
     /// <returns><c>true</c> if valid; otherwise <c>false</c>.</returns>
-    public static bool IsValid(string? value, out string? errorMessage)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errorMessage = "Sector ID cannot be null or whitespace.";
-            return false;
-        }
-
-        if (value.Length < MinLength || value.Length > MaxLength)
-        {
-            errorMessage = $"Sector ID must be between {MinLength} and {MaxLength} characters.";
-            return false;
-        }
-
-        if (!ValidationPattern.IsMatch(value))
-        {
-            errorMessage = "Sector ID must be kebab-case: lowercase letters, digits, and single hyphens only.";
-            return false;
-        }
-
-        errorMessage = null;
-        return true;
-    }
+    public static bool IsValid(string? value, out string? errorMessage) =>
+        KebabCaseIdentity.IsValid(value, "Sector ID", MinLength, MaxLength, out errorMessage);
 
     /// <summary>
     /// Attempts to parse a string into a <see cref="SectorId"/>.
@@ -95,9 +71,6 @@ public readonly partial record struct SectorId
 
     /// <inheritdoc />
     public override string ToString() => Value;
-
-    [GeneratedRegex(@"^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled)]
-    private static partial Regex ValidationRegex();
 
     /// <summary>
     /// Well-known sector identifiers for the HoneyDrunk Grid.

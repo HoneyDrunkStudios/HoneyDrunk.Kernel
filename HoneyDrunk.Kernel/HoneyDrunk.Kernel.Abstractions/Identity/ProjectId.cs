@@ -25,14 +25,7 @@ public readonly record struct ProjectId
     /// <exception cref="ArgumentException">Thrown if the string is not a valid Ulid.</exception>
     public ProjectId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
-
-        if (!Ulid.TryParse(value, out var ulid))
-        {
-            throw new ArgumentException("Value is not a valid ULID.", nameof(value));
-        }
-
-        Value = ulid;
+        Value = UlidIdentity.Parse(value, nameof(value));
     }
 
     /// <summary>
@@ -79,7 +72,7 @@ public readonly record struct ProjectId
     /// <returns>True if parsing succeeded; otherwise false.</returns>
     public static bool TryParse(string value, out ProjectId projectId)
     {
-        if (Ulid.TryParse(value, out var ulid))
+        if (UlidIdentity.TryParse(value, out var ulid))
         {
             projectId = new ProjectId(ulid);
             return true;

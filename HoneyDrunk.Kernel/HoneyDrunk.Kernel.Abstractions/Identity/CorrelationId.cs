@@ -25,14 +25,7 @@ public readonly record struct CorrelationId
     /// <exception cref="ArgumentException">Thrown if the string is not a valid Ulid.</exception>
     public CorrelationId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
-
-        if (!Ulid.TryParse(value, out var ulid))
-        {
-            throw new ArgumentException("Value is not a valid ULID.", nameof(value));
-        }
-
-        Value = ulid;
+        Value = UlidIdentity.Parse(value, nameof(value));
     }
 
     /// <summary>
@@ -79,7 +72,7 @@ public readonly record struct CorrelationId
     /// <returns>True if parsing succeeded; otherwise false.</returns>
     public static bool TryParse(string value, out CorrelationId correlationId)
     {
-        if (Ulid.TryParse(value, out var ulid))
+        if (UlidIdentity.TryParse(value, out var ulid))
         {
             correlationId = new CorrelationId(ulid);
             return true;

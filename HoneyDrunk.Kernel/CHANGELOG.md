@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] - 2026-05-18
+
+### Added
+
+- Added `GridContextSnapshot` in Abstractions so downstream libraries can create initialized context snapshots without referencing the Kernel runtime package.
+
+### Changed
+
+- Consolidated duplicated HTTP header/correlation/baggage extraction logic used by `HttpContextMapper` and `GridContextMiddleware`.
+- Consolidated repeated ULID and kebab-case identity parsing/validation helper logic across Kernel identity types.
+
+### Package Versions
+
+- `HoneyDrunk.Kernel.Abstractions` → `0.7.0`
+- `HoneyDrunk.Kernel` → `0.7.0`
+
+---
+
 ## [0.6.0] - 2026-05-17
 
 ### ⚠️ BREAKING CHANGES

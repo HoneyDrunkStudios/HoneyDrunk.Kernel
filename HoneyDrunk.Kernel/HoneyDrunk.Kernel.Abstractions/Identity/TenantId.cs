@@ -27,14 +27,7 @@ public readonly record struct TenantId
     /// <exception cref="ArgumentException">Thrown if the string is not a valid Ulid.</exception>
     public TenantId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
-
-        if (!Ulid.TryParse(value, out var ulid))
-        {
-            throw new ArgumentException("Value is not a valid ULID.", nameof(value));
-        }
-
-        Value = ulid;
+        Value = UlidIdentity.Parse(value, nameof(value));
     }
 
     /// <summary>
@@ -91,7 +84,7 @@ public readonly record struct TenantId
     /// <returns>True if parsing succeeded; otherwise false.</returns>
     public static bool TryParse(string value, out TenantId tenantId)
     {
-        if (Ulid.TryParse(value, out var ulid))
+        if (UlidIdentity.TryParse(value, out var ulid))
         {
             tenantId = new TenantId(ulid);
             return true;
