@@ -26,14 +26,7 @@ public readonly record struct CausationId
     /// <exception cref="ArgumentException">Thrown when the value is not a valid ULID.</exception>
     public CausationId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
-
-        if (!Ulid.TryParse(value, out var ulid))
-        {
-            throw new ArgumentException("Value is not a valid ULID.", nameof(value));
-        }
-
-        Value = ulid;
+        Value = UlidIdentity.Parse(value, nameof(value));
     }
 
     /// <summary>
@@ -63,7 +56,7 @@ public readonly record struct CausationId
     /// <returns>True if parsing succeeds; otherwise false.</returns>
     public static bool TryParse(string? value, out CausationId causationId)
     {
-        if (!string.IsNullOrWhiteSpace(value) && Ulid.TryParse(value, out var ulid))
+        if (UlidIdentity.TryParse(value, out var ulid))
         {
             causationId = new CausationId(ulid);
             return true;

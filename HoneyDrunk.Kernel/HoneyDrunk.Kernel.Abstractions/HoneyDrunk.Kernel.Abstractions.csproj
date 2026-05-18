@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.6.0</Version>
+    <Version>0.7.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Pure semantic contracts for HoneyDrunk.OS Grid. Provides zero-dependency abstractions for Grid context, Node lifecycle, identity primitives, telemetry, transport, error handling, and agent execution. Safe for libraries and SDKs.</Description>
-    <PackageReleaseNotes>v0.6.0: BREAKING CHANGES - WellKnownNodes now uses canonical honeydrunk-prefixed Node IDs and includes all current Grid Nodes. See CHANGELOG.md for migration notes.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.7.0: Adds abstractions-visible GridContextSnapshot and consolidates context/identity parsing helpers. See CHANGELOG.md for details.</PackageReleaseNotes>
     <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting;transport;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

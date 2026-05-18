@@ -26,12 +26,7 @@ public readonly record struct OperationId
     /// <exception cref="ArgumentException">Thrown if the value is not a valid ULID.</exception>
     public OperationId(string value)
     {
-        if (!Ulid.TryParse(value, out var ulid))
-        {
-            throw new ArgumentException("Invalid ULID format", nameof(value));
-        }
-
-        Value = ulid;
+        Value = UlidIdentity.Parse(value, nameof(value));
     }
 
     /// <summary>
@@ -72,7 +67,7 @@ public readonly record struct OperationId
     /// <returns>True if parsing succeeded; otherwise false.</returns>
     public static bool TryParse(string? value, out OperationId operationId)
     {
-        if (Ulid.TryParse(value, out var ulid))
+        if (UlidIdentity.TryParse(value, out var ulid))
         {
             operationId = new OperationId(ulid);
             return true;

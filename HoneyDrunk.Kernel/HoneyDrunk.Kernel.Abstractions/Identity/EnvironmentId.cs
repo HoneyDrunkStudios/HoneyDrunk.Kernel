@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace HoneyDrunk.Kernel.Abstractions.Identity;
 
 /// <summary>
@@ -10,9 +8,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Identity;
 /// and operational behavior. They must be kebab-case (lowercase letters, digits, single hyphens) and
 /// between 3 and 32 characters. Examples: "production", "staging", "dev-alice", "perf-test".
 /// </remarks>
-public readonly partial record struct EnvironmentId
+public readonly record struct EnvironmentId
 {
-    private static readonly Regex ValidationPattern = ValidationRegex();
     private const int MinLength = 3;
     private const int MaxLength = 32;
 
@@ -50,29 +47,8 @@ public readonly partial record struct EnvironmentId
     /// <param name="value">Candidate value.</param>
     /// <param name="errorMessage">Error message when invalid.</param>
     /// <returns>True if valid; otherwise false.</returns>
-    public static bool IsValid(string? value, out string? errorMessage)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errorMessage = "Environment ID cannot be null or whitespace.";
-            return false;
-        }
-
-        if (value.Length < MinLength || value.Length > MaxLength)
-        {
-            errorMessage = $"Environment ID must be between {MinLength} and {MaxLength} characters.";
-            return false;
-        }
-
-        if (!ValidationPattern.IsMatch(value))
-        {
-            errorMessage = "Environment ID must be kebab-case: lowercase letters, digits, and single hyphens only.";
-            return false;
-        }
-
-        errorMessage = null;
-        return true;
-    }
+    public static bool IsValid(string? value, out string? errorMessage) =>
+        KebabCaseIdentity.IsValid(value, "Environment ID", MinLength, MaxLength, out errorMessage);
 
     /// <summary>
     /// Attempts to parse a string into an <see cref="EnvironmentId"/>.
@@ -94,9 +70,6 @@ public readonly partial record struct EnvironmentId
 
     /// <inheritdoc />
     public override string ToString() => Value;
-
-    [GeneratedRegex(@"^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled)]
-    private static partial Regex ValidationRegex();
 
     /// <summary>
     /// Well-known environment identifiers for common deployment environments.
