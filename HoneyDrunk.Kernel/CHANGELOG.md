@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Internal
+
+- Backfilled Kernel identity unit-test coverage, wired the PR workflow for the coverage gate/baseline ratchet, and seeded `.github/coverage-baseline.json`; total line coverage now measures 72.0% under the Grid PR coverage gate filter.
+
+---
+
 ## [0.7.0] - 2026-05-18
 
 ### Added
