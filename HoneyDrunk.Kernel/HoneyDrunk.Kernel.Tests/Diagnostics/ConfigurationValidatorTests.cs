@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Abstractions.Hosting;
 using HoneyDrunk.Kernel.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;

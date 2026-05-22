@@ -152,7 +152,7 @@ dotnet test HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj -c Release --
 
 - Tests live only in `HoneyDrunk.Kernel.Tests` (no test code in runtime libraries).  
 - Use BCL directly for deterministic time/IDs in tests (no more `IClock`/`IIdGenerator` mocks).
-- Prefer **xUnit** + **FluentAssertions**.  
+- Prefer **xUnit** + **AwesomeAssertions**.
 - Keep tests fast, isolated, and repeatable.
 - Test classes should mirror implementation structure (e.g., `GridContextTests`, `NodeLifecycleManagerTests`).
 

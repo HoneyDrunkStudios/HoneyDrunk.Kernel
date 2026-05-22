@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Tests.Diagnostics;

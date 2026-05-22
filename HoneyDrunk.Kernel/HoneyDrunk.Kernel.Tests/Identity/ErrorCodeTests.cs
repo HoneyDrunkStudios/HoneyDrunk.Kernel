@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Abstractions.Identity;
 
 namespace HoneyDrunk.Kernel.Tests.Identity;

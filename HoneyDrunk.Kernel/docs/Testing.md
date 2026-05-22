@@ -26,7 +26,7 @@ Testing guidance and patterns for HoneyDrunk.Kernel, including unit tests, integ
 
 **Location:** `HoneyDrunk.Kernel.Tests/`
 
-**Test Framework:** xUnit + FluentAssertions
+**Test Framework:** xUnit + AwesomeAssertions
 
 **Design Philosophy:** Test patterns match the actual v0.3 Kernel API - no fictional interfaces or behaviors. Examples use real types from `HoneyDrunk.Kernel.Abstractions` and `HoneyDrunk.Kernel`.
 
