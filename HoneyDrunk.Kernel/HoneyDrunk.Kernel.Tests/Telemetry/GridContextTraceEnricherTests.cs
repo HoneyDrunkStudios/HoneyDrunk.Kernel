@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Abstractions.Telemetry;
 using HoneyDrunk.Kernel.Telemetry;
 using HoneyDrunk.Kernel.Tests.TestHelpers;

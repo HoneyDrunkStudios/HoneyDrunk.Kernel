@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Context;
 using HoneyDrunk.Kernel.Tests.TestHelpers;
 

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Abstractions.Configuration;
 using HoneyDrunk.Kernel.Configuration.Secrets;
 

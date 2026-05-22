@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Abstractions.Health;
 
 namespace HoneyDrunk.Kernel.Tests.Health;
