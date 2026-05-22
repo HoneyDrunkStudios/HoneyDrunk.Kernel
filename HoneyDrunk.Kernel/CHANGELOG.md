@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Internal
 
 - Backfilled Kernel identity unit-test coverage, wired the PR workflow for the coverage gate/baseline ratchet, and seeded `.github/coverage-baseline.json`; total line coverage now measures 72.0% under the Grid PR coverage gate filter.
-- Migrated Kernel unit tests from FluentAssertions to AwesomeAssertions per ADR-0047 test-tooling standards.
+- Migrated Kernel unit tests to AwesomeAssertions per ADR-0047 test-tooling standards.
 
 ---
 

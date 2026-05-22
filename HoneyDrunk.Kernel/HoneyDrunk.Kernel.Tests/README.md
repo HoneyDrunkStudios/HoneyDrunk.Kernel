@@ -7,7 +7,7 @@
 
 ## ?? Overview
 
-This project contains unit and integration tests for **HoneyDrunk.Kernel.Abstractions** and **HoneyDrunk.Kernel** runtime implementations. Tests follow xUnit conventions with FluentAssertions for readable assertions.
+This project contains unit and integration tests for **HoneyDrunk.Kernel.Abstractions** and **HoneyDrunk.Kernel** runtime implementations. Tests follow xUnit conventions with AwesomeAssertions for readable assertions.
 
 ## ?? Testing Philosophy
 
@@ -277,10 +277,10 @@ public void TestExample()
 }
 ```
 
-### FluentAssertions Usage
+### AwesomeAssertions Usage
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 
 [Fact]
 public void Context_Should_HaveExpectedProperties()
