@@ -98,7 +98,6 @@ public class OperationContextTests
         // Act
         opContext.Complete();
         var firstCompletedAt = opContext.CompletedAtUtc;
-        Thread.Sleep(10);
         opContext.Complete();
 
         // Assert
@@ -164,7 +163,6 @@ public class OperationContextTests
         opContext.Fail("First error");
         var firstCompletedAt = opContext.CompletedAtUtc;
         var firstError = opContext.ErrorMessage;
-        Thread.Sleep(10);
         opContext.Fail("Second error");
 
         // Assert
