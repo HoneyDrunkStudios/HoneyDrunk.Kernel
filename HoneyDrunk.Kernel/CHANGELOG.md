@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
+- Enabled ADR-0044 OpenClaw/Codex Grid Review Runner request generation for Kernel PRs and added PR metadata placeholders for authorship, packet scope, and out-of-band review declarations.
 - Adopted HoneyDrunk.Standards.Tests 0.2.9 for Kernel tests, refreshed HoneyDrunk.Standards to 0.2.9, and removed Thread.Sleep-based idempotency checks for ADR-0047 testing alignment.
 - Backfilled Kernel identity unit-test coverage, wired the PR workflow for the coverage gate/baseline ratchet, and seeded `.github/coverage-baseline.json`; total line coverage now measures 72.0% under the Grid PR coverage gate filter.
 - Migrated Kernel unit tests to AwesomeAssertions per ADR-0047 test-tooling standards.
