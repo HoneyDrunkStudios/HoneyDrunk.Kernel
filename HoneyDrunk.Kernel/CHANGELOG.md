@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
+- Onboarded Kernel to SonarQube Cloud (ADR-0011 D11). Added `sonar-project.properties` at the inner project subdir and wired a `sonarcloud` job in `pr.yml` that calls `HoneyDrunk.Actions/.github/workflows/job-sonarcloud.yml` after `pr-core`. SonarQube Cloud quality gate runs against PRs; branch-protection requirement added separately after the first successful run.
 - Enabled ADR-0044 OpenClaw/Codex Grid Review Runner request generation for Kernel PRs and added PR metadata placeholders for authorship, packet scope, and out-of-band review declarations.
 - Adopted HoneyDrunk.Standards.Tests 0.2.9 for Kernel tests, refreshed HoneyDrunk.Standards to 0.2.9, and removed Thread.Sleep-based idempotency checks for ADR-0047 testing alignment.
 - Backfilled Kernel identity unit-test coverage, wired the PR workflow for the coverage gate/baseline ratchet, and seeded `.github/coverage-baseline.json`; total line coverage now measures 72.0% under the Grid PR coverage gate filter.
