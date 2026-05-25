@@ -37,7 +37,10 @@ jobs:
 
   sonarcloud:
     name: SonarQube Cloud
-    if: github.event_name == 'pull_request'
+    # Skip on fork PRs — secrets (incl. SONAR_TOKEN) aren't available to
+    # pull_request workflows from forks, so the job would fail or expose
+    # surface. Same-repo PRs only.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: pr-core
     permissions:
       contents: read
