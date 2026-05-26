@@ -25,7 +25,7 @@ public readonly record struct CorrelationId
     /// <exception cref="ArgumentException">Thrown if the string is not a valid Ulid.</exception>
     public CorrelationId(string value)
     {
-        Value = UlidIdentity.Parse(value, nameof(value));
+        Value = UlidIdentity.Parse(value);
     }
 
     /// <summary>

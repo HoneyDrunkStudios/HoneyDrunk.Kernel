@@ -26,7 +26,7 @@ public readonly record struct OperationId
     /// <exception cref="ArgumentException">Thrown if the value is not a valid ULID.</exception>
     public OperationId(string value)
     {
-        Value = UlidIdentity.Parse(value, nameof(value));
+        Value = UlidIdentity.Parse(value);
     }
 
     /// <summary>

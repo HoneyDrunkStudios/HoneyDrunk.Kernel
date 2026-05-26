@@ -20,7 +20,7 @@ public readonly record struct EnvironmentId
     /// <exception cref="ArgumentException">Thrown when the value is invalid.</exception>
     public EnvironmentId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
         if (!IsValid(value, out var error))
         {

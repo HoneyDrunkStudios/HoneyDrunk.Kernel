@@ -18,7 +18,7 @@ public readonly record struct ErrorCode
     /// <exception cref="ArgumentException">Thrown when the value is invalid.</exception>
     public ErrorCode(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
         if (!IsValid(value, out var error))
         {
             throw new ArgumentException(error, nameof(value));

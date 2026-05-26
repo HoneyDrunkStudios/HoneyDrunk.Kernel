@@ -15,7 +15,7 @@ public readonly record struct ConfigKey
     /// <param name="value">The configuration key value.</param>
     public ConfigKey(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
         Value = value;
     }
 
@@ -66,7 +66,7 @@ public readonly record struct ConfigKey
     /// <returns>A new child key.</returns>
     public ConfigKey CreateChild(string segment)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(segment, nameof(segment));
+        ArgumentException.ThrowIfNullOrWhiteSpace(segment);
         return new ConfigKey($"{Value}:{segment}");
     }
 

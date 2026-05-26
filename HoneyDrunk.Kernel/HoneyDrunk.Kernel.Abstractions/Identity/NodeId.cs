@@ -21,7 +21,7 @@ public readonly record struct NodeId
     /// <exception cref="ArgumentException">Thrown if the value is invalid.</exception>
     public NodeId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
         if (!IsValid(value, out var errorMessage))
         {

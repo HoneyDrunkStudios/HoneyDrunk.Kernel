@@ -478,4 +478,158 @@ public class GridContextSerializerTests
         json.Should().Contain("UserId");
         json.Should().Contain("SESSION_ID");
     }
+
+    [Fact]
+    public void Deserialize_NonStringCorrelationId_ReturnsNull()
+    {
+        var json = @"{
+            ""correlationId"": 123,
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_NonStringNodeId_ReturnsNull()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""nodeId"": true,
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_NonStringCausationId_TreatsAsAbsent()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""causationId"": 456,
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.CausationId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_NonStringTenantId_ReturnsNull()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""tenantId"": 789,
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_NonStringProjectId_TreatsAsAbsent()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""projectId"": 42,
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.ProjectId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_NonObjectBaggage_TreatsAsEmpty()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production"",
+            ""baggage"": ""not-an-object""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.Baggage.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Deserialize_BaggageWithNonStringValues_SkipsThoseEntries()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production"",
+            ""baggage"": {
+                ""ok"": ""string-value"",
+                ""bad-number"": 42,
+                ""bad-bool"": true,
+                ""bad-array"": [""x""]
+            }
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.Baggage.Should().HaveCount(1);
+        context.Baggage.Should().ContainKey("ok");
+        context.Baggage["ok"].Should().Be("string-value");
+    }
+
+    [Fact]
+    public void Deserialize_NonUlidTenantId_ReturnsNull()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""tenantId"": ""not-a-valid-ulid"",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_EmptyStringTenantId_DefaultsToInternal()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""tenantId"": """",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().NotBeNull();
+        context!.TenantId.Should().Be(HoneyDrunk.Kernel.Abstractions.Identity.TenantId.Internal);
+    }
 }

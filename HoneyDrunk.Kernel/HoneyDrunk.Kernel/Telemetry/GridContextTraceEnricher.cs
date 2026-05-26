@@ -10,8 +10,8 @@ public sealed class GridContextTraceEnricher : ITraceEnricher
     /// <inheritdoc />
     public void Enrich(ITelemetryContext context, IDictionary<string, object?> tags)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
-        ArgumentNullException.ThrowIfNull(tags, nameof(tags));
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(tags);
 
         var gridContext = context.GridContext;
 

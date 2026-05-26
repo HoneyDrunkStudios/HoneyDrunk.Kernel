@@ -1,5 +1,6 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Identity;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
@@ -11,6 +12,10 @@ namespace HoneyDrunk.Kernel.AgentsInterop;
 /// Agents receive a scoped view of GridContext based on their permissions.
 /// This serializer creates JSON representations that agents can parse and use.
 /// </remarks>
+[SuppressMessage(
+    "Major Code Smell",
+    "S1118:Utility classes should not have public constructors",
+    Justification = "Public sealed class shape preserved for HoneyDrunk.Kernel 0.7.x binary compatibility. Converting to static class is a published-API break that requires a coordinated minor-version bump across all cross-node consumers; deferred to a focused initiative.")]
 public sealed class GridContextSerializer
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -27,7 +32,7 @@ public sealed class GridContextSerializer
     /// <returns>A JSON string representing the GridContext.</returns>
     public static string Serialize(IGridContext context, bool includeFullBaggage = false)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
 
         var data = new
         {
@@ -52,26 +57,22 @@ public sealed class GridContextSerializer
     /// <returns>The deserialized GridContext, or null if deserialization fails.</returns>
     public static IGridContext? Deserialize(string json)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json, nameof(json));
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
         try
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
-            // Safely try to get required properties
-            if (!root.TryGetProperty("correlationId", out var correlationIdElement) ||
-                !root.TryGetProperty("nodeId", out var nodeIdElement) ||
-                !root.TryGetProperty("studioId", out var studioIdElement) ||
-                !root.TryGetProperty("environment", out var environmentElement))
-            {
-                return null;
-            }
-
-            var correlationId = correlationIdElement.GetString();
-            var nodeId = nodeIdElement.GetString();
-            var studioId = studioIdElement.GetString();
-            var environment = environmentElement.GetString();
+            // Required fields. TryGetStringProperty returns null for both
+            // missing properties and non-string JSON shapes (number, bool,
+            // array, object), so the string.IsNullOrEmpty checks below treat
+            // every bad-shape case as "field absent" — matching Deserialize's
+            // documented "returns null on bad input" contract.
+            var correlationId = TryGetStringProperty(root, "correlationId");
+            var nodeId = TryGetStringProperty(root, "nodeId");
+            var studioId = TryGetStringProperty(root, "studioId");
+            var environment = TryGetStringProperty(root, "environment");
 
             if (string.IsNullOrEmpty(correlationId) ||
                 string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(studioId) ||
@@ -80,40 +81,15 @@ public sealed class GridContextSerializer
                 return null;
             }
 
-            string? causationId = null;
-            if (root.TryGetProperty("causationId", out var causationElement))
+            var causationId = TryGetStringProperty(root, "causationId");
+
+            if (!TryGetTenantId(root, out var tenantId))
             {
-                causationId = causationElement.GetString();
+                return null;
             }
 
-            var tenantId = TenantId.Internal;
-            if (root.TryGetProperty("tenantId", out var tenantElement))
-            {
-                var tenantValue = tenantElement.GetString();
-                if (!string.IsNullOrWhiteSpace(tenantValue) && !TenantId.TryParse(tenantValue, out tenantId))
-                {
-                    return null;
-                }
-            }
-
-            string? projectId = null;
-            if (root.TryGetProperty("projectId", out var projectElement))
-            {
-                projectId = projectElement.GetString();
-            }
-
-            var baggage = new Dictionary<string, string>();
-            if (root.TryGetProperty("baggage", out var baggageElement))
-            {
-                foreach (var prop in baggageElement.EnumerateObject())
-                {
-                    var value = prop.Value.GetString();
-                    if (value != null)
-                    {
-                        baggage[prop.Name] = value;
-                    }
-                }
-            }
+            var projectId = TryGetStringProperty(root, "projectId");
+            var baggage = ExtractBaggage(root);
 
             // Create and initialize a new GridContext for deserialization scenarios
             // This is used when receiving context from external sources (e.g., agent results)
@@ -135,6 +111,55 @@ public sealed class GridContextSerializer
         {
             return null;
         }
+    }
+
+    // Returns the property's string value if present AND the JSON shape is a string;
+    // otherwise null. Guards Deserialize's documented "returns null on bad input" contract
+    // against unexpected JSON kinds (e.g., a number where a string was expected) — without
+    // this check, JsonElement.GetString() throws InvalidOperationException which would
+    // escape Deserialize's JsonException-only catch.
+    private static string? TryGetStringProperty(JsonElement root, string propertyName) =>
+        root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String
+            ? element.GetString()
+            : null;
+
+    private static bool TryGetTenantId(JsonElement root, out TenantId tenantId)
+    {
+        tenantId = TenantId.Internal;
+        if (!root.TryGetProperty("tenantId", out var element))
+        {
+            return true;
+        }
+
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var value = element.GetString();
+        return string.IsNullOrWhiteSpace(value) || TenantId.TryParse(value, out tenantId);
+    }
+
+    private static Dictionary<string, string> ExtractBaggage(JsonElement root)
+    {
+        var baggage = new Dictionary<string, string>();
+        if (!root.TryGetProperty("baggage", out var baggageElement) || baggageElement.ValueKind != JsonValueKind.Object)
+        {
+            return baggage;
+        }
+
+        foreach (var prop in baggageElement.EnumerateObject())
+        {
+            if (prop.Value.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            // ValueKind == String guarantees GetString() is non-null.
+            baggage[prop.Name] = prop.Value.GetString()!;
+        }
+
+        return baggage;
     }
 
     /// <summary>

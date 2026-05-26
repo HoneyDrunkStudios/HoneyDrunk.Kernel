@@ -17,7 +17,7 @@ public readonly record struct ConfigPath
     /// <param name="key">The configuration key.</param>
     public ConfigPath(IConfigScope scope, ConfigKey key)
     {
-        ArgumentNullException.ThrowIfNull(scope, nameof(scope));
+        ArgumentNullException.ThrowIfNull(scope);
         Scope = scope;
         Key = key;
     }
@@ -45,8 +45,8 @@ public readonly record struct ConfigPath
     /// <returns>The parsed ConfigPath.</returns>
     public static ConfigPath Parse(string pathString, Func<string, IConfigScope> scopeFactory)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pathString, nameof(pathString));
-        ArgumentNullException.ThrowIfNull(scopeFactory, nameof(scopeFactory));
+        ArgumentException.ThrowIfNullOrWhiteSpace(pathString);
+        ArgumentNullException.ThrowIfNull(scopeFactory);
 
         var parts = pathString.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2)

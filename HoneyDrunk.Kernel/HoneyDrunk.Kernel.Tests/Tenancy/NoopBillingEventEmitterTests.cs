@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using HoneyDrunk.Kernel.Abstractions.Identity;
 using HoneyDrunk.Kernel.Abstractions.Tenancy;
 using HoneyDrunk.Kernel.Tenancy;
@@ -21,6 +22,9 @@ public sealed class NoopBillingEventEmitterTests
             new Dictionary<string, string>());
 
         // Act
-        await emitter.EmitAsync(billingEvent, CancellationToken.None);
+        var act = async () => await emitter.EmitAsync(billingEvent, CancellationToken.None);
+
+        // Assert
+        await act.Should().NotThrowAsync();
     }
 }

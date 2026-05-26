@@ -260,10 +260,16 @@ public class OperationContextTests
         var gridContext = GridContextTestHelper.CreateDefault();
         using var opContext = new OperationContext(gridContext, "TestOperation", Ulid.NewUlid().ToString());
 
-        // Act & Assert - Should not throw
-        opContext.Dispose();
-        opContext.Dispose();
-        opContext.Dispose();
+        // Act
+        var act = () =>
+        {
+            opContext.Dispose();
+            opContext.Dispose();
+            opContext.Dispose();
+        };
+
+        // Assert
+        act.Should().NotThrow();
     }
 
     [Fact]

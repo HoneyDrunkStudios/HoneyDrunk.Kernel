@@ -1,6 +1,7 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Identity;
 using Microsoft.AspNetCore.Http;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HoneyDrunk.Kernel.Context.Mappers;
 
@@ -23,6 +24,10 @@ namespace HoneyDrunk.Kernel.Context.Mappers;
 /// <item>baggage, X-Baggage-* → Baggage</item>
 /// </list>
 /// </remarks>
+[SuppressMessage(
+    "Major Code Smell",
+    "S1118:Utility classes should not have public constructors",
+    Justification = "Public sealed class shape preserved for HoneyDrunk.Kernel 0.7.x binary compatibility. Converting to static class is a published-API break that requires a coordinated minor-version bump across all cross-node consumers; deferred to a focused initiative.")]
 public sealed class HttpContextMapper
 {
     /// <summary>

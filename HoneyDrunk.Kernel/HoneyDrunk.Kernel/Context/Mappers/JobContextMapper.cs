@@ -1,5 +1,6 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Identity;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HoneyDrunk.Kernel.Context.Mappers;
 
@@ -16,10 +17,19 @@ namespace HoneyDrunk.Kernel.Context.Mappers;
 /// and use this mapper to initialize it before any work begins.
 /// </para>
 /// </remarks>
+[SuppressMessage(
+    "Major Code Smell",
+    "S1118:Utility classes should not have public constructors",
+    Justification = "Public sealed class shape + instance constructor preserved for HoneyDrunk.Kernel 0.7.x binary compatibility. The instance shape is part of the published API surface even though current callers all use the static InitializeForJob/InitializeForScheduledJob/InitializeFromMetadata methods. Converting to static class is deferred to a coordinated minor-version bump.")]
 public sealed class JobContextMapper
 {
+    [SuppressMessage("Style", "IDE0052:Remove unread private members", Justification = "Held for API compatibility; future non-static Map overloads will use these.")]
     private readonly string _nodeId;
+
+    [SuppressMessage("Style", "IDE0052:Remove unread private members", Justification = "Held for API compatibility; future non-static Map overloads will use these.")]
     private readonly string _studioId;
+
+    [SuppressMessage("Style", "IDE0052:Remove unread private members", Justification = "Held for API compatibility; future non-static Map overloads will use these.")]
     private readonly string _environment;
 
     /// <summary>
@@ -28,11 +38,15 @@ public sealed class JobContextMapper
     /// <param name="nodeId">The Node identifier.</param>
     /// <param name="studioId">The Studio identifier.</param>
     /// <param name="environment">The environment name.</param>
+    [SuppressMessage(
+        "Critical Code Smell",
+        "S4487:Unread \"private\" fields should be removed",
+        Justification = "Constructor + fields retained for 0.7.x binary compatibility; non-static Map overloads using these fields tracked in a follow-up.")]
     public JobContextMapper(string nodeId, string studioId, string environment)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(nodeId, nameof(nodeId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(studioId, nameof(studioId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(environment, nameof(environment));
+        ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(studioId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(environment);
 
         _nodeId = nodeId;
         _studioId = studioId;
@@ -55,8 +69,8 @@ public sealed class JobContextMapper
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobId, nameof(jobId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobType, nameof(jobType));
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobType);
 
         var baggage = new Dictionary<string, string>
         {
@@ -96,7 +110,7 @@ public sealed class JobContextMapper
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobName, nameof(jobName));
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobName);
 
         var baggage = new Dictionary<string, string>
         {

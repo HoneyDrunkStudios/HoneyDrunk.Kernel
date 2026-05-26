@@ -67,4 +67,4 @@ app.MapGet("/health", () => Results.Ok(new
     Timestamp = DateTimeOffset.UtcNow
 }));
 
-app.Run();
+await app.RunAsync();
