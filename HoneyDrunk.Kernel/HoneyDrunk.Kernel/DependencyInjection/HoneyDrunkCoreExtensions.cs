@@ -21,8 +21,8 @@ public static class HoneyDrunkCoreExtensions
         this IServiceCollection services,
         INodeDescriptor nodeDescriptor)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(nodeDescriptor);
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
+        ArgumentNullException.ThrowIfNull(nodeDescriptor, nameof(nodeDescriptor));
 
         // Validate Node descriptor
         ValidateNodeDescriptor(nodeDescriptor);
@@ -62,7 +62,7 @@ public static class HoneyDrunkCoreExtensions
     /// <param name="services">The service provider to validate.</param>
     public static void ValidateHoneyDrunkServices(this IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
 
         var validator = services.GetService<IServiceProviderValidation>();
         validator?.Validate(services);

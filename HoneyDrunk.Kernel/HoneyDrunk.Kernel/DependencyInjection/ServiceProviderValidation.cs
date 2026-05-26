@@ -19,8 +19,6 @@ namespace HoneyDrunk.Kernel.DependencyInjection;
     Justification = "Instantiated via GetService<IServiceProviderValidation>")]
 internal sealed class ServiceProviderValidation : IServiceProviderValidation
 {
-    private const string AddHoneyDrunkNodeHint = "AddHoneyDrunkNode()";
-
     /// <inheritdoc />
     public void Validate(IServiceProvider services)
     {
@@ -34,19 +32,19 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
 
         // Validate core context services (required)
         // Note: Use scopedServices for scoped registrations, services for singletons
-        ValidateRequired<INodeContext>(services, errors, "INodeContext", AddHoneyDrunkNodeHint);
-        ValidateRequired<IGridContextAccessor>(services, errors, "IGridContextAccessor", AddHoneyDrunkNodeHint);
-        ValidateRequired<IOperationContextAccessor>(services, errors, "IOperationContextAccessor", AddHoneyDrunkNodeHint);
-        ValidateRequiredScoped<IOperationContextFactory>(scopedServices, errors, "IOperationContextFactory", AddHoneyDrunkNodeHint);
+        ValidateRequired<INodeContext>(services, errors, "INodeContext", "AddHoneyDrunkNode()");
+        ValidateRequired<IGridContextAccessor>(services, errors, "IGridContextAccessor", "AddHoneyDrunkNode()");
+        ValidateRequired<IOperationContextAccessor>(services, errors, "IOperationContextAccessor", "AddHoneyDrunkNode()");
+        ValidateRequiredScoped<IOperationContextFactory>(scopedServices, errors, "IOperationContextFactory", "AddHoneyDrunkNode()");
 
         // Validate hosting services (required)
-        ValidateRequired<INodeDescriptor>(services, errors, "INodeDescriptor", AddHoneyDrunkNodeHint);
+        ValidateRequired<INodeDescriptor>(services, errors, "INodeDescriptor", "AddHoneyDrunkNode()");
 
         // Validate error handling (required)
-        ValidateRequired<IErrorClassifier>(services, errors, "IErrorClassifier", AddHoneyDrunkNodeHint);
+        ValidateRequired<IErrorClassifier>(services, errors, "IErrorClassifier", "AddHoneyDrunkNode()");
 
         // Validate lifecycle coordination (required in v3)
-        ValidateRequired<NodeLifecycleManager>(services, errors, "NodeLifecycleManager", AddHoneyDrunkNodeHint);
+        ValidateRequired<NodeLifecycleManager>(services, errors, "NodeLifecycleManager", "AddHoneyDrunkNode()");
         ValidateLifecycleHost(services, errors);
 
         // Validate transport binders (recommended)
@@ -140,7 +138,7 @@ internal sealed class ServiceProviderValidation : IServiceProviderValidation
 
         if (!hasLifecycleHost)
         {
-            errors.Add($"  - NodeLifecycleHost (IHostedService) is missing. Register via: {AddHoneyDrunkNodeHint}");
+            errors.Add("  - NodeLifecycleHost (IHostedService) is missing. Register via: AddHoneyDrunkNode()");
         }
     }
 }

@@ -10,16 +10,6 @@ namespace HoneyDrunk.Kernel.Errors;
 [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Instantiated via DI container registration.")]
 internal sealed class DefaultErrorClassifier : IErrorClassifier
 {
-    private const string DocsBaseUri = "https://docs.honeydrunk.io/errors";
-    private const string ValidationTypeUri = $"{DocsBaseUri}/validation";
-    private const string NotFoundTypeUri = $"{DocsBaseUri}/not-found";
-    private const string SecurityTypeUri = $"{DocsBaseUri}/security";
-    private const string ConcurrencyTypeUri = $"{DocsBaseUri}/concurrency";
-    private const string DependencyFailureTypeUri = $"{DocsBaseUri}/dependency-failure";
-    private const string InternalTypeUri = $"{DocsBaseUri}/internal";
-    private const string ValidationArgumentTypeUri = $"{DocsBaseUri}/validation-argument";
-    private const string DependencyTimeoutTypeUri = $"{DocsBaseUri}/dependency-timeout";
-
     /// <summary>
     /// Classifies an exception into a transport-friendly shape.
     /// </summary>
@@ -36,30 +26,30 @@ internal sealed class DefaultErrorClassifier : IErrorClassifier
         switch (exception)
         {
             case ValidationException validation:
-                return Create(400, validation.Message, validation.ErrorCode?.Value, ValidationTypeUri);
+                return Create(400, validation.Message, validation.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/validation");
             case NotFoundException notFound:
-                return Create(404, notFound.Message, notFound.ErrorCode?.Value, NotFoundTypeUri);
+                return Create(404, notFound.Message, notFound.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/not-found");
             case SecurityException security:
-                return Create(403, security.Message, security.ErrorCode?.Value, SecurityTypeUri);
+                return Create(403, security.Message, security.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/security");
             case ConcurrencyException concurrency:
-                return Create(409, concurrency.Message, concurrency.ErrorCode?.Value, ConcurrencyTypeUri);
+                return Create(409, concurrency.Message, concurrency.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/concurrency");
             case DependencyFailureException dependencyFailure:
-                return Create(502, dependencyFailure.Message, dependencyFailure.ErrorCode?.Value, DependencyFailureTypeUri);
+                return Create(502, dependencyFailure.Message, dependencyFailure.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/dependency-failure");
             case HoneyDrunkException honeyDrunk:
-                return Create(500, honeyDrunk.Message, honeyDrunk.ErrorCode?.Value, InternalTypeUri);
+                return Create(500, honeyDrunk.Message, honeyDrunk.ErrorCode?.Value, "https://docs.honeydrunk.io/errors/internal");
         }
 
         // Map common BCL exceptions to validation semantics where helpful.
         if (exception is ArgumentException or FormatException)
         {
             var ec = new ErrorCode("validation.argument");
-            return new ErrorClassification(400, exception.Message, ec.Value, ValidationArgumentTypeUri);
+            return new ErrorClassification(400, exception.Message, ec.Value, "https://docs.honeydrunk.io/errors/validation-argument");
         }
 
         if (exception is TimeoutException)
         {
             var ec = new ErrorCode("dependency.timeout");
-            return new ErrorClassification(504, exception.Message, ec.Value, DependencyTimeoutTypeUri);
+            return new ErrorClassification(504, exception.Message, ec.Value, "https://docs.honeydrunk.io/errors/dependency-timeout");
         }
 
         // Unclassified -> null (caller may fall back to generic 500 handling).
