@@ -1,6 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Identity;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
@@ -12,11 +11,7 @@ namespace HoneyDrunk.Kernel.AgentsInterop;
 /// Agents receive a scoped view of GridContext based on their permissions.
 /// This serializer creates JSON representations that agents can parse and use.
 /// </remarks>
-[SuppressMessage(
-    "Major Code Smell",
-    "S1118:Utility classes should not have public constructors",
-    Justification = "Public sealed class shape preserved for HoneyDrunk.Kernel 0.7.x binary compatibility. Converting to static class is a published-API break that requires a coordinated minor-version bump across all cross-node consumers; deferred to a focused initiative.")]
-public sealed class GridContextSerializer
+public static class GridContextSerializer
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -113,11 +108,15 @@ public sealed class GridContextSerializer
         }
     }
 
-    // Returns the property's string value if present AND the JSON shape is a string;
-    // otherwise null. Guards Deserialize's documented "returns null on bad input" contract
-    // against unexpected JSON kinds (e.g., a number where a string was expected) — without
-    // this check, JsonElement.GetString() throws InvalidOperationException which would
-    // escape Deserialize's JsonException-only catch.
+    /// <summary>
+    /// Returns the property's string value if present AND the JSON shape is a string; otherwise null.
+    /// </summary>
+    /// <remarks>
+    /// Guards <see cref="Deserialize"/>'s documented "returns null on bad input" contract against unexpected
+    /// JSON kinds (e.g., a number where a string was expected). Without this check,
+    /// <see cref="JsonElement.GetString"/> throws <see cref="InvalidOperationException"/> which would escape
+    /// <see cref="Deserialize"/>'s <see cref="JsonException"/>-only catch.
+    /// </remarks>
     private static string? TryGetStringProperty(JsonElement root, string propertyName) =>
         root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String
             ? element.GetString()
