@@ -23,7 +23,7 @@ namespace HoneyDrunk.Kernel.Context.Mappers;
 /// <item>baggage, X-Baggage-* → Baggage</item>
 /// </list>
 /// </remarks>
-public sealed class HttpContextMapper
+public static class HttpContextMapper
 {
     /// <summary>
     /// Extracts GridContext initialization values from an HTTP request.

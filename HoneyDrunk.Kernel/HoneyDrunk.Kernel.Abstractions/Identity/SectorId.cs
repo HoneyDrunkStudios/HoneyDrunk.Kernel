@@ -21,7 +21,7 @@ public readonly record struct SectorId
     /// <exception cref="ArgumentException">Thrown when the value is invalid.</exception>
     public SectorId(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
         if (!IsValid(value, out var error))
         {

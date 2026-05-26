@@ -3,6 +3,7 @@ using HoneyDrunk.Kernel.Abstractions.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HoneyDrunk.Kernel.Context.Middleware;
 
@@ -40,6 +41,10 @@ public sealed class GridContextMiddleware(RequestDelegate next, ILogger<GridCont
     /// </summary>
     /// <param name="httpContext">Current HTTP context.</param>
     /// <returns>A task representing the asynchronous pipeline continuation.</returns>
+    [SuppressMessage(
+        "Major Code Smell",
+        "S2139:Exceptions should be either logged or rethrown but not both",
+        Justification = "Middleware deliberately logs with CorrelationId context (not in any logger scope at this level) then rethrows so the global error handler can produce the response. Dropping the log would lose the per-request correlation attribution.")]
     public async Task InvokeAsync(HttpContext httpContext)
     {
         // Resolve the scoped GridContext from DI - this is THE single instance for this request

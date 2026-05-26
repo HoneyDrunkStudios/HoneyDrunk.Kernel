@@ -1,8 +1,10 @@
+using System.Runtime.CompilerServices;
+
 namespace HoneyDrunk.Kernel.Abstractions.Identity;
 
 internal static class UlidIdentity
 {
-    public static Ulid Parse(string? value, string paramName)
+    public static Ulid Parse(string? value, [CallerArgumentExpression(nameof(value))] string? paramName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, paramName);
 

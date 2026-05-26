@@ -175,6 +175,10 @@ public static class HoneyDrunkNodeServiceCollectionExtensions
     /// Minimal <see cref="INodeDescriptor"/> implementation for bootstrap; extended later by capability registration.
     /// </summary>
     [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Constructed via DI factory above.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Private nested bootstrap descriptor mirrors INodeDescriptor's metadata surface. Refactor to an options record is a non-trivial public-shape change deferred to a focused initiative.")]
     private sealed class NodeDescriptor(string nodeId, string version, string name, string description, string sector, string studioId, string environment, IReadOnlyDictionary<string, string> tags) : INodeDescriptor
     {
         public string NodeId { get; } = nodeId;

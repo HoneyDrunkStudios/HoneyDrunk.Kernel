@@ -25,7 +25,7 @@ public readonly record struct ProjectId
     /// <exception cref="ArgumentException">Thrown if the string is not a valid Ulid.</exception>
     public ProjectId(string value)
     {
-        Value = UlidIdentity.Parse(value, nameof(value));
+        Value = UlidIdentity.Parse(value);
     }
 
     /// <summary>

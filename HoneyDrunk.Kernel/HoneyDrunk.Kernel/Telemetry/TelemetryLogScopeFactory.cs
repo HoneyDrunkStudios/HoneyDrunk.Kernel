@@ -17,7 +17,7 @@ public sealed class TelemetryLogScopeFactory(ILogger logger) : ILogScopeFactory
     /// <inheritdoc />
     public IDisposable CreateScope(ITelemetryContext context)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
 
         var properties = BuildScopeProperties(context);
         return _logger.BeginScope(properties)!;
@@ -26,8 +26,8 @@ public sealed class TelemetryLogScopeFactory(ILogger logger) : ILogScopeFactory
     /// <inheritdoc />
     public IDisposable CreateScope(ITelemetryContext context, IReadOnlyDictionary<string, object?> additionalProperties)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
-        ArgumentNullException.ThrowIfNull(additionalProperties, nameof(additionalProperties));
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(additionalProperties);
 
         var properties = BuildScopeProperties(context);
 

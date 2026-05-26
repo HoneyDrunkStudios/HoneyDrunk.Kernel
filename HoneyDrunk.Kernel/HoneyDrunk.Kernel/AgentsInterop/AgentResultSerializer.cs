@@ -6,7 +6,7 @@ namespace HoneyDrunk.Kernel.AgentsInterop;
 /// <summary>
 /// Serializes agent execution results for Grid consumption.
 /// </summary>
-public sealed class AgentResultSerializer
+public static class AgentResultSerializer
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -28,7 +28,7 @@ public sealed class AgentResultSerializer
         object? result = null,
         string? errorMessage = null)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
 
         var data = new
         {
@@ -52,7 +52,7 @@ public sealed class AgentResultSerializer
     /// <returns>The deserialized agent execution result, or null if deserialization fails.</returns>
     public static AgentExecutionResult? DeserializeResult(string json)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json, nameof(json));
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
         try
         {

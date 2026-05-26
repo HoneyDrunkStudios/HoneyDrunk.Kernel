@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Identity;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HoneyDrunk.Kernel.Abstractions.Errors;
 
@@ -15,6 +16,10 @@ namespace HoneyDrunk.Kernel.Abstractions.Errors;
 /// <param name="environmentId">Optional environment identifier.</param>
 /// <param name="innerException">Optional inner exception.</param>
 [Serializable]
+[SuppressMessage(
+    "Major Code Smell",
+    "S3925:\"ISerializable\" should be implemented correctly",
+    Justification = "Legacy ISerializable pattern (private ctor with SerializationInfo/StreamingContext) is obsolete in .NET 8+ (SYSLIB0051) and BinaryFormatter is removed (SYSLIB0011). The [Serializable] attribute is retained for ABI compatibility with downstream consumers but the legacy deserialization ctor is intentionally omitted.")]
 public sealed class ConcurrencyException(
     string message,
     CorrelationId? correlationId = null,

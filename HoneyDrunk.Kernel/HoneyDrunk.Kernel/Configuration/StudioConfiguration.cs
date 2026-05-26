@@ -27,9 +27,9 @@ public sealed class StudioConfiguration : IStudioConfiguration
         IConfiguration configuration,
         ISecretsSource? secretsSource = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(studioId, nameof(studioId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(environment, nameof(environment));
-        ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
+        ArgumentException.ThrowIfNullOrWhiteSpace(studioId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(environment);
+        ArgumentNullException.ThrowIfNull(configuration);
 
         StudioId = studioId;
         Environment = environment;
@@ -87,7 +87,7 @@ public sealed class StudioConfiguration : IStudioConfiguration
     /// <inheritdoc />
     public bool TryGetValue(string key, out string? value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key, nameof(key));
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
         // Try configuration first
         value = _configuration[key];

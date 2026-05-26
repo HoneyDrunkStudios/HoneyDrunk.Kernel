@@ -25,6 +25,10 @@ internal sealed class NodeLifecycleHost(
     private readonly IEnumerable<IShutdownHook> _shutdownHooks = shutdownHooks;
     private readonly ILogger<NodeLifecycleHost> _logger = logger;
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S2139:Exceptions should be either logged or rethrown but not both",
+        Justification = "Lifecycle host logs with NodeId attribution before rethrowing so the generic hosting framework can fail the process. Dropping the log would lose the per-Node start failure attribution.")]
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation(
@@ -62,6 +66,10 @@ internal sealed class NodeLifecycleHost(
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S2139:Exceptions should be either logged or rethrown but not both",
+        Justification = "Lifecycle host logs with NodeId attribution before rethrowing so the generic hosting framework can record shutdown failure. Dropping the log would lose the per-Node stop failure attribution.")]
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping Node {NodeId}", _nodeContext.NodeId);

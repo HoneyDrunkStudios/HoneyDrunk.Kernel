@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Identity;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HoneyDrunk.Kernel.Abstractions.Context;
 
@@ -28,6 +29,14 @@ public sealed class GridContextSnapshot : IGridContext
     /// <param name="baggage">Optional propagated baggage.</param>
     /// <param name="cancellation">The cancellation token for the operation chain.</param>
     /// <param name="createdAtUtc">The UTC creation time. Defaults to now.</param>
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Public snapshot type mirrors IGridContext's full surface so libraries can bootstrap without the Kernel runtime. Refactoring to an options/builder is a public-API break tracked separately.")]
+    [SuppressMessage(
+        "Roslynator",
+        "RCS1163:CancellationToken should be the last parameter",
+        Justification = "Existing public-API parameter order. CancellationToken cannot be moved without a major-version break to downstream consumers.")]
     public GridContextSnapshot(
         string nodeId,
         string studioId,

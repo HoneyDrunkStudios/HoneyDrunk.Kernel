@@ -11,7 +11,7 @@ namespace HoneyDrunk.Kernel.AgentsInterop;
 /// Agents receive a scoped view of GridContext based on their permissions.
 /// This serializer creates JSON representations that agents can parse and use.
 /// </remarks>
-public sealed class GridContextSerializer
+public static class GridContextSerializer
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -27,7 +27,7 @@ public sealed class GridContextSerializer
     /// <returns>A JSON string representing the GridContext.</returns>
     public static string Serialize(IGridContext context, bool includeFullBaggage = false)
     {
-        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
 
         var data = new
         {
@@ -52,7 +52,7 @@ public sealed class GridContextSerializer
     /// <returns>The deserialized GridContext, or null if deserialization fails.</returns>
     public static IGridContext? Deserialize(string json)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json, nameof(json));
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
         try
         {
@@ -80,40 +80,15 @@ public sealed class GridContextSerializer
                 return null;
             }
 
-            string? causationId = null;
-            if (root.TryGetProperty("causationId", out var causationElement))
+            var causationId = TryGetStringProperty(root, "causationId");
+
+            if (!TryGetTenantId(root, out var tenantId))
             {
-                causationId = causationElement.GetString();
+                return null;
             }
 
-            var tenantId = TenantId.Internal;
-            if (root.TryGetProperty("tenantId", out var tenantElement))
-            {
-                var tenantValue = tenantElement.GetString();
-                if (!string.IsNullOrWhiteSpace(tenantValue) && !TenantId.TryParse(tenantValue, out tenantId))
-                {
-                    return null;
-                }
-            }
-
-            string? projectId = null;
-            if (root.TryGetProperty("projectId", out var projectElement))
-            {
-                projectId = projectElement.GetString();
-            }
-
-            var baggage = new Dictionary<string, string>();
-            if (root.TryGetProperty("baggage", out var baggageElement))
-            {
-                foreach (var prop in baggageElement.EnumerateObject())
-                {
-                    var value = prop.Value.GetString();
-                    if (value != null)
-                    {
-                        baggage[prop.Name] = value;
-                    }
-                }
-            }
+            var projectId = TryGetStringProperty(root, "projectId");
+            var baggage = ExtractBaggage(root);
 
             // Create and initialize a new GridContext for deserialization scenarios
             // This is used when receiving context from external sources (e.g., agent results)
@@ -135,6 +110,41 @@ public sealed class GridContextSerializer
         {
             return null;
         }
+    }
+
+    private static string? TryGetStringProperty(JsonElement root, string propertyName) =>
+        root.TryGetProperty(propertyName, out var element) ? element.GetString() : null;
+
+    private static bool TryGetTenantId(JsonElement root, out TenantId tenantId)
+    {
+        tenantId = TenantId.Internal;
+        if (!root.TryGetProperty("tenantId", out var element))
+        {
+            return true;
+        }
+
+        var value = element.GetString();
+        return string.IsNullOrWhiteSpace(value) || TenantId.TryParse(value, out tenantId);
+    }
+
+    private static Dictionary<string, string> ExtractBaggage(JsonElement root)
+    {
+        var baggage = new Dictionary<string, string>();
+        if (!root.TryGetProperty("baggage", out var baggageElement))
+        {
+            return baggage;
+        }
+
+        foreach (var prop in baggageElement.EnumerateObject())
+        {
+            var value = prop.Value.GetString();
+            if (value != null)
+            {
+                baggage[prop.Name] = value;
+            }
+        }
+
+        return baggage;
     }
 
     /// <summary>

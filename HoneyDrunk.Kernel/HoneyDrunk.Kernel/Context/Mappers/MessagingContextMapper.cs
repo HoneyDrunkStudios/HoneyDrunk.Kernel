@@ -33,39 +33,14 @@ public static class MessagingContextMapper
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        var correlationId = GetMetadata(metadata, "CorrelationId")
-            ?? GetMetadata(metadata, "correlation-id")
-            ?? GetMetadata(metadata, "X-Correlation-Id")
-            ?? Ulid.NewUlid().ToString();
-
-        var causationId = GetMetadata(metadata, "CausationId")
-            ?? GetMetadata(metadata, "causation-id")
-            ?? GetMetadata(metadata, "X-Causation-Id");
-
-        var tenantId = ParseTenantIdOrNull(
-            GetMetadata(metadata, "TenantId")
-            ?? GetMetadata(metadata, "tenant-id")
-            ?? GetMetadata(metadata, GridHeaderNames.TenantId));
-
-        var projectId = GetMetadata(metadata, "ProjectId")
-            ?? GetMetadata(metadata, "project-id")
-            ?? GetMetadata(metadata, "X-Project-Id");
-
-        // Extract baggage (keys starting with "baggage-" or "Baggage-")
-        var baggage = metadata
-            .Where(kvp => kvp.Key.StartsWith("baggage-", StringComparison.OrdinalIgnoreCase)
-                       || kvp.Key.StartsWith("Baggage-", StringComparison.Ordinal))
-            .ToDictionary(
-                kvp => kvp.Key[8..], // Remove "baggage-" prefix
-                kvp => kvp.Value,
-                StringComparer.OrdinalIgnoreCase);
+        var values = ExtractFromMessage(metadata);
 
         context.Initialize(
-            correlationId: correlationId,
-            causationId: causationId,
-            tenantId: tenantId,
-            projectId: projectId,
-            baggage: baggage,
+            correlationId: values.CorrelationId ?? Ulid.NewUlid().ToString(),
+            causationId: values.CausationId,
+            tenantId: values.TenantId,
+            projectId: values.ProjectId,
+            baggage: values.Baggage,
             cancellation: cancellationToken);
     }
 
@@ -83,22 +58,11 @@ public static class MessagingContextMapper
     {
         ArgumentNullException.ThrowIfNull(metadata);
 
-        var correlationId = GetMetadata(metadata, "CorrelationId")
-            ?? GetMetadata(metadata, "correlation-id")
-            ?? GetMetadata(metadata, "X-Correlation-Id");
-
-        var causationId = GetMetadata(metadata, "CausationId")
-            ?? GetMetadata(metadata, "causation-id")
-            ?? GetMetadata(metadata, "X-Causation-Id");
-
+        var correlationId = ResolveMetadata(metadata, "CorrelationId", "correlation-id", "X-Correlation-Id");
+        var causationId = ResolveMetadata(metadata, "CausationId", "causation-id", "X-Causation-Id");
         var tenantId = ParseTenantIdOrNull(
-            GetMetadata(metadata, "TenantId")
-            ?? GetMetadata(metadata, "tenant-id")
-            ?? GetMetadata(metadata, GridHeaderNames.TenantId));
-
-        var projectId = GetMetadata(metadata, "ProjectId")
-            ?? GetMetadata(metadata, "project-id")
-            ?? GetMetadata(metadata, "X-Project-Id");
+            ResolveMetadata(metadata, "TenantId", "tenant-id", GridHeaderNames.TenantId));
+        var projectId = ResolveMetadata(metadata, "ProjectId", "project-id", "X-Project-Id");
 
         // Extract baggage (keys starting with "baggage-" or "Baggage-")
         var baggage = metadata
@@ -117,6 +81,19 @@ public static class MessagingContextMapper
             Baggage: baggage);
     }
 
+    private static string? ResolveMetadata(IReadOnlyDictionary<string, string> metadata, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (metadata.TryGetValue(key, out var value))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
     private static TenantId? ParseTenantIdOrNull(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -130,10 +107,5 @@ public static class MessagingContextMapper
         }
 
         throw new FormatException($"Metadata {GridHeaderNames.TenantId} must be a valid ULID.");
-    }
-
-    private static string? GetMetadata(IReadOnlyDictionary<string, string> metadata, string key)
-    {
-        return metadata.TryGetValue(key, out var value) ? value : null;
     }
 }

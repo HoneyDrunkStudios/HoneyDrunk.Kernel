@@ -26,7 +26,7 @@ public readonly record struct CausationId
     /// <exception cref="ArgumentException">Thrown when the value is not a valid ULID.</exception>
     public CausationId(string value)
     {
-        Value = UlidIdentity.Parse(value, nameof(value));
+        Value = UlidIdentity.Parse(value);
     }
 
     /// <summary>

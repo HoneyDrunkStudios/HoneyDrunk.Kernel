@@ -16,29 +16,8 @@ namespace HoneyDrunk.Kernel.Context.Mappers;
 /// and use this mapper to initialize it before any work begins.
 /// </para>
 /// </remarks>
-public sealed class JobContextMapper
+public static class JobContextMapper
 {
-    private readonly string _nodeId;
-    private readonly string _studioId;
-    private readonly string _environment;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JobContextMapper"/> class.
-    /// </summary>
-    /// <param name="nodeId">The Node identifier.</param>
-    /// <param name="studioId">The Studio identifier.</param>
-    /// <param name="environment">The environment name.</param>
-    public JobContextMapper(string nodeId, string studioId, string environment)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(nodeId, nameof(nodeId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(studioId, nameof(studioId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(environment, nameof(environment));
-
-        _nodeId = nodeId;
-        _studioId = studioId;
-        _environment = environment;
-    }
-
     /// <summary>
     /// Initializes a GridContext for a background job.
     /// </summary>
@@ -55,8 +34,8 @@ public sealed class JobContextMapper
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobId, nameof(jobId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobType, nameof(jobType));
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobType);
 
         var baggage = new Dictionary<string, string>
         {
@@ -96,7 +75,7 @@ public sealed class JobContextMapper
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobName, nameof(jobName));
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobName);
 
         var baggage = new Dictionary<string, string>
         {

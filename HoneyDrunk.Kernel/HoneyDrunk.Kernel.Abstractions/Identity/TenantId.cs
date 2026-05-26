@@ -27,7 +27,7 @@ public readonly record struct TenantId
     /// <exception cref="ArgumentException">Thrown if the string is not a valid Ulid.</exception>
     public TenantId(string value)
     {
-        Value = UlidIdentity.Parse(value, nameof(value));
+        Value = UlidIdentity.Parse(value);
     }
 
     /// <summary>
