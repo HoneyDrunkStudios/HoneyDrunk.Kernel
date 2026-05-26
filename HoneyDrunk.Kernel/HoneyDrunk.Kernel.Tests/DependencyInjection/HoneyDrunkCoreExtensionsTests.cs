@@ -112,9 +112,8 @@ public class HoneyDrunkCoreExtensionsTests
         var services = new ServiceCollection();
         using var provider = services.BuildServiceProvider();
 
-        var act = () => provider.ValidateHoneyDrunkServices();
-
-        act.Should().NotThrow();
+        // If this throws, xUnit fails the test — no assertion library wrapper needed.
+        provider.ValidateHoneyDrunkServices();
     }
 
     private sealed class StubDescriptor : INodeDescriptor
@@ -141,9 +140,9 @@ public class HoneyDrunkCoreExtensionsTests
 
         public INodeManifest? Manifest => null;
 
-        public string StudioId => "test-studio";
+        public string StudioId { get; } = "test-studio";
 
-        public string Environment => "test";
+        public string Environment { get; } = "test";
 
         public bool HasCapability(string name) => false;
     }

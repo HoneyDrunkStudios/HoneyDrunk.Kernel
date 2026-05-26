@@ -8,6 +8,10 @@ namespace HoneyDrunk.Kernel.Errors;
 /// Default implementation of <see cref="IErrorClassifier"/> mapping Kernel exceptions to transport-friendly classifications.
 /// </summary>
 [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Instantiated via DI container registration.")]
+[SuppressMessage(
+    "Minor Code Smell",
+    "S1075:URIs should not be hardcoded",
+    Justification = "These are RFC 9457 ProblemDetails 'type' URIs — opaque stable identifiers for error categories, not configuration endpoints or paths. They are part of the wire contract (consumers may dereference them for documentation) and intentionally constant across deployments.")]
 internal sealed class DefaultErrorClassifier : IErrorClassifier
 {
     private const string DocsBaseUri = "https://docs.honeydrunk.io/errors";
