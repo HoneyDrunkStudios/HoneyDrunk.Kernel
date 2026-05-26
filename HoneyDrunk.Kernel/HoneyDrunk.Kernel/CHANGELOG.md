@@ -11,6 +11,17 @@ All notable changes to HoneyDrunk.Kernel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-26
+
+### ⚠️ Breaking Changes
+
+- **`AgentResultSerializer`, `GridContextSerializer`, `HttpContextMapper`, `JobContextMapper` converted to `public static class`.** All methods on these types were already static; the previous `public sealed class` shape was unused at every call site in the Grid. **Migration:** drop any `new <Type>(...)` calls — the static methods are the only entry points.
+- **`JobContextMapper` instance constructor and unused private fields removed.** The constructor `JobContextMapper(string nodeId, string studioId, string environment)` and the `_nodeId` / `_studioId` / `_environment` fields are gone. **Migration:** if you were calling `new JobContextMapper(...)` before invoking the static `InitializeForJob` / `InitializeForScheduledJob` / `InitializeFromMetadata` methods, drop the construction step.
+
+### Changed
+
+- Driven the remaining 17 SonarQube Cloud maintainability findings on the runtime package to zero (ADR-0011 D11 follow-up to repo PRs #63 and #64). See the repo-level [CHANGELOG.md](../CHANGELOG.md) for the full list of non-breaking refactors.
+
 ## [0.7.0] - 2026-05-18
 
 ### Changed

@@ -11,6 +11,16 @@ All notable changes to HoneyDrunk.Kernel.Abstractions will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-26
+
+### ⚠️ Breaking Changes
+
+- **`GridContextSnapshot` constructor parameter order updated.** `CancellationToken cancellation` is now the last parameter (after `DateTimeOffset? createdAtUtc`), matching .NET conventions (CA1068 / RCS1163). **Migration:** all known callers in the Grid (`HoneyDrunk.Transport.GridContextFactory`, Kernel + Transport test fixtures) use named arguments and are unaffected. If you used positional args specifying both `cancellation` and `createdAtUtc`, swap their order at the call site.
+
+### Changed
+
+- Cleared the related Roslyn `CA1068` / `RCS1163` and Sonar `S107` findings on `GridContextSnapshot` (ADR-0011 D11 follow-up). See the repo-level [CHANGELOG.md](../CHANGELOG.md) for the full picture, including the broader maintainability sweep on the runtime package.
+
 ## [0.7.0] - 2026-05-18
 
 ### Added

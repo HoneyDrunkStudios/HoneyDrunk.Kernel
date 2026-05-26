@@ -27,16 +27,12 @@ public sealed class GridContextSnapshot : IGridContext
     /// <param name="tenantId">The tenant identifier. Defaults to <see cref="TenantId.Internal"/>.</param>
     /// <param name="projectId">The optional project identifier.</param>
     /// <param name="baggage">Optional propagated baggage.</param>
-    /// <param name="cancellation">The cancellation token for the operation chain.</param>
     /// <param name="createdAtUtc">The UTC creation time. Defaults to now.</param>
+    /// <param name="cancellation">The cancellation token for the operation chain.</param>
     [SuppressMessage(
         "Major Code Smell",
         "S107:Methods should not have too many parameters",
-        Justification = "Public snapshot type mirrors IGridContext's full surface so libraries can bootstrap without the Kernel runtime. Refactoring to an options/builder is a public-API break tracked separately.")]
-    [SuppressMessage(
-        "Roslynator",
-        "RCS1163:CancellationToken should be the last parameter",
-        Justification = "Existing public-API parameter order. CancellationToken cannot be moved without a major-version break to downstream consumers.")]
+        Justification = "Snapshot type mirrors IGridContext's full surface 1:1 by design so libraries can bootstrap a context without referencing the Kernel runtime. Converting to an options/builder shape is a separate UX choice, not addressed here.")]
     public GridContextSnapshot(
         string nodeId,
         string studioId,
@@ -46,8 +42,8 @@ public sealed class GridContextSnapshot : IGridContext
         TenantId? tenantId = null,
         string? projectId = null,
         IReadOnlyDictionary<string, string>? baggage = null,
-        CancellationToken cancellation = default,
-        DateTimeOffset? createdAtUtc = null)
+        DateTimeOffset? createdAtUtc = null,
+        CancellationToken cancellation = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
         ArgumentException.ThrowIfNullOrWhiteSpace(studioId);

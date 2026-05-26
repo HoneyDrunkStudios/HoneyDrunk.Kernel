@@ -39,18 +39,22 @@ public sealed class ConfigurationValidator(ILogger<ConfigurationValidator> logge
             errors.Add("Name is required");
         }
 
-        // Validate capabilities
-        var capabilityNames = new HashSet<string>();
-        foreach (var capability in descriptor.Capabilities)
+        // Validate capabilities: one error per empty name, one per duplicate name.
+        var emptyCapabilityCount = descriptor.Capabilities.Count(c => string.IsNullOrWhiteSpace(c.Name));
+        for (var i = 0; i < emptyCapabilityCount; i++)
         {
-            if (string.IsNullOrWhiteSpace(capability.Name))
-            {
-                errors.Add("Capability name cannot be empty");
-            }
-            else if (!capabilityNames.Add(capability.Name))
-            {
-                errors.Add($"Duplicate capability name: {capability.Name}");
-            }
+            errors.Add("Capability name cannot be empty");
+        }
+
+        var duplicateCapabilityNames = descriptor.Capabilities
+            .Select(c => c.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .GroupBy(name => name)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key);
+        foreach (var duplicate in duplicateCapabilityNames)
+        {
+            errors.Add($"Duplicate capability name: {duplicate}");
         }
 
         // Validate dependencies

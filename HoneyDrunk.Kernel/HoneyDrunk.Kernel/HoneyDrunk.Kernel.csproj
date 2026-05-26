@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel</PackageId>
-    <Version>0.7.0</Version>
+    <Version>0.8.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Production-ready runtime implementations for HoneyDrunk.OS Grid. Provides GridContext, NodeContext, OperationContext implementations, transport binders (HTTP/messaging/jobs), context mappers, GridContextMiddleware, lifecycle orchestration, AgentsInterop, telemetry (GridActivitySource), and unified bootstrapping (AddHoneyDrunkGrid).</Description>
-    <PackageReleaseNotes>v0.7.0: Adds abstractions-visible GridContextSnapshot and consolidates context/identity parsing helpers. See CHANGELOG.md for details.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.8.0: Maintainability refactor (ADR-0011 follow-up). Converts AgentResultSerializer, GridContextSerializer, HttpContextMapper, JobContextMapper to static classes; drops JobContextMapper's instance constructor and unused fields. Breaking change — see CHANGELOG.md.</PackageReleaseNotes>
     <PackageTags>kernel;runtime;grid;context;lifecycle;hosting;telemetry;mappers;transport;middleware;opentelemetry;agents;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -62,6 +62,10 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HoneyDrunk.Kernel.Tests" />
   </ItemGroup>
 
   <ItemGroup>

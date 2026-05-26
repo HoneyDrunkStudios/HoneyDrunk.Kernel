@@ -34,28 +34,28 @@ public class WellKnownNodesTests
         new("honeydrunk-sim", WellKnownNodes.AI.Sim),
     ];
 
-    public static TheoryData<string, NodeId> CanonicalNodeIds => Nodes.Aggregate(
-        new TheoryData<string, NodeId>(),
+    public static TheoryData<string, string> CanonicalNodeIds => Nodes.Aggregate(
+        new TheoryData<string, string>(),
         (data, node) =>
         {
-            data.Add(node.Key, node.Value);
+            data.Add(node.Key, node.Value.Value);
             return data;
         });
 
     [Theory]
     [MemberData(nameof(CanonicalNodeIds))]
-    public void WellKnownNodeIds_MatchCanonicalGridIds(string expected, NodeId actual)
+    public void WellKnownNodeIds_MatchCanonicalGridIds(string expected, string actualValue)
     {
-        actual.Value.Should().Be(expected);
-        actual.ToString().Should().Be(expected);
+        actualValue.Should().Be(expected);
+        new NodeId(actualValue).ToString().Should().Be(expected);
     }
 
     [Theory]
     [MemberData(nameof(CanonicalNodeIds))]
-    public void WellKnownNodeIds_AreValidKebabCaseNodeIds(string expected, NodeId actual)
+    public void WellKnownNodeIds_AreValidKebabCaseNodeIds(string expected, string actualValue)
     {
-        actual.Value.Should().Be(expected);
-        NodeId.IsValid(actual.Value, out var errorMessage).Should().BeTrue(errorMessage);
+        actualValue.Should().Be(expected);
+        NodeId.IsValid(actualValue, out var errorMessage).Should().BeTrue(errorMessage);
     }
 
     [Fact]

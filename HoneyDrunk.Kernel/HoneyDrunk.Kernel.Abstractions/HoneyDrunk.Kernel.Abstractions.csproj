@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel.Abstractions</PackageId>
-    <Version>0.7.0</Version>
+    <Version>0.8.0</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Pure semantic contracts for HoneyDrunk.OS Grid. Provides zero-dependency abstractions for Grid context, Node lifecycle, identity primitives, telemetry, transport, error handling, and agent execution. Safe for libraries and SDKs.</Description>
-    <PackageReleaseNotes>v0.7.0: Adds abstractions-visible GridContextSnapshot and consolidates context/identity parsing helpers. See CHANGELOG.md for details.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.8.0: GridContextSnapshot constructor parameter order updated to match .NET conventions (CancellationToken moved to last position). Breaking change for callers using positional arguments — see CHANGELOG.md.</PackageReleaseNotes>
     <PackageTags>kernel;abstractions;grid;context;lifecycle;identity;telemetry;agents;hosting;transport;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
