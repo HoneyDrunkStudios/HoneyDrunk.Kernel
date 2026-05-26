@@ -13,7 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed (breaking — v0.8.0)
+---
+
+## [0.8.0] - 2026-05-26
+
+### Changed (breaking)
 
 - **`AgentResultSerializer`, `GridContextSerializer`, `HttpContextMapper`, `JobContextMapper`** converted from `public sealed class` to `public static class`. All methods on these types are already static; the previous instance shape was unused at every call site in the Grid. **Migration:** drop any `new <Type>(...)` calls and use the static methods directly. No code in the Kernel codebase or its sibling Grid repos relied on the instance shape, but downstream consumers who held references to instances will need to remove them.
 - **`JobContextMapper`** also drops its public instance constructor `(string nodeId, string studioId, string environment)` and the three private `_nodeId` / `_studioId` / `_environment` fields. The fields were never read and the constructor was unused. **Migration:** if you were calling `new JobContextMapper(nodeId, studioId, environment)` and then invoking the static `InitializeForJob` / `InitializeForScheduledJob` / `InitializeFromMetadata` methods, drop the construction step — the static methods are the only entry points.
