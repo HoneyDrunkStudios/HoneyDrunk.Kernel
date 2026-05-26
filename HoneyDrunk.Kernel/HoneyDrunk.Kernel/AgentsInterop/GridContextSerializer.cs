@@ -1,5 +1,6 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Identity;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
@@ -11,7 +12,11 @@ namespace HoneyDrunk.Kernel.AgentsInterop;
 /// Agents receive a scoped view of GridContext based on their permissions.
 /// This serializer creates JSON representations that agents can parse and use.
 /// </remarks>
-public static class GridContextSerializer
+[SuppressMessage(
+    "Major Code Smell",
+    "S1118:Utility classes should not have public constructors",
+    Justification = "Public sealed class shape preserved for HoneyDrunk.Kernel 0.7.x binary compatibility. Converting to static class is a published-API break that requires a coordinated minor-version bump across all cross-node consumers; deferred to a focused initiative.")]
+public sealed class GridContextSerializer
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -59,19 +64,15 @@ public static class GridContextSerializer
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
-            // Safely try to get required properties
-            if (!root.TryGetProperty("correlationId", out var correlationIdElement) ||
-                !root.TryGetProperty("nodeId", out var nodeIdElement) ||
-                !root.TryGetProperty("studioId", out var studioIdElement) ||
-                !root.TryGetProperty("environment", out var environmentElement))
-            {
-                return null;
-            }
-
-            var correlationId = correlationIdElement.GetString();
-            var nodeId = nodeIdElement.GetString();
-            var studioId = studioIdElement.GetString();
-            var environment = environmentElement.GetString();
+            // Required fields. TryGetStringProperty returns null for both
+            // missing properties and non-string JSON shapes (number, bool,
+            // array, object), so the string.IsNullOrEmpty checks below treat
+            // every bad-shape case as "field absent" — matching Deserialize's
+            // documented "returns null on bad input" contract.
+            var correlationId = TryGetStringProperty(root, "correlationId");
+            var nodeId = TryGetStringProperty(root, "nodeId");
+            var studioId = TryGetStringProperty(root, "studioId");
+            var environment = TryGetStringProperty(root, "environment");
 
             if (string.IsNullOrEmpty(correlationId) ||
                 string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(studioId) ||

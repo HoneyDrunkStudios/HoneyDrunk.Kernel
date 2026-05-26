@@ -1,4 +1,5 @@
 using HoneyDrunk.Kernel.Abstractions.Agents;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace HoneyDrunk.Kernel.AgentsInterop;
@@ -6,7 +7,11 @@ namespace HoneyDrunk.Kernel.AgentsInterop;
 /// <summary>
 /// Serializes agent execution results for Grid consumption.
 /// </summary>
-public static class AgentResultSerializer
+[SuppressMessage(
+    "Major Code Smell",
+    "S1118:Utility classes should not have public constructors",
+    Justification = "Public sealed class shape preserved for HoneyDrunk.Kernel 0.7.x binary compatibility. Converting to static class is a published-API break that requires a coordinated minor-version bump across all cross-node consumers; deferred to a focused initiative.")]
+public sealed class AgentResultSerializer
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
