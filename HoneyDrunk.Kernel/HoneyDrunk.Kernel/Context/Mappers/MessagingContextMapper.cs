@@ -81,18 +81,8 @@ public static class MessagingContextMapper
             Baggage: baggage);
     }
 
-    private static string? ResolveMetadata(IReadOnlyDictionary<string, string> metadata, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (metadata.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-        }
-
-        return null;
-    }
+    private static string? ResolveMetadata(IReadOnlyDictionary<string, string> metadata, params string[] keys) =>
+        keys.Where(metadata.ContainsKey).Select(k => metadata[k]).FirstOrDefault();
 
     private static TenantId? ParseTenantIdOrNull(string? value)
     {

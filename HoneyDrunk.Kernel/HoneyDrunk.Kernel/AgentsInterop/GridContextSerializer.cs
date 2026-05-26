@@ -112,8 +112,15 @@ public static class GridContextSerializer
         }
     }
 
+    // Returns the property's string value if present AND the JSON shape is a string;
+    // otherwise null. Guards Deserialize's documented "returns null on bad input" contract
+    // against unexpected JSON kinds (e.g., a number where a string was expected) — without
+    // this check, JsonElement.GetString() throws InvalidOperationException which would
+    // escape Deserialize's JsonException-only catch.
     private static string? TryGetStringProperty(JsonElement root, string propertyName) =>
-        root.TryGetProperty(propertyName, out var element) ? element.GetString() : null;
+        root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String
+            ? element.GetString()
+            : null;
 
     private static bool TryGetTenantId(JsonElement root, out TenantId tenantId)
     {
@@ -123,6 +130,11 @@ public static class GridContextSerializer
             return true;
         }
 
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
         var value = element.GetString();
         return string.IsNullOrWhiteSpace(value) || TenantId.TryParse(value, out tenantId);
     }
@@ -130,13 +142,18 @@ public static class GridContextSerializer
     private static Dictionary<string, string> ExtractBaggage(JsonElement root)
     {
         var baggage = new Dictionary<string, string>();
-        if (!root.TryGetProperty("baggage", out var baggageElement))
+        if (!root.TryGetProperty("baggage", out var baggageElement) || baggageElement.ValueKind != JsonValueKind.Object)
         {
             return baggage;
         }
 
         foreach (var prop in baggageElement.EnumerateObject())
         {
+            if (prop.Value.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
             var value = prop.Value.GetString();
             if (value != null)
             {
