@@ -155,11 +155,8 @@ public sealed class GridContextSerializer
                 continue;
             }
 
-            var value = prop.Value.GetString();
-            if (value != null)
-            {
-                baggage[prop.Name] = value;
-            }
+            // ValueKind == String guarantees GetString() is non-null.
+            baggage[prop.Name] = prop.Value.GetString()!;
         }
 
         return baggage;

@@ -601,6 +601,22 @@ public class GridContextSerializerTests
     }
 
     [Fact]
+    public void Deserialize_NonUlidTenantId_ReturnsNull()
+    {
+        var json = @"{
+            ""correlationId"": ""corr-123"",
+            ""tenantId"": ""not-a-valid-ulid"",
+            ""nodeId"": ""test-node"",
+            ""studioId"": ""test-studio"",
+            ""environment"": ""production""
+        }";
+
+        var context = GridContextSerializer.Deserialize(json);
+
+        context.Should().BeNull();
+    }
+
+    [Fact]
     public void Deserialize_EmptyStringTenantId_DefaultsToInternal()
     {
         var json = @"{
