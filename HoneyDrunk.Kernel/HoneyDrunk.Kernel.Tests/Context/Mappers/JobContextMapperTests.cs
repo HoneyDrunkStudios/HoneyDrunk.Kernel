@@ -566,4 +566,45 @@ public class JobContextMapperTests
         // Assert
         context.Baggage.Should().ContainKey("case-test").WhoseValue.Should().Be("case-value");
     }
+
+    [Fact]
+    public void Ctor_ValidParameters_ConstructsInstance()
+    {
+        var act = () => new JobContextMapper(TestNodeId, TestStudioId, TestEnvironment);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Ctor_NullOrWhitespaceNodeId_ThrowsArgumentException(string? nodeId)
+    {
+        var act = () => new JobContextMapper(nodeId!, TestStudioId, TestEnvironment);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Ctor_NullOrWhitespaceStudioId_ThrowsArgumentException(string? studioId)
+    {
+        var act = () => new JobContextMapper(TestNodeId, studioId!, TestEnvironment);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Ctor_NullOrWhitespaceEnvironment_ThrowsArgumentException(string? environment)
+    {
+        var act = () => new JobContextMapper(TestNodeId, TestStudioId, environment!);
+
+        act.Should().Throw<ArgumentException>();
+    }
 }
