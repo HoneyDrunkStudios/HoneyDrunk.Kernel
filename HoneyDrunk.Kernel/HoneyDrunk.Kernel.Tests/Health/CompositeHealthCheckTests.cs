@@ -423,7 +423,7 @@ public class CompositeHealthCheckTests
 
         public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
         {
-            Started.SetResult(true);
+            Started.TrySetResult(true);
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             return HealthStatus.Healthy;
         }
