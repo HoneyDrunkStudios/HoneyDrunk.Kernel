@@ -277,15 +277,15 @@ public class CompositeHealthCheckTests
         using var cts = new CancellationTokenSource();
         var checks = new[]
         {
-            new DelayedHealthCheck(TimeSpan.FromMilliseconds(100))
+            new BlockingHealthCheck()
         };
         var composite = new CompositeHealthCheck(checks);
 
         var checkTask = composite.CheckAsync(cts.Token);
-        await Task.Delay(10);
+        await checks[0].Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
         cts.Cancel();
 
-        var act = async () => await checkTask;
+        var act = async () => await checkTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -413,6 +413,18 @@ public class CompositeHealthCheckTests
         public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
         {
             await Task.Delay(delay, cancellationToken);
+            return HealthStatus.Healthy;
+        }
+    }
+
+    private sealed class BlockingHealthCheck : IHealthCheck
+    {
+        public TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
+        {
+            Started.SetResult(true);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             return HealthStatus.Healthy;
         }
     }
