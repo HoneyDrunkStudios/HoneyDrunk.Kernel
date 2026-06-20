@@ -97,7 +97,7 @@ app.MapGet("/", (INodeContext nodeContext, IGridContext gridContext) =>
 app.Run();
 ```
 
-**See [samples/MinimalNode](samples/MinimalNode/) for a complete working example.**
+**See [samples/MinimalNode](HoneyDrunk.Kernel/samples/MinimalNode/) for a complete working example.**
 
 ---
 
@@ -174,33 +174,33 @@ jobBinder.Bind(jobMetadata, gridContext);
 ## 📖 Documentation
 
 ### Package Documentation
-- **[HoneyDrunk.Kernel.Abstractions README](HoneyDrunk.Kernel.Abstractions/README.md)** - Contracts/abstractions package
-- **[HoneyDrunk.Kernel README](HoneyDrunk.Kernel/README.md)** - Runtime implementations package
+- **[HoneyDrunk.Kernel.Abstractions README](HoneyDrunk.Kernel/HoneyDrunk.Kernel.Abstractions/README.md)** - Contracts/abstractions package
+- **[HoneyDrunk.Kernel README](HoneyDrunk.Kernel/HoneyDrunk.Kernel/README.md)** - Runtime implementations package
 
 ### Architecture & Guides
 
 **Core Documentation:**
-- **[FILE_GUIDE.md](docs/FILE_GUIDE.md)** - Complete file structure and architecture reference (START HERE)
-- **[Identity.md](docs/Identity.md)** - Strongly-typed identifiers (NodeId, CorrelationId, TenantId, etc.)
-- **[Context.md](docs/Context.md)** - Three-tier context propagation (Grid/Node/Operation)
-- **[Configuration.md](docs/Configuration.md)** - Studio-level configuration
-- **[Hosting.md](docs/Hosting.md)** - Node hosting and discovery
+- **[FILE_GUIDE.md](HoneyDrunk.Kernel/docs/FILE_GUIDE.md)** - Complete file structure and architecture reference (START HERE)
+- **[Identity.md](HoneyDrunk.Kernel/docs/Identity.md)** - Strongly-typed identifiers (NodeId, CorrelationId, TenantId, etc.)
+- **[Context.md](HoneyDrunk.Kernel/docs/Context.md)** - Three-tier context propagation (Grid/Node/Operation)
+- **[Configuration.md](HoneyDrunk.Kernel/docs/Configuration.md)** - Studio-level configuration
+- **[Hosting.md](HoneyDrunk.Kernel/docs/Hosting.md)** - Node hosting and discovery
 
 **Advanced Topics:**
-- **[Agents.md](docs/Agents.md)** - Agent execution framework + AgentsInterop serialization
-- **[Lifecycle.md](docs/Lifecycle.md)** - Lifecycle orchestration (startup/shutdown hooks)
-- **[Telemetry.md](docs/Telemetry.md)** - Observability primitives and OpenTelemetry integration
-- **[Transport.md](docs/Transport.md)** - Context propagation across boundaries
-- **[Errors.md](docs/Errors.md)** - Exception hierarchy and error handling
-- **[Implementations.md](docs/Implementations.md)** - Runtime implementation details
+- **[Agents.md](HoneyDrunk.Kernel/docs/Agents.md)** - Agent execution framework + AgentsInterop serialization
+- **[Lifecycle.md](HoneyDrunk.Kernel/docs/Lifecycle.md)** - Lifecycle orchestration (startup/shutdown hooks)
+- **[Telemetry.md](HoneyDrunk.Kernel/docs/Telemetry.md)** - Observability primitives and OpenTelemetry integration
+- **[Transport.md](HoneyDrunk.Kernel/docs/Transport.md)** - Context propagation across boundaries
+- **[Errors.md](HoneyDrunk.Kernel/docs/Errors.md)** - Exception hierarchy and error handling
+- **[Implementations.md](HoneyDrunk.Kernel/docs/Implementations.md)** - Runtime implementation details
 
 **Integration:**
-- **[Bootstrapping.md](docs/Bootstrapping.md)** - Unified Node initialization
-- **[OpenTelemetry.md](docs/OpenTelemetry.md)** - Distributed tracing with Activity API
-- **[Health.md](docs/Health.md)** - Service health monitoring
-- **[Diagnostics.md](docs/Diagnostics.md)** - Metrics and diagnostics
-- **[DependencyInjection.md](docs/DependencyInjection.md)** - Modular service registration
-- **[Testing.md](docs/Testing.md)** - Test patterns and best practices
+- **[Bootstrapping.md](HoneyDrunk.Kernel/docs/Bootstrapping.md)** - Unified Node initialization
+- **[OpenTelemetry.md](HoneyDrunk.Kernel/docs/OpenTelemetry.md)** - Distributed tracing with Activity API
+- **[Health.md](HoneyDrunk.Kernel/docs/Health.md)** - Service health monitoring
+- **[Diagnostics.md](HoneyDrunk.Kernel/docs/Diagnostics.md)** - Metrics and diagnostics
+- **[DependencyInjection.md](HoneyDrunk.Kernel/docs/DependencyInjection.md)** - Modular service registration
+- **[Testing.md](HoneyDrunk.Kernel/docs/Testing.md)** - Test patterns and best practices
 
 ### Standards
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Coding standards and conventions
@@ -303,6 +303,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 **Built with 🍯 by HoneyDrunk Studios**
 
-[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
+[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](HoneyDrunk.Kernel/docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
 
 </div>
