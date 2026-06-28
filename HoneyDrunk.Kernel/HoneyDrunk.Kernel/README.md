@@ -67,7 +67,7 @@ dotnet add package HoneyDrunk.Kernel
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="HoneyDrunk.Kernel" Version="0.4.0" />
+  <PackageReference Include="HoneyDrunk.Kernel" Version="0.8.0" />
 </ItemGroup>
 ```
 
