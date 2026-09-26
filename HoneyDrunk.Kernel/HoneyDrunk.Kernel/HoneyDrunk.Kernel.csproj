@@ -8,10 +8,10 @@
 
     <!-- Package Metadata -->
     <PackageId>HoneyDrunk.Kernel</PackageId>
-    <Version>0.8.0</Version>
+    <Version>0.8.1</Version>
     <Authors>HoneyDrunk Studios</Authors>
     <Description>Production-ready runtime implementations for HoneyDrunk.OS Grid. Provides GridContext, NodeContext, OperationContext implementations, transport binders (HTTP/messaging/jobs), context mappers, GridContextMiddleware, lifecycle orchestration, AgentsInterop, telemetry (GridActivitySource), and unified bootstrapping (AddHoneyDrunkGrid).</Description>
-    <PackageReleaseNotes>v0.8.0: Maintainability refactor (ADR-0011 follow-up). Converts AgentResultSerializer, GridContextSerializer, HttpContextMapper, JobContextMapper to static classes; drops JobContextMapper's instance constructor and unused fields. Breaking change — see CHANGELOG.md.</PackageReleaseNotes>
+    <PackageReleaseNotes>v0.8.1: Refresh stable dependencies while preserving target frameworks and HoneyDrunk public contracts.</PackageReleaseNotes>
     <PackageTags>kernel;runtime;grid;context;lifecycle;hosting;telemetry;mappers;transport;middleware;opentelemetry;agents;errors;multi-tenant</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -49,14 +49,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HoneyDrunk.Standards" Version="0.2.9">
+    <PackageReference Include="HoneyDrunk.Standards" Version="0.3.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
     <PackageReference Include="Ulid" Version="1.4.1" />
   </ItemGroup>
 
@@ -69,7 +69,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.201" />
+    <PackageReference Update="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.401" />
   </ItemGroup>
 
 </Project>
