@@ -242,8 +242,8 @@ HoneyDrunk.Kernel/
 ## 📖 Additional Resources
 
 ### Official Documentation
-- [README.md](../README.md) - Quick start and overview
-- [.github/copilot-instructions.md](../.github/copilot-instructions.md) - Coding standards
+- [README.md](../../README.md) - Quick start and overview
+- [.github/copilot-instructions.md](../../.github/copilot-instructions.md) - Coding standards
 
 ### Related Projects
 - [HoneyDrunk.Standards](https://github.com/HoneyDrunkStudios/HoneyDrunk.Standards) - Analyzers and conventions
