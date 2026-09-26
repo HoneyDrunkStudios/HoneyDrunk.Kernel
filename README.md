@@ -1,4 +1,4 @@
-﻿# HoneyDrunk.Kernel
+# HoneyDrunk.Kernel
 
 [![PR](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/actions/workflows/pr.yml/badge.svg)](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/actions/workflows/pr.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -38,10 +38,10 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 ```xml
 <ItemGroup>
   <!-- Runtime implementations (recommended) -->
-  <PackageReference Include="HoneyDrunk.Kernel" Version="0.8.0" />
+  <PackageReference Include="HoneyDrunk.Kernel" Version="0.8.1" />
   
   <!-- Abstractions only (for libraries) -->
-  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.8.0" />
+  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.8.1" />
 </ItemGroup>
 ```
 
