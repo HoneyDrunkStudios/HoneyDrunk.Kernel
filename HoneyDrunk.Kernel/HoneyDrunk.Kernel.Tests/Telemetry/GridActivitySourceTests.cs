@@ -1,12 +1,19 @@
 using AwesomeAssertions;
+using HoneyDrunk.Kernel.Abstractions.Context;
+using HoneyDrunk.Kernel.Context.Mappers;
 using HoneyDrunk.Kernel.Telemetry;
 using HoneyDrunk.Kernel.Tests.TestHelpers;
+using HoneyDrunk.Kernel.Transport;
 using System.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Tests.Telemetry;
 
 public class GridActivitySourceTests
 {
+    private const string TraceId = "0af7651916cd43dd8448eb211c80319c";
+    private const string ParentSpanId = "b7ad6b7169203331";
+    private const string TraceState = "vendor=value";
+
     [Fact]
     public void SourceName_HasCorrectValue()
     {
@@ -613,6 +620,109 @@ public class GridActivitySourceTests
         activity!.Kind.Should().Be(ActivityKind.Consumer);
     }
 
+    [Theory]
+    [InlineData(false, "00")]
+    [InlineData(false, "01")]
+    [InlineData(true, "00")]
+    [InlineData(true, "01")]
+    public async Task StartActivity_WithAmbientParent_PreservesTraceContext(bool useKernelSource, string flags)
+    {
+        using var listener = CreateListener();
+        using var parent = new Activity("remote-request")
+            .SetParentId($"00-{TraceId}-{ParentSpanId}-{flags}")
+            .Start();
+        parent.TraceStateString = TraceState;
+        var grid = GridContextTestHelper.CreateDefault(correlationId: "business-correlation");
+
+        using var child = useKernelSource
+            ? HoneyDrunkTelemetry.StartActivity("local-operation", grid)
+            : GridActivitySource.StartActivity("local-operation", grid);
+        await Task.Yield();
+
+        child.Should().NotBeNull();
+        child!.TraceId.Should().Be(parent.TraceId);
+        child.ParentSpanId.Should().Be(parent.SpanId);
+        child.SpanId.Should().NotBe(parent.SpanId);
+        child.ActivityTraceFlags.Should().Be(parent.ActivityTraceFlags);
+        child.TraceStateString.Should().Be(TraceState);
+        child.GetTagItem("hd.correlation_id").Should().Be("business-correlation");
+        Activity.Current.Should().BeSameAs(child);
+        grid.CorrelationId.Should().Be("business-correlation");
+    }
+
+    [Theory]
+    [InlineData(false, "00")]
+    [InlineData(false, "01")]
+    [InlineData(true, "00")]
+    [InlineData(true, "01")]
+    public void Bind_WithActiveTrace_RoundTripsIndependentTraceAndBusinessContext(bool isJob, string flags)
+    {
+        using var listener = CreateListener();
+        var grid = GridContextTestHelper.CreateInitialized(
+            "business-correlation", "test-node", "test-studio", "test-env", causationId: "business-parent");
+        Dictionary<string, string> metadata;
+        ActivityContext producerContext;
+        using (var producer = new Activity("send")
+            .SetParentId($"00-{TraceId}-{ParentSpanId}-{flags}")
+            .Start())
+        {
+            producer.TraceStateString = TraceState;
+            producerContext = producer.Context;
+            metadata = BindMetadata(grid, isJob);
+            metadata["traceparent"].Should().Be(producer.Id);
+            metadata["tracestate"].Should().Be(TraceState);
+        }
+
+        var receivedGrid = GridContextTestHelper.CreateUninitialized();
+        if (isJob)
+        {
+            JobContextMapper.InitializeFromMetadata(receivedGrid, metadata);
+        }
+        else
+        {
+            MessagingContextMapper.InitializeFromMessage(receivedGrid, metadata);
+        }
+
+        ActivityContext.TryParse(metadata["traceparent"], metadata["tracestate"], isRemote: true, out var remoteParent)
+            .Should().BeTrue();
+        using var consumer = GridActivitySource.Instance.StartActivity("receive", ActivityKind.Consumer, remoteParent);
+        using var work = GridActivitySource.StartActivity("handle", receivedGrid);
+
+        consumer.Should().NotBeNull();
+        consumer!.TraceId.Should().Be(producerContext.TraceId);
+        consumer.ParentSpanId.Should().Be(producerContext.SpanId);
+        consumer.ActivityTraceFlags.Should().Be(producerContext.TraceFlags);
+        consumer.TraceStateString.Should().Be(TraceState);
+        work.Should().NotBeNull();
+        work!.TraceId.Should().Be(producerContext.TraceId);
+        work.ParentSpanId.Should().Be(consumer.SpanId);
+        work.TraceStateString.Should().Be(TraceState);
+        receivedGrid.CorrelationId.Should().Be("business-correlation");
+        receivedGrid.CausationId.Should().Be("business-parent");
+        receivedGrid.CorrelationId.Should().NotBe(work.TraceId.ToString());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Bind_WithoutActiveTrace_DoesNotInventTraceContext(bool isJob)
+    {
+        var previous = Activity.Current;
+        try
+        {
+            Activity.Current = null;
+            var metadata = BindMetadata(GridContextTestHelper.CreateDefault(), isJob);
+
+            metadata.Should().NotContainKey("traceparent");
+            metadata.Should().NotContainKey("tracestate");
+            metadata[GridHeaderNames.CorrelationId].Should().Be("test-correlation-id");
+        }
+        finally
+        {
+            Activity.Current = previous;
+        }
+    }
+
     private static InvalidOperationException CaptureThrownException()
     {
         try
@@ -623,5 +733,33 @@ public class GridActivitySourceTests
         {
             return ex;
         }
+    }
+
+    private static ActivityListener CreateListener()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name is GridActivitySource.SourceName or "HoneyDrunk.Kernel",
+            Sample = (ref ActivityCreationOptions<ActivityContext> options) =>
+                options.Parent.TraceFlags.HasFlag(ActivityTraceFlags.Recorded)
+                    ? ActivitySamplingResult.AllDataAndRecorded
+                    : ActivitySamplingResult.AllData,
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    private static Dictionary<string, string> BindMetadata(IGridContext grid, bool isJob)
+    {
+        if (isJob)
+        {
+            var metadata = new Dictionary<string, string>();
+            new JobMetadataBinder().Bind(metadata, grid);
+            return metadata;
+        }
+
+        var properties = new Dictionary<string, object>();
+        new MessagePropertiesBinder().Bind(properties, grid);
+        return properties.ToDictionary(pair => pair.Key, pair => (string)pair.Value);
     }
 }

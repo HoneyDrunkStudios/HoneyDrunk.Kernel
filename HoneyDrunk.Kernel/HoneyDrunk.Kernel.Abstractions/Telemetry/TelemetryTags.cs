@@ -7,6 +7,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Telemetry;
 /// These constants define the semantic standard for tagging metrics, traces, and logs
 /// across the entire Grid. All Nodes should use these tag names for consistency.
 /// This enables unified querying, filtering, and correlation in observability backends.
+/// Identifier, free-text, and per-request tags are for traces/logs, not metric dimensions.
+/// Metrics must use bounded dimensions; valid tenant syntax alone does not bound tenant cardinality.
 /// Follows OpenTelemetry semantic conventions with "hd." prefix for HoneyDrunk-specific tags.
 /// </remarks>
 public static class TelemetryTags

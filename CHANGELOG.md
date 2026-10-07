@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Validate the HTTP `traceparent` correlation fallback with `ActivityContext.TryParse`; malformed headers fall back to a new ULID.
+- Preserve active distributed trace context in message/job envelopes with the configured `DistributedContextPropagator`, independently of business identifiers.
+- Clarify trace identity, consumer activity ownership, and bounded metric dimensions; add sampled/unsampled propagation regression tests.
+
 ## [0.8.0] - 2026-05-26
 
 ### Changed

@@ -1,5 +1,6 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Transport;
+using System.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Transport;
 
@@ -9,7 +10,8 @@ namespace HoneyDrunk.Kernel.Transport;
 /// <remarks>
 /// This binder assumes job metadata is stored as a dictionary (common for systems
 /// like Hangfire, Quartz, Azure Functions). For strongly-typed job contexts,
-/// implement a custom binder.
+/// implement a custom binder. The configured DistributedContextPropagator also injects the
+/// current Activity context. Consumers must extract it and own the receiving Activity lifetime.
 /// </remarks>
 public sealed class JobMetadataBinder : ITransportEnvelopeBinder
 {
@@ -53,5 +55,11 @@ public sealed class JobMetadataBinder : ITransportEnvelopeBinder
         {
             metadata[$"{GridHeaderNames.BaggagePrefix}{key}"] = value;
         }
+
+        // Business IDs do not replace the active distributed trace context.
+        DistributedContextPropagator.Current.Inject(
+            Activity.Current,
+            metadata,
+            static (carrier, name, value) => ((IDictionary<string, string>)carrier!)[name] = value);
     }
 }

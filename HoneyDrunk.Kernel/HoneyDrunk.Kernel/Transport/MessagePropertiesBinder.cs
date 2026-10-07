@@ -1,5 +1,6 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using HoneyDrunk.Kernel.Abstractions.Transport;
+using System.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Transport;
 
@@ -9,7 +10,8 @@ namespace HoneyDrunk.Kernel.Transport;
 /// <remarks>
 /// This binder assumes message envelopes are dictionaries (common pattern for most
 /// messaging systems like RabbitMQ, Azure Service Bus, AWS SQS). For strongly-typed
-/// message envelopes, implement a custom binder.
+/// message envelopes, implement a custom binder. The configured DistributedContextPropagator
+/// also injects the current Activity context. Consumers own the receiving Activity lifetime.
 /// </remarks>
 public sealed class MessagePropertiesBinder : ITransportEnvelopeBinder
 {
@@ -52,5 +54,11 @@ public sealed class MessagePropertiesBinder : ITransportEnvelopeBinder
         {
             properties[$"{GridHeaderNames.BaggagePrefix}{key}"] = value;
         }
+
+        // Business IDs do not replace the active distributed trace context.
+        DistributedContextPropagator.Current.Inject(
+            Activity.Current,
+            properties,
+            static (carrier, name, value) => ((IDictionary<string, object>)carrier!)[name] = value);
     }
 }

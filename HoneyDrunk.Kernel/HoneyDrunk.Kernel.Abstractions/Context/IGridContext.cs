@@ -12,8 +12,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// in the HoneyDrunk ecosystem. It carries:
 /// </para>
 /// <list type="bullet">
-/// <item>Correlation ID (Trace ID): Groups related operations across Nodes (constant per request)</item>
-/// <item>Causation ID (Parent Span ID): Tracks which operation triggered this one</item>
+/// <item>Business Correlation ID: Groups related operations across Nodes (constant per request)</item>
+/// <item>Business Causation ID: Tracks which operation triggered this one</item>
 /// <item>Node Identity: Which Node is executing this operation</item>
 /// <item>Studio Context: Which Studio owns this execution</item>
 /// <item>Environment: Which environment (production, staging, development, etc.)</item>
@@ -21,8 +21,8 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// <item>Cancellation: Cooperative cancellation for the entire operation chain</item>
 /// </list>
 /// <para>
-/// The CorrelationId and CausationId align with W3C Trace Context and OpenTelemetry standards.
-/// OperationId (Span ID) is owned by IOperationContext, not GridContext.
+/// CorrelationId and CausationId are business identifiers, not W3C trace or span IDs.
+/// Activity owns distributed trace identity; IOperationContext owns the business OperationId.
 /// </para>
 /// <para>
 /// <strong>Ownership model:</strong> Exactly one GridContext instance exists per DI scope.
@@ -44,17 +44,17 @@ public interface IGridContext
     bool IsInitialized { get; }
 
     /// <summary>
-    /// Gets the correlation identifier (trace ID) that groups related operations across the Grid.
+    /// Gets the business correlation identifier that groups related operations across the Grid.
     /// This ID remains constant as work flows through multiple Nodes within a single user request.
     /// Created once at the edge and propagated unchanged through all downstream operations.
-    /// Maps to W3C traceparent trace-id and OpenTelemetry trace_id.
+    /// Does not set Activity.TraceId or replace W3C traceparent/tracestate propagation.
     /// </summary>
     string CorrelationId { get; }
 
     /// <summary>
-    /// Gets the causation identifier (parent span ID) indicating which operation triggered this one.
+    /// Gets the business causation identifier indicating which operation triggered this one.
     /// Points to the parent operation's OperationId. Null for root operations.
-    /// Maps to W3C traceparent parent-id and OpenTelemetry parent_span_id.
+    /// Does not set Activity.ParentSpanId.
     /// </summary>
     string? CausationId { get; }
 

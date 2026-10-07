@@ -1,12 +1,12 @@
 namespace HoneyDrunk.Kernel.Abstractions.Identity;
 
 /// <summary>
-/// Represents a unique identifier for a single operation (span) within a distributed trace.
+/// Represents a unique business identifier for a single operation.
 /// </summary>
 /// <remarks>
 /// OperationId uniquely identifies a unit of work (HTTP request, message handler, job step, etc.)
-/// within a larger trace. Together with CorrelationId (trace-id) and CausationId (parent-operation-id),
-/// it forms the complete distributed tracing identity model compatible with W3C Trace Context and OpenTelemetry.
+/// within a business operation chain. Together with CorrelationId and CausationId,
+/// it describes business relationships independently of Activity trace and span IDs.
 /// </remarks>
 public readonly record struct OperationId
 {
