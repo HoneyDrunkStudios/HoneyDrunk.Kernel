@@ -7,6 +7,8 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Trace propagation and business correlation](#trace-propagation-and-business-correlation)
+- [Metric cardinality](#metric-cardinality)
 - **Abstractions**
   - [ITelemetryContext.cs](#itelemetrycontextcs)
   - [ITelemetryActivityFactory.cs](#itelemetryactivityfactorycs)
@@ -55,6 +57,73 @@ Telemetry abstractions provide OpenTelemetry-ready tracing, enrichment, and log 
 [↑ Back to top](#table-of-contents)
 
 ---
+
+## Trace propagation and business correlation
+
+`Activity.TraceId`, `Activity.SpanId`, `Activity.ParentSpanId`, trace flags, and
+`Activity.TraceStateString` carry the distributed trace. Kernel's `CorrelationId`,
+`OperationId`, and `CausationId` describe business relationships and remain separate
+trace/log attributes. Never convert a ULID into a W3C trace or span ID.
+
+Both `GridActivitySource` and `HoneyDrunkTelemetry` inherit `Activity.Current`.
+HTTP server and client instrumentation own W3C header extraction/injection. The
+Grid middleware does not replace the ASP.NET Core activity. For compatibility,
+HTTP correlation extraction still prefers `X-Correlation-Id`, then a **valid**
+`traceparent` trace ID, then a new ULID. That fallback does not set trace identity.
+
+`MessagePropertiesBinder` and `JobMetadataBinder` use
+`DistributedContextPropagator.Current.Inject` to put the active trace context into
+the outgoing carrier alongside business headers. Bind while the producer activity
+is current. The configured propagator controls any additional propagated fields,
+including activity baggage; applications should admit only safe baggage at ingress.
+With no current activity, the default propagator does not invent trace headers.
+Use a fresh metadata dictionary for each outgoing envelope.
+
+At receive time, the transport adapter owns the consumer activity lifetime. Extract
+W3C context independently from initializing the scoped Grid context:
+
+```csharp
+// metadata is a fresh Dictionary<string, string> received with a job.
+var propagator = DistributedContextPropagator.Current;
+propagator.ExtractTraceIdAndState(
+    metadata,
+    static (object? carrier, string name, out string? value,
+        out IEnumerable<string>? values) =>
+    {
+        value = carrier is IReadOnlyDictionary<string, string> headers
+            && headers.TryGetValue(name, out var header) ? header : null;
+        values = null;
+    },
+    out var traceParent,
+    out var traceState);
+ActivityContext.TryParse(traceParent, traceState, isRemote: true, out var parent);
+
+// Register HoneyDrunk.Grid with the application's OpenTelemetry provider.
+using var activity = GridActivitySource.Instance.StartActivity(
+    "ProcessJob", ActivityKind.Consumer, parent);
+JobContextMapper.InitializeFromMetadata(gridContext, metadata);
+// Process the job here; dispose the activity when processing finishes.
+```
+
+Message consumers follow the same pattern with `MessagingContextMapper`.
+The mappers initialize business context; they do not start, stop, or replace
+activities. Invalid or missing W3C headers produce a default parent context;
+never substitute a business ID into that context. Let the transport's standard
+OpenTelemetry instrumentation handle this when it already provides consumer spans.
+
+See the .NET documentation for
+[ActivityContext.TryParse](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.activitycontext.tryparse)
+and [DistributedContextPropagator](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.distributedcontextpropagator).
+
+## Metric cardinality
+
+Kernel's built-in `IMetricsCollector` is a no-op. Downstream implementations must
+limit metric labels to bounded dimensions such as node, environment, operation
+type, signal, and outcome. Do not copy trace/log tags wholesale: correlation,
+operation, trace, user, session, request IDs, raw paths, and baggage are unsuitable
+metric labels. A tenant ULID being syntactically valid does not bound its
+cardinality; emit tenant labels only from an explicitly bounded, validated set,
+and omit malformed or internal tenant values.
 
 ## Abstractions
 

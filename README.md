@@ -101,6 +101,15 @@ app.Run();
 
 ---
 
+## Trace and metric safety
+
+Business correlation/operation IDs are separate from W3C trace/span IDs. Keep
+ASP.NET Core and HttpClient instrumentation responsible for HTTP propagation.
+Message and job binders inject the current Activity through the configured .NET
+propagator; consumers extract and scope their own Activity. Metrics use bounded
+dimensions, never per-request IDs or arbitrary baggage. See
+[trace propagation and cardinality guidance](HoneyDrunk.Kernel/docs/Telemetry.md#trace-propagation-and-business-correlation).
+
 ## 🎯 Key Features (v0.3.0)
 
 ### 🌐 Three-Tier Context Model

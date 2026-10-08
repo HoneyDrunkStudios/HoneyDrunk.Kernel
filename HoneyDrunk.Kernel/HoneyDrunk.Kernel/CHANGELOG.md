@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Validate the HTTP `traceparent` correlation fallback with `ActivityContext.TryParse`; malformed headers fall back to a new ULID.
+- Preserve active distributed trace context in message/job envelopes with the configured `DistributedContextPropagator`, independently of business identifiers.
+- Clarify trace identity, consumer activity ownership, and bounded metric dimensions; add sampled/unsampled propagation regression tests.
+
 ### Changed
 
 - Refreshed HoneyDrunk.Standards to 0.2.9 for ADR-0047 testing/tooling alignment.

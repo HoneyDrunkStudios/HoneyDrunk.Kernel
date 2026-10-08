@@ -1,5 +1,6 @@
 using HoneyDrunk.Kernel.Abstractions.Context;
 using Microsoft.AspNetCore.Http;
+using System.Diagnostics;
 
 namespace HoneyDrunk.Kernel.Context;
 
@@ -14,13 +15,9 @@ internal static class HttpContextExtraction
         }
 
         var traceParent = ExtractHeader(httpContext, GridHeaderNames.TraceParent);
-        if (!string.IsNullOrWhiteSpace(traceParent))
+        if (ActivityContext.TryParse(traceParent, traceState: null, out var traceContext))
         {
-            var parts = traceParent.Split('-');
-            if (parts.Length >= 2)
-            {
-                return parts[1];
-            }
+            return traceContext.TraceId.ToString();
         }
 
         return Ulid.NewUlid().ToString();

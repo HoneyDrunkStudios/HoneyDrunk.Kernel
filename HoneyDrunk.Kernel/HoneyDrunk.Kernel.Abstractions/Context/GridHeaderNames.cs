@@ -6,25 +6,25 @@ namespace HoneyDrunk.Kernel.Abstractions.Context;
 /// <remarks>
 /// These names are stable contracts for downstream surfaces (Web.Rest, Gateway, Edge). They intentionally avoid
 /// X- prefixes where a future standard name may be adopted. Keep additions minimal; prefer baggage for ad-hoc keys.
-/// The three-ID model (Correlation, Operation, Causation) maps directly to W3C Trace Context (trace-id, span-id, parent-id).
+/// Business correlation, operation, and causation IDs are separate from W3C trace and span IDs.
 /// </remarks>
 public static class GridHeaderNames
 {
     /// <summary>
     /// Correlation identifier (ULID or external trace id) - groups all operations in a request tree.
-    /// Falls back to generated ULID when absent. Maps to W3C traceparent trace-id.
+    /// Falls back to a valid incoming trace ID or a generated ULID; never sets the active trace ID.
     /// </summary>
     public const string CorrelationId = "X-Correlation-Id";
 
     /// <summary>
-    /// Operation identifier (ULID) - uniquely identifies this unit of work (span) within the trace.
-    /// Maps to W3C traceparent span-id.
+    /// Operation identifier (ULID) - uniquely identifies this business unit of work.
+    /// Independent of the Activity span ID.
     /// </summary>
     public const string OperationId = "X-Operation-Id";
 
     /// <summary>
     /// Causation identifier referencing the parent operation's OperationId (not CorrelationId).
-    /// Forms parent-child chain for distributed tracing. Maps to W3C traceparent parent-id.
+    /// Forms the business operation chain, independently of the Activity parent span ID.
     /// </summary>
     public const string CausationId = "X-Causation-Id";
 

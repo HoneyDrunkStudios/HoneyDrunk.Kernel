@@ -660,46 +660,18 @@ See [Lifecycle.md](Lifecycle.md) for detailed lifecycle hook patterns.
 
 **Location:** `HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
 
-#### Three-ID Model Mapping
+#### Business IDs and trace IDs
 
-Kernel's three-ID model (CorrelationId, OperationId, CausationId) maps directly to W3C Trace Context / OpenTelemetry:
+Kernel's `CorrelationId`, `OperationId`, and `CausationId` form a business operation
+chain. They are not W3C trace or span IDs. Activities own `TraceId`, `SpanId`,
+`ParentSpanId`, flags, and `TraceStateString`; business correlation is attached as
+trace/log metadata. Creating an `IOperationContext` does not start an Activity.
 
-| Kernel Property | OpenTelemetry | W3C Trace Context | Description |
-|-----------------|---------------|-------------------|-------------|
-| `CorrelationId` | `Activity.TraceId` | `traceparent.trace-id` | Groups all operations in request tree |
-| `OperationId` | `Activity.SpanId` | `traceparent.span-id` | Uniquely identifies this operation/span |
-| `CausationId` | `Activity.ParentSpanId` | `traceparent.parent-id` | Points to parent operation |
-
-Note: These are conceptual mappings. OpenTelemetry generates and manages actual Activity IDs. Kernel aligns its CorrelationId, OperationId, and CausationId with the resulting Activity.TraceId, SpanId, and ParentSpanId automatically.
-
-#### How It Works
-
-Kernel's three-ID model maps conceptually to OpenTelemetry/W3C Trace Context:
-
-- **CorrelationId → `Activity.TraceId`** (constant across entire trace)
-- **OperationId → `Activity.SpanId`** (unique per operation/span)
-- **CausationId → `Activity.ParentSpanId`** (points to parent operation)
-
-The actual wiring is handled inside `IOperationContextFactory` and the telemetry integration layer. **Callers just use `IOperationContext` - Kernel handles the Activity plumbing automatically.**
-
-**Example (conceptual):**
-
-```csharp
-// When you create an operation context:
-using var operation = operationFactory.Create("ProcessOrder");
-
-// Kernel internally creates an Activity with:
-// - activity.TraceId = grid.CorrelationId (from parent context)
-// - activity.SpanId = grid.OperationId (newly generated)
-// - activity.ParentSpanId = grid.CausationId (parent's OperationId)
-
-await ProcessOrderAsync(order);
-operation.Complete();
-
-// Activity is automatically stopped and telemetry emitted
-```
-
-**Important:** You don't manually assign `Activity.TraceId` or `Activity.SpanId`. OpenTelemetry handles this when you call `StartActivity()`. The mapping above describes the **conceptual relationship**, not literal code you write.
+Use `GridActivitySource` or `ITelemetryActivityFactory` for manual spans. They
+inherit the current Activity, including its trace state. HTTP instrumentation owns
+HTTP propagation; message/job transport adapters must extract a remote parent and
+scope the consumer Activity. See
+[trace propagation](Telemetry.md#trace-propagation-and-business-correlation).
 
 #### OpenTelemetry Registration
 
@@ -724,7 +696,7 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(tracing =>
     {
         tracing
-            .AddSource(GridActivitySource.Name)  // "HoneyDrunk.Grid"
+            .AddSource(GridActivitySource.SourceName)  // "HoneyDrunk.Grid"
             .AddAspNetCoreInstrumentation()      // HTTP instrumentation
             .AddHttpClientInstrumentation()      // Outbound HTTP calls
             .AddOtlpExporter(options =>
@@ -739,33 +711,20 @@ app.Run();
 
 #### What Gets Traced
 
-All `IOperationContext` instances create Activities automatically:
+ASP.NET Core instrumentation creates HTTP server spans. `UseGridContext()`
+initializes business context. Start manual spans explicitly:
 
 ```csharp
-// HTTP requests (via GridContextMiddleware)
-app.UseGridContext(); // Creates Activity for each request
-
-// Manual operations
 using var operation = operationFactory.Create("ProcessOrder");
-// Activity started automatically with TraceId/SpanId/ParentSpanId
+using var activity = GridActivitySource.StartActivity(
+    "ProcessOrder", operation.GridContext);
 await ProcessOrderAsync(order);
 operation.Complete();
-// Activity stopped, duration recorded
+GridActivitySource.SetSuccess(activity);
 ```
 
-#### Trace Visualization
-
-```
-TraceId: 01HQXZ8K4TJ9X5B3N2YGF7WDCQ (CorrelationId - constant across trace)
-├─ SpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCR (OperationId - API Gateway)
-│  ParentSpanId: null (root span)
-│  └─ SpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCS (OperationId - Order Service)
-│     ParentSpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCR (parent = gateway span)
-│     └─ SpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCT (OperationId - Payment Service)
-│        ParentSpanId: 01HQXZ8K4TJ9X5B3N2YGF7WDCS (parent = order span)
-```
-
-**Design:** Kernel's three-ID model is **OpenTelemetry-native** by design. No translation layer needed - IDs map 1:1.
+An Activity exists only when a listener's sampling decision creates it. Business
+operation identity still exists independently when no Activity is created.
 
 See [Context.md](Context.md) for detailed context propagation and [Telemetry.md](Telemetry.md) for enrichment patterns.
 

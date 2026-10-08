@@ -190,7 +190,7 @@ All logs across all services share the same CorrelationId → full trace reconst
 ## OperationId.cs
 
 ### What it is
-ULID-based identifier for a single operation (span) within a distributed trace.
+ULID-based business identifier for a single unit of work, independent of an Activity span.
 
 ### Real-world analogy
 Like a unique transaction ID on a receipt - identifies this specific step in a larger journey.
@@ -201,9 +201,9 @@ Like a unique transaction ID on a receipt - identifies this specific step in a l
 ### Properties
 - **Uniqueness:** Globally unique across all operations
 - **Sortability:** Lexicographically sortable by creation time
-- **Span Identity:** Maps to W3C traceparent span-id and OpenTelemetry span_id
+- **Business Identity:** Independent of the W3C/OpenTelemetry span ID
 - **Per-Operation:** Created fresh for each unit of work (HTTP request, message handler, job step)
-- **Owned by IOperationContext:** Each `IOperationContext` instance generates and exposes its own `OperationId` to identify that span
+- **Owned by IOperationContext:** Each `IOperationContext` instance exposes its own `OperationId` to identify that business operation
 
 ### Usage
 
@@ -230,42 +230,42 @@ Ulid ulidValue = operationId;            // To Ulid
 ### When to use
 - Every operation creates its own OperationId
 - Identifies a unit of work within a larger trace
-- Maps to span_id in distributed tracing systems
+- Can be attached to spans/logs as business metadata; does not set span_id
 - Parent's OperationId becomes child's CausationId
 
 ### Why it matters
-**Enables proper distributed tracing** - the missing piece that completes the three-ID model:
-- **CorrelationId (trace-id)**: "All of these belong together"
-- **OperationId (span-id)**: "This specific unit of work"
-- **CausationId (parent-span-id)**: "Who called me"
+**Tracks business causation** independently of the distributed trace:
+- **CorrelationId (business correlation)**: "All of these belong together"
+- **OperationId (business operation)**: "This specific unit of work"
+- **CausationId (parent operation)**: "Who called me"
 
-Without OperationId, you can't distinguish between different operations in the same trace or build proper parent-child span relationships.
+OperationId distinguishes business operations in the same correlation chain; Activity owns parent-child span relationships.
 
 ### Three-ID Model Example
 
 ```
 User Request
-  ├─ CorrelationId: ABC123 (constant - trace ID)
+  ├─ CorrelationId: ABC123 (constant business correlation)
   ├─ OperationId: OP-001 (this operation - span ID)
   └─ CausationId: null (no parent - root span)
       │
       ├─ API Gateway
-      │   ├─ CorrelationId: ABC123 (same trace)
+      │   ├─ CorrelationId: ABC123 (same business correlation)
       │   ├─ OperationId: OP-002 (new span)
-      │   └─ CausationId: OP-001 (parent span)
+      │   └─ CausationId: OP-001 (parent operation)
       │       │
       │       ├─ Auth Service
-      │       │   ├─ CorrelationId: ABC123 (same trace)
+      │       │   ├─ CorrelationId: ABC123 (same business correlation)
       │       │   ├─ OperationId: OP-003 (new span)
-      │       │   └─ Causation Id: OP-002 (parent span)
+      │       │   └─ Causation Id: OP-002 (parent operation)
       │       │
       │       └─ Payment Service
-      │           ├─ CorrelationId: ABC123 (same trace)
+      │           ├─ CorrelationId: ABC123 (same business correlation)
       │           ├─ OperationId: OP-004 (new span)
-      │           └─ CausationId: OP-002 (parent span)
+      │           └─ CausationId: OP-002 (parent operation)
 ```
 
-**Result:** Perfect tree reconstruction with W3C/OpenTelemetry compatibility.
+**Result:** A business operation tree that can be correlated with separate W3C/OpenTelemetry traces.
 
 [↑ Back to top](#table-of-contents)
 
@@ -1136,9 +1136,9 @@ public void ErrorCode_SupportsHierarchicalStructure()
 | Type | Format | Length | Use Case |
 |------|--------|--------|----------|
 | **NodeId** | Kebab-case | 3-64 chars | Node identification |
-| **CorrelationId** | ULID | 26 chars | Request tracing (trace-id - constant per request) |
-| **OperationId** | ULID | 26 chars | Operation/span identification (span-id - unique per operation) |
-| **CausationId** | ULID | 26 chars | Parent operation tracking (parent-span-id - points to parent OperationId) |
+| **CorrelationId** | ULID | 26 chars | Request tracing (business correlation - constant per request) |
+| **OperationId** | ULID | 26 chars | Operation/span identification (business ID - unique per operation) |
+| **CausationId** | ULID | 26 chars | Parent operation tracking (points to parent OperationId) |
 | **TenantId** | ULID | 26 chars | Multi-tenancy isolation |
 | **ProjectId** | ULID | 26 chars | Project/workspace organization |
 | **RunId** | ULID | 26 chars | Execution instance tracking |
@@ -1150,10 +1150,13 @@ public void ErrorCode_SupportsHierarchicalStructure()
 - **Kebab-case** = lowercase + hyphens (`kernel`, `payment-service`, `rate-limit.exceeded`)
 - **ULID** = chronologically sortable, 26-char Base32 (`01HQXZ8K...`)
 
-**Three-ID Tracing Model (W3C/OpenTelemetry Compatible):**
-- **CorrelationId (trace-id)** = Constant across entire request tree
-- **OperationId (span-id)** = Unique per operation/span
-- **CausationId (parent-span-id)** = Points to parent's OperationId
+W3C trace IDs use 32 hex characters and span IDs use 16 hex characters; ULIDs
+are not substitutes. See [trace propagation](Telemetry.md#trace-propagation-and-business-correlation).
+
+**Three-ID Business Correlation Model:**
+- **CorrelationId (business correlation)** = Constant across entire request tree
+- **OperationId (business operation)** = Unique per operation/span
+- **CausationId (parent operation)** = Points to parent's OperationId
 
 **Common Properties:**
 - ✅ Type-safe

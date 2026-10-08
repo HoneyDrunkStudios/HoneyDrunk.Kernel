@@ -6,7 +6,9 @@ namespace HoneyDrunk.Kernel.Abstractions.Diagnostics;
 /// <remarks>
 /// IMetricsCollector is the Grid-wide abstraction for observability metrics.
 /// Implementations should map to appropriate backends (OpenTelemetry, Application Insights, etc.).
-/// Use <see cref="Telemetry.TelemetryTags"/> constants for consistent tagging across the Grid.
+/// Use only bounded dimensions such as node, environment, operation type, and outcome.
+/// Never use correlation, operation, trace, user, session, or request IDs, raw paths, or baggage as metric labels.
+/// Tenant labels require a bounded, validated set; malformed and internal tenant IDs must be omitted.
 /// </remarks>
 public interface IMetricsCollector
 {
@@ -16,7 +18,7 @@ public interface IMetricsCollector
     /// </summary>
     /// <param name="name">The name of the counter metric.</param>
     /// <param name="value">The value to add to the counter (default: 1).</param>
-    /// <param name="tags">Optional key-value pairs for metric dimensions. Use <see cref="Telemetry.TelemetryTags"/> constants.</param>
+    /// <param name="tags">Optional bounded, low-cardinality metric dimensions.</param>
     void RecordCounter(string name, long value = 1, params KeyValuePair<string, object?>[] tags);
 
     /// <summary>
@@ -25,7 +27,7 @@ public interface IMetricsCollector
     /// </summary>
     /// <param name="name">The name of the histogram metric.</param>
     /// <param name="value">The value to record in the histogram.</param>
-    /// <param name="tags">Optional key-value pairs for metric dimensions. Use <see cref="Telemetry.TelemetryTags"/> constants.</param>
+    /// <param name="tags">Optional bounded, low-cardinality metric dimensions.</param>
     void RecordHistogram(string name, double value, params KeyValuePair<string, object?>[] tags);
 
     /// <summary>
@@ -34,6 +36,6 @@ public interface IMetricsCollector
     /// </summary>
     /// <param name="name">The name of the gauge metric.</param>
     /// <param name="value">The current value of the gauge.</param>
-    /// <param name="tags">Optional key-value pairs for metric dimensions. Use <see cref="Telemetry.TelemetryTags"/> constants.</param>
+    /// <param name="tags">Optional bounded, low-cardinality metric dimensions.</param>
     void RecordGauge(string name, double value, params KeyValuePair<string, object?>[] tags);
 }

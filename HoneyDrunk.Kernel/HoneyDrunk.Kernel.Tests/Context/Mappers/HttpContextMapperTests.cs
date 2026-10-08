@@ -43,50 +43,49 @@ public class HttpContextMapperTests
         values.CorrelationId.Should().NotBeNullOrWhiteSpace();
     }
 
-    [Fact]
-    public void ExtractFromHttpContext_WithTraceParentHeader_ExtractsTraceId()
+    [Theory]
+    [InlineData("00")]
+    [InlineData("01")]
+    public void ExtractFromHttpContext_WithTraceParentHeader_ExtractsTraceId(string flags)
     {
         var httpContext = CreateHttpContext();
-        httpContext.Request.Headers.TraceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+        httpContext.Request.Headers.TraceParent = $"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-{flags}";
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
         values.CorrelationId.Should().Be("0af7651916cd43dd8448eb211c80319c");
     }
 
-    [Fact]
-    public void ExtractFromHttpContext_WithBothCorrelationIdAndTraceParent_PrefersCorrelationId()
+    [Theory]
+    [InlineData("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01")]
+    [InlineData("00-shortid")]
+    public void ExtractFromHttpContext_WithBothCorrelationIdAndTraceParent_PrefersCorrelationId(string traceParent)
     {
         var httpContext = CreateHttpContext();
         httpContext.Request.Headers["X-Correlation-Id"] = "explicit-correlation-id";
-        httpContext.Request.Headers.TraceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+        httpContext.Request.Headers.TraceParent = traceParent;
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
         values.CorrelationId.Should().Be("explicit-correlation-id");
     }
 
-    [Fact]
-    public void ExtractFromHttpContext_WithShortTraceParentFormat_ExtractsTraceId()
+    [Theory]
+    [InlineData("00-shortid")]
+    [InlineData("invalid-format")]
+    [InlineData("00-00000000000000000000000000000000-b7ad6b7169203331-01")]
+    [InlineData("00-0af7651916cd43dd8448eb211c80319c-0000000000000000-01")]
+    [InlineData("00-0af7651916cd43dd8448eb211c80319z-b7ad6b7169203331-01")]
+    [InlineData("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-xx")]
+    [InlineData("ff-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01")]
+    public void ExtractFromHttpContext_WithInvalidTraceParent_GeneratesUlid(string traceParent)
     {
         var httpContext = CreateHttpContext();
-        httpContext.Request.Headers.TraceParent = "00-shortid";
+        httpContext.Request.Headers.TraceParent = traceParent;
 
         var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
 
-        values.CorrelationId.Should().Be("shortid");
-    }
-
-    [Fact]
-    public void ExtractFromHttpContext_WithInvalidTraceParentFormat_GeneratesNewCorrelationId()
-    {
-        var httpContext = CreateHttpContext();
-        httpContext.Request.Headers.TraceParent = "invalid-format";
-
-        var values = HttpContextMapper.ExtractFromHttpContext(httpContext);
-
-        values.CorrelationId.Should().NotBeNullOrWhiteSpace();
-        values.CorrelationId.Should().NotBe("invalid-format");
+        Ulid.TryParse(values.CorrelationId, out _).Should().BeTrue();
     }
 
     [Fact]
