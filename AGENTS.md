@@ -28,4 +28,4 @@ Apply the [shared review criteria](https://github.com/HoneyDrunkStudios/HoneyDru
 
 - Preserve Grid/Node/Operation context and foundational contracts without pulling product rules or provider implementations into Kernel. Check dependency direction and real public consumers before changing contracts or adding a shared abstraction.
 - Trace scope and correlation through asynchronous work, nested operations, disposal and concurrent requests. Flag ambient-context leakage, dropped cancellation or confusion between trace and correlation identities; inspect hot-path allocations using actual callers.
-- Require contract and lifecycle/context-isolation tests for changed behavior, including failure and concurrency paths. A catalog name is not proof of an implemented type; prefer the smallest change compatible with current packages.
+- Require contract, lifecycle/context-isolation, failure and concurrency tests when the changed behavior affects those paths. A catalog name is not proof of an implemented type; prefer the smallest change compatible with current packages.
