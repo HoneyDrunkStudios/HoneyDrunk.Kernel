@@ -21,3 +21,11 @@ dotnet test HoneyDrunk.Kernel/HoneyDrunk.Kernel.slnx -c Release --no-build
 ```
 
 Use the checked-in workflow and relevant test documentation for additional integration prerequisites, coverage and consumer checks. Do not use live resources or credentials merely to make a local check pass.
+
+## Code Review Rules
+
+Apply the [shared review criteria](https://github.com/HoneyDrunkStudios/HoneyDrunk.Standards/blob/main/HoneyDrunk.Standards/docs/CONVENTIONS.md#code-review) to changed behavior, using the repository boundaries above. Report actionable findings with the failing path, concrete impact and a small corrective action; disclose unavailable evidence. These rules grant no cross-repository access or merge authority.
+
+- Preserve Grid/Node/Operation context and foundational contracts without pulling product rules or provider implementations into Kernel. Check dependency direction and real public consumers before changing contracts or adding a shared abstraction.
+- Trace scope and correlation through asynchronous work, nested operations, disposal and concurrent requests. Flag ambient-context leakage, dropped cancellation or confusion between trace and correlation identities; inspect hot-path allocations using actual callers.
+- Require contract and lifecycle/context-isolation tests for changed behavior, including failure and concurrency paths. A catalog name is not proof of an implemented type; prefer the smallest change compatible with current packages.
