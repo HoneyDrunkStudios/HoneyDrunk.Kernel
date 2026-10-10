@@ -28,7 +28,7 @@ This guide is organized into focused documents by domain:
 | 🌐 **Context** | [Context.md](Context.md) | Distributed context propagation (IGridContext, INodeContext, IOperationContext) |
 | ⚙️ **Configuration** | [Configuration.md](Configuration.md) | Studio-level configuration access (IStudioConfiguration) |
 | 🏢 **Hosting** | [Hosting.md](Hosting.md) | Node hosting and discovery (INodeDescriptor, INodeManifest, IStudioConfiguration) |
-| 🤖 **Agents** | [Agents.md](Agents.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext, AgentsInterop) |
+| 🤖 **Agents** | [AgentInterop.md](AgentInterop.md) | Agent execution framework (IAgentDescriptor, IAgentExecutionContext, AgentsInterop) |
 | 🔄 **Lifecycle** | [Lifecycle.md](Lifecycle.md) | Node lifecycle management (INodeLifecycle, IStartupHook, IShutdownHook, Health/Readiness) |
 | 📡 **Telemetry** | [Telemetry.md](Telemetry.md) | Observability primitives (ITelemetryContext, ITraceEnricher, ILogScopeFactory) for application and infrastructure |
 | ❤️ **Health** | [Health.md](Health.md) | Service health monitoring (IHealthCheck, HealthStatus) |
@@ -243,7 +243,7 @@ HoneyDrunk.Kernel/
 
 ### Official Documentation
 - [README.md](../../README.md) - Quick start and overview
-- [.github/copilot-instructions.md](../../.github/copilot-instructions.md) - Coding standards
+- [AGENTS.md](../../AGENTS.md) - Coding standards
 
 ### Related Projects
 - [HoneyDrunk.Standards](https://github.com/HoneyDrunkStudios/HoneyDrunk.Standards) - Analyzers and conventions
@@ -265,4 +265,3 @@ HoneyDrunk.Kernel/
 *Last Updated: 2025-11-28*  
 *Version: 0.3.0*  
 *Target Framework: .NET 10.0*
-

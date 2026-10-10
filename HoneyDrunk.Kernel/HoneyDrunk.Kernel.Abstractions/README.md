@@ -316,7 +316,7 @@ builder.Services.AddSingleton<ITransportEnvelopeBinder, GrpcMetadataBinder>();
 - **[Telemetry Guide](../docs/Telemetry.md)** - Observability primitives
 - **[Transport Guide](../docs/Transport.md)** - Context propagation across boundaries
 - **[Errors Guide](../docs/Errors.md)** - Exception hierarchy and error handling
-- **[Agents Guide](../docs/Agents.md)** - Agent execution framework
+- **[Agents Guide](../docs/AgentInterop.md)** - Agent execution framework
 - **[Health Guide](../docs/Health.md)** - Health monitoring contracts
 
 ## 📄 License
