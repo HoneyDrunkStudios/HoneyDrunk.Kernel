@@ -18,9 +18,9 @@
   - [AgentResultSerializer.cs](#agentresultserializercs)
   - [GridContextSerializer.cs](#gridcontextserializercs)
   - [AgentContextProjection.cs](#agentcontextprojectioncs)
-  - [Complete AgentsInterop Example](#complete-agentsinterop-example)
+  - [Complete Agent Execution Example](#complete-agent-execution-example)
   - [Cross-Process Agent Flow](#cross-process-agent-flow)
-- [Testing Patterns](#testing-patterns)
+- [Testing Fixtures and Helpers](#testing-fixtures-and-helpers)
 - [Summary](#summary)
 
 ---
@@ -1173,7 +1173,7 @@ All transport adapters follow the same flow:
 3. Return AgentExecutionResult
 4. Track execution in OperationContext
 
-See [Transport.md](Transport.md) for message-based agent invocation patterns and [Jobs.md](Jobs.md) for background agent execution.
+See [Transport.md](Transport.md) for message-based agent invocation patterns. Background agent execution must follow the owning host's implemented lifecycle and scheduling contracts.
 
 [← Back to File Guide](FILE_GUIDE.md) | [↑ Back to top](#table-of-contents)
 

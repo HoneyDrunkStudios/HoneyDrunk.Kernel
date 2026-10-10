@@ -196,7 +196,7 @@ jobBinder.Bind(jobMetadata, gridContext);
 - **[Hosting.md](HoneyDrunk.Kernel/docs/Hosting.md)** - Node hosting and discovery
 
 **Advanced Topics:**
-- **[Agents.md](HoneyDrunk.Kernel/docs/Agents.md)** - Agent execution framework + AgentsInterop serialization
+- **[AgentInterop.md](HoneyDrunk.Kernel/docs/AgentInterop.md)** - Agent execution framework + AgentsInterop serialization
 - **[Lifecycle.md](HoneyDrunk.Kernel/docs/Lifecycle.md)** - Lifecycle orchestration (startup/shutdown hooks)
 - **[Telemetry.md](HoneyDrunk.Kernel/docs/Telemetry.md)** - Observability primitives and OpenTelemetry integration
 - **[Transport.md](HoneyDrunk.Kernel/docs/Transport.md)** - Context propagation across boundaries
@@ -212,8 +212,8 @@ jobBinder.Bind(jobMetadata, gridContext);
 - **[Testing.md](HoneyDrunk.Kernel/docs/Testing.md)** - Test patterns and best practices
 
 ### Standards
-- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Coding standards and conventions
-- **[.github/instructions/](.github/instructions/)** - Repository guidelines
+- **[AGENTS.md](AGENTS.md)** - Coding standards and conventions
+- **[Shared conventions](https://github.com/HoneyDrunkStudios/HoneyDrunk.Standards/blob/main/HoneyDrunk.Standards/docs/CONVENTIONS.md)** - Engineering standards
 
 ---
 
