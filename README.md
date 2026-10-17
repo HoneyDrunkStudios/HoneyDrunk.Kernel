@@ -255,8 +255,8 @@ HoneyDrunk.Kernel/
 │   ├── Telemetry/                      # Trace enrichment + GridActivitySource
 │   └── Transport/                      # Transport binders
 │
-├── tests/HoneyDrunk.Kernel.Tests/           # Unit & integration tests
-└── HoneyDrunk.Kernel/docs/                               # Complete documentation
+├── tests/HoneyDrunk.Kernel.Tests/      # Unit & integration tests
+└── HoneyDrunk.Kernel/docs/             # Complete documentation
 ```
 
 ---

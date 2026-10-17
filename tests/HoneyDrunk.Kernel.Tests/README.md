@@ -27,7 +27,7 @@ This project contains unit and integration tests for **HoneyDrunk.Kernel.Abstrac
 ## ??? Test Structure
 
 ```
-HoneyDrunk.Kernel.Tests/
+tests/HoneyDrunk.Kernel.Tests/
 ??? AgentsInterop/                      # Agent serialization tests
 ?   ??? AgentContextProjectionTests.cs
 ?   ??? AgentExecutionResultTests.cs
@@ -196,6 +196,11 @@ public void CompositeHealthCheck_AnyUnhealthy_ReturnsUnhealthy()
 ### All Tests
 
 ```bash
+# From the repository root (solution at the root)
+dotnet test HoneyDrunk.Kernel.slnx
+
+# Or from this project folder
+cd tests/HoneyDrunk.Kernel.Tests
 dotnet test
 ```
 

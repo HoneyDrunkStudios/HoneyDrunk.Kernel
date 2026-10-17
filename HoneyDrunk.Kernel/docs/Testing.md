@@ -24,7 +24,7 @@
 
 Testing guidance and patterns for HoneyDrunk.Kernel, including unit tests, integration tests, and testing best practices for Grid-aware applications.
 
-**Location:** `HoneyDrunk.Kernel.Tests/`
+**Location:** `tests/HoneyDrunk.Kernel.Tests/`
 
 **Test Framework:** xUnit + AwesomeAssertions
 

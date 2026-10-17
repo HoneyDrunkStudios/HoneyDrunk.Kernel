@@ -21,7 +21,7 @@ Modular service registration for Node features. **Modules let Nodes opt into tra
 
 **What This Is:** Kernel defines `IModule` as the common shape for "feature packs" that a Node can install. Think of modules as composable building blocks that encapsulate DI registrations for a specific feature area (transport, database, payments, notifications, etc.).
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/DI/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/DI/`
 
 **Key Concepts:**
 - **Feature Packs** - Encapsulate DI registrations for a specific domain or infrastructure concern
@@ -37,7 +37,7 @@ Modular service registration for Node features. **Modules let Nodes opt into tra
 
 **What it is:** Common interface for self-contained service registration modules.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/DI/IModule.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/DI/IModule.cs`
 
 ```csharp
 public interface IModule

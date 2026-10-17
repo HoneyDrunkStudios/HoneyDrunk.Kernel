@@ -35,8 +35,8 @@ Telemetry abstractions provide OpenTelemetry-ready tracing, enrichment, and log 
 **What Telemetry Does:** Gives every Node a standard way to produce OpenTelemetry traces and structured logs that are pre-tagged with Grid context, so you can follow a **single correlation ID** across **HTTP, messaging, database, and logs** anywhere in the Grid.
 
 **Location:** 
-- Abstractions: `HoneyDrunk.Kernel.Abstractions/Telemetry/`
-- Implementations: `HoneyDrunk.Kernel/Telemetry/`
+- Abstractions: `src/HoneyDrunk.Kernel.Abstractions/Telemetry/`
+- Implementations: `src/HoneyDrunk.Kernel/Telemetry/`
 
 **Key Concepts:**
 - **Telemetry Context** - W3C Trace Context compatible view for observability
@@ -133,7 +133,7 @@ and omit malformed or internal tenant values.
 
 **Real-world analogy:** Like a flight data recorder - captures everything needed for post-flight analysis.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ITelemetryContext.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Telemetry/ITelemetryContext.cs`
 
 #### Properties
 
@@ -176,7 +176,7 @@ public interface ITelemetryContext
 
 **Real-world analogy:** Like a form generator that auto-fills your personal info - starts activities with context already attached.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ITelemetryActivityFactory.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Telemetry/ITelemetryActivityFactory.cs`
 
 **Intended Audience:** **Recommended for application services** that want automatic context wiring, enricher integration, and consistent tagging without manual plumbing.
 
@@ -247,7 +247,7 @@ public class PaymentService(ITelemetryActivityFactory activityFactory)
 
 **Real-world analogy:** Like adding stamps to a passport - automatically annotates traces with relevant context.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ITraceEnricher.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Telemetry/ITraceEnricher.cs`
 
 #### Methods
 
@@ -274,7 +274,7 @@ public interface ITraceEnricher
 
 **Real-world analogy:** Like a meeting room that automatically records who's present - context is captured automatically.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/ILogScopeFactory.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Telemetry/ILogScopeFactory.cs`
 
 #### Methods
 
@@ -345,7 +345,7 @@ public class OrderProcessor(
 
 **Real-world analogy:** Like a data dictionary - ensures everyone speaks the same language.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Telemetry/TelemetryTags.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Telemetry/TelemetryTags.cs`
 
 #### Standard Tags
 
@@ -384,7 +384,7 @@ public class OrderProcessor(
 
 **Real-world analogy:** Like a stamping station - automatically marks every activity with Grid identity.
 
-**Location:** `HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
+**Location:** `src/HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
 
 **Intended Audience:** Primarily for **infrastructure-level operations** (HTTP pipelines, messaging adapters, database adapters). **Application services should prefer `ITelemetryActivityFactory`** for automatic context wiring and enricher integration.
 
@@ -493,7 +493,7 @@ builder.Services.AddOpenTelemetry()
 
 **Real-world analogy:** Like a dispatch center - coordinates all telemetry with consistent standards.
 
-**Location:** `HoneyDrunk.Kernel/Telemetry/HoneyDrunkTelemetry.cs`
+**Location:** `src/HoneyDrunk.Kernel/Telemetry/HoneyDrunkTelemetry.cs`
 
 #### Key Members
 
@@ -559,7 +559,7 @@ public class PaymentProcessor(
 
 **What it is:** Implementation of `ITelemetryActivityFactory` that uses ambient context accessors and trace enrichers.
 
-**Location:** `HoneyDrunk.Kernel/Telemetry/TelemetryActivityFactory.cs`
+**Location:** `src/HoneyDrunk.Kernel/Telemetry/TelemetryActivityFactory.cs`
 
 #### How It Works
 
@@ -595,7 +595,7 @@ internal sealed class TelemetryActivityFactory(
 
 **What it is:** Default implementation of `ITelemetryContext`.
 
-**Location:** `HoneyDrunk.Kernel/Telemetry/TelemetryContext.cs`
+**Location:** `src/HoneyDrunk.Kernel/Telemetry/TelemetryContext.cs`
 
 #### Constructor
 

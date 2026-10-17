@@ -24,7 +24,7 @@
 
 Bootstrapping provides a unified, opinionated way to configure HoneyDrunk Nodes with all required services, validation, and middleware in a single registration call.
 
-**Location:** `HoneyDrunk.Kernel/Hosting/`
+**Location:** `src/HoneyDrunk.Kernel/Hosting/`
 
 **Key Concepts:**
 - **Unified Registration** - Single `AddHoneyDrunkNode()` call registers all services

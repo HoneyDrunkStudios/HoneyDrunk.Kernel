@@ -20,7 +20,7 @@ Abstractions for recording application metrics without coupling to specific tele
 
 **What Diagnostics Is:** **Telemetry covers traces and logs**. **Diagnostics covers raw metrics** (counters, histograms, gauges) behind a simple abstraction that can be wired to OpenTelemetry, Prometheus, Application Insights, or left as a no-op.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Diagnostics/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Diagnostics/`
 
 **Key Concepts:**
 - **Counter** - Monotonically increasing event count (requests processed, errors encountered)
@@ -40,7 +40,7 @@ Abstractions for recording application metrics without coupling to specific tele
 
 **What it is:** Minimal interface for recording metrics without coupling to a specific observability backend.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Diagnostics/IMetricsCollector.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Diagnostics/IMetricsCollector.cs`
 
 ```csharp
 public interface IMetricsCollector
@@ -129,7 +129,7 @@ queue_depth{queue_name="payments"}
 
 **What it is:** Default implementation that discards all metrics with minimal overhead.
 
-**Location:** `HoneyDrunk.Kernel/Diagnostics/NoOpMetricsCollector.cs`
+**Location:** `src/HoneyDrunk.Kernel/Diagnostics/NoOpMetricsCollector.cs`
 
 **Design:** Kernel hosting registers `NoOpMetricsCollector` by default so Nodes can depend on `IMetricsCollector` without configuring a metrics backend. **Production Nodes should replace this** with a concrete implementation (for example, an OpenTelemetry-backed collector).
 

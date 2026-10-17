@@ -22,7 +22,7 @@
 
 This document covers the runtime implementations in `HoneyDrunk.Kernel` project. These are the concrete classes that bring the abstractions to life.
 
-**Location:** `HoneyDrunk.Kernel/`
+**Location:** `src/HoneyDrunk.Kernel/`
 
 **Philosophy:** Implementations follow "thin wrapper" principles - delegate to BCL where possible, add Grid-specific semantics where necessary.
 
@@ -36,7 +36,7 @@ This document covers the runtime implementations in `HoneyDrunk.Kernel` project.
 
 Default implementation of `IGridContext` carrying distributed tracing and baggage.
 
-**Location:** `HoneyDrunk.Kernel/Context/GridContext.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/GridContext.cs`
 
 **v0.4.0 Two-Phase Initialization:**
 
@@ -148,7 +148,7 @@ var childContext = context.CreateChildContext("payment-service");
 
 Static Node identity implementation carrying process-level metadata.
 
-**Location:** `HoneyDrunk.Kernel/Context/NodeContext.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/NodeContext.cs`
 
 ```csharp
 public sealed class NodeContext : INodeContext
@@ -195,7 +195,7 @@ NodeLifecycleStage.Failed        // Fatal error
 
 Per-operation tracking implementation with timing and outcome.
 
-**Location:** `HoneyDrunk.Kernel/Context/OperationContext.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/OperationContext.cs`
 
 ```csharp
 public sealed class OperationContext : IOperationContext
@@ -278,7 +278,7 @@ public class OrderService(IOperationContext operationContext)
 
 Accesses GridContext from the current DI scope via HttpContext.
 
-**Location:** `HoneyDrunk.Kernel/Context/GridContextAccessor.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/GridContextAccessor.cs`
 
 **v0.4.0 Implementation (Breaking Change):**
 
@@ -332,7 +332,7 @@ var correlationId = _accessor.GridContext.CorrelationId;
 
 Async-local storage for operation context.
 
-**Location:** `HoneyDrunk.Kernel/Context/OperationContextAccessor.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/OperationContextAccessor.cs`
 
 ```csharp
 public sealed class OperationContextAccessor : IOperationContextAccessor
@@ -357,7 +357,7 @@ Same pattern as `GridContextAccessor` but for `IOperationContext`.
 
 Factory for creating `IOperationContext` instances.
 
-**Location:** `HoneyDrunk.Kernel/Context/OperationContextFactory.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/OperationContextFactory.cs`
 
 ```csharp
 public sealed class OperationContextFactory : IOperationContextFactory
@@ -417,7 +417,7 @@ Context mappers extract and initialize GridContext from transport-specific envel
 
 Extracts headers from HTTP requests and initializes GridContext.
 
-**Location:** `HoneyDrunk.Kernel/Context/Mappers/HttpContextMapper.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/Mappers/HttpContextMapper.cs`
 
 ```csharp
 public static class HttpContextMapper
@@ -451,7 +451,7 @@ HttpContextMapper.InitializeFromHttpContext(gridContext, httpContext);
 
 Extracts context from message properties and initializes GridContext.
 
-**Location:** `HoneyDrunk.Kernel/Context/Mappers/MessagingContextMapper.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/Mappers/MessagingContextMapper.cs`
 
 ```csharp
 public static class MessagingContextMapper
@@ -471,7 +471,7 @@ public static class MessagingContextMapper
 
 Initializes GridContext for background jobs.
 
-**Location:** `HoneyDrunk.Kernel/Context/Mappers/JobContextMapper.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/Mappers/JobContextMapper.cs`
 
 ```csharp
 public static class JobContextMapper
@@ -507,7 +507,7 @@ public static class JobContextMapper
 
 ASP.NET Core middleware that initializes GridContext for each HTTP request.
 
-**Location:** `HoneyDrunk.Kernel/Context/Middleware/GridContextMiddleware.cs`
+**Location:** `src/HoneyDrunk.Kernel/Context/Middleware/GridContextMiddleware.cs`
 
 **v0.4.0 Behavior (Breaking Change):**
 
@@ -571,7 +571,7 @@ Runtime lifecycle orchestration is implemented in the following components:
 
 ### NodeLifecycleHost
 
-**Location:** `HoneyDrunk.Kernel/Lifecycle/NodeLifecycleHost.cs`
+**Location:** `src/HoneyDrunk.Kernel/Hosting/NodeLifecycleHost.cs`
 
 Implements `IHostedService` and orchestrates Node startup and shutdown using:
 - `IStartupHook` (priority ordered, lower first)
@@ -600,7 +600,7 @@ Initializing → Starting → Ready → Stopping → Stopped (or Failed on error
 
 ### NodeLifecycleManager
 
-**Location:** `HoneyDrunk.Kernel/Lifecycle/NodeLifecycleManager.cs`
+**Location:** `src/HoneyDrunk.Kernel/Lifecycle/NodeLifecycleManager.cs`
 
 Aggregates `IHealthContributor` and `IReadinessContributor` and provides:
 - `CheckHealthAsync(...)` - Returns aggregated `HealthStatus` + per-contributor details
@@ -630,7 +630,7 @@ Used by health/readiness endpoints and background health monitors.
 
 Zero-overhead metrics stub for when metrics are disabled.
 
-**Location:** `HoneyDrunk.Kernel/Diagnostics/NoOpMetricsCollector.cs`
+**Location:** `src/HoneyDrunk.Kernel/Diagnostics/NoOpMetricsCollector.cs`
 
 ```csharp
 internal sealed class NoOpMetricsCollector : IMetricsCollector
@@ -653,7 +653,7 @@ internal sealed class NoOpMetricsCollector : IMetricsCollector
 
 Readiness contributor ensuring NodeContext is initialized and in appropriate stage.
 
-**Location:** `HoneyDrunk.Kernel/Diagnostics/NodeContextReadinessContributor.cs`
+**Location:** `src/HoneyDrunk.Kernel/Diagnostics/NodeContextReadinessContributor.cs`
 
 ```csharp
 public sealed class NodeContextReadinessContributor : IReadinessContributor
@@ -709,7 +709,7 @@ public sealed class NodeContextReadinessContributor : IReadinessContributor
 
 Validates Grid configuration at startup.
 
-**Location:** `HoneyDrunk.Kernel/Diagnostics/ConfigurationValidator.cs`
+**Location:** `src/HoneyDrunk.Kernel/Diagnostics/ConfigurationValidator.cs`
 
 ```csharp
 public sealed class ConfigurationValidator
@@ -749,7 +749,7 @@ Fails fast if configuration is invalid.
 
 Studio configuration implementation.
 
-**Location:** `HoneyDrunk.Kernel/Configuration/StudioConfiguration.cs`
+**Location:** `src/HoneyDrunk.Kernel/Configuration/StudioConfiguration.cs`
 
 ```csharp
 public sealed class StudioConfiguration : IStudioConfiguration
@@ -783,7 +783,7 @@ Thin wrapper over `IConfiguration` with Studio identity.
 
 Core service registration extension methods.
 
-**Location:** `HoneyDrunk.Kernel/DependencyInjection/HoneyDrunkCoreExtensions.cs`
+**Location:** `src/HoneyDrunk.Kernel/DependencyInjection/HoneyDrunkCoreExtensions.cs`
 
 Registers all Kernel services. See [Bootstrapping.md](Bootstrapping.md) for details.
 
@@ -795,7 +795,7 @@ Registers all Kernel services. See [Bootstrapping.md](Bootstrapping.md) for deta
 
 Validates required services are registered at startup.
 
-**Location:** `HoneyDrunk.Kernel/DependencyInjection/ServiceProviderValidation.cs`
+**Location:** `src/HoneyDrunk.Kernel/DependencyInjection/ServiceProviderValidation.cs`
 
 ```csharp
 public static class ServiceProviderValidation

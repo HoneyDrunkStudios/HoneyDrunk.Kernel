@@ -22,7 +22,7 @@
 
 Identity registries provide static, well-known values for Node IDs, Sectors, and Environments. Using these registries ensures consistency across the Grid and prevents typos from string literals.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/`
 
 **Key Concepts:**
 - **Static Registries** - Centralized, compile-time-safe identity values
@@ -88,7 +88,7 @@ Static registry of **infrastructure** Node identifiers required by Kernel and co
 - Grid catalog (nodes.json) is the single source of truth for all nodes
 
 ### Location
-`HoneyDrunk.Kernel.Abstractions/WellKnownNodes.cs`
+`src/HoneyDrunk.Kernel.Abstractions/WellKnownNodes.cs`
 
 ### Structure
 
@@ -185,7 +185,7 @@ Node IDs follow kebab-case pattern for all nodes:
 Static registry of well-known Sector identifiers for grouping related Nodes.
 
 ### Location
-`HoneyDrunk.Kernel.Abstractions/Sectors.cs`
+`src/HoneyDrunk.Kernel.Abstractions/Sectors.cs`
 
 ### Available Sectors
 
@@ -250,7 +250,7 @@ options.SectorId = Sectors.Core;
 Static registry of well-known Environment identifiers for deployment stages.
 
 ### Location
-`HoneyDrunk.Kernel.Abstractions/Environments.cs`
+`src/HoneyDrunk.Kernel.Abstractions/Environments.cs`
 
 ### ⚠️ Namespace Collision
 
@@ -326,7 +326,7 @@ options.EnvironmentId = environmentName switch
 Static registry of well-known error codes for consistent error handling.
 
 ### Location
-`HoneyDrunk.Kernel.Abstractions/Identity/ErrorCode.cs` (WellKnown nested class)
+`src/HoneyDrunk.Kernel.Abstractions/Identity/ErrorCode.cs` (WellKnown nested class)
 
 ### Available Error Codes
 
