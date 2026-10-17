@@ -179,7 +179,7 @@ public class OrderService(IGridContext gridContext, ILogger<OrderService> logger
 
 ```
 HoneyDrunk.Kernel/
-├── HoneyDrunk.Kernel.Abstractions/    # Contracts (zero dependencies)
+├── src/HoneyDrunk.Kernel.Abstractions/    # Contracts (zero dependencies)
 │   ├── Agents/                         # Agent execution abstractions
 │   ├── Configuration/                  # Studio configuration
 │   ├── Context/                        # Grid/Node/Operation context
@@ -189,12 +189,14 @@ HoneyDrunk.Kernel/
 │   ├── Health/                         # Health check contracts
 │   ├── Hosting/                        # Node hosting & discovery
 │   ├── Identity/                       # Strongly-typed IDs
-│   ├── IdentityRegistries/             # Static well-known values
+│   ├── WellKnownNodes.cs               # Static well-known values
+│   ├── Sectors.cs                      #   (identity registries)
+│   ├── Environments.cs                 #
 │   ├── Lifecycle/                      # Startup/shutdown hooks
 │   ├── Telemetry/                      # Observability primitives
 │   └── Transport/                      # Context propagation
 │
-├── HoneyDrunk.Kernel/                  # Runtime implementations
+├── src/HoneyDrunk.Kernel/                  # Runtime implementations
 │   ├── AgentsInterop/                  # Agent serialization
 │   ├── Configuration/                  # Studio configuration
 │   ├── Context/                        # Context implementations
@@ -207,11 +209,13 @@ HoneyDrunk.Kernel/
 │   ├── Lifecycle/                      # Lifecycle manager
 │   └── Telemetry/                      # Trace enrichment, GridActivitySource
 │
-└── HoneyDrunk.Kernel.Tests/            # Unit & integration tests
-    ├── Context/                        # Context tests
-    ├── Diagnostics/                    # Diagnostics tests
-    ├── Identity/                       # Identity validation tests
-    └── Lifecycle/                      # Lifecycle tests
+├── tests/HoneyDrunk.Kernel.Tests/      # Unit & integration tests
+│   ├── Context/                        # Context tests
+│   ├── Diagnostics/                    # Diagnostics tests
+│   ├── Identity/                       # Identity validation tests
+│   └── Lifecycle/                      # Lifecycle tests
+│
+└── HoneyDrunk.Kernel/docs/             # Complete documentation (this guide)
 ```
 
 ---

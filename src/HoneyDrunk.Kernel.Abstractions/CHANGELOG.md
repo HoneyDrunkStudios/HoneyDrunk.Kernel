@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Cleared the related Roslyn `CA1068` / `RCS1163` and Sonar `S107` findings on `GridContextSnapshot` (ADR-0011 D11 follow-up). See the repo-level [CHANGELOG.md](../CHANGELOG.md) for the full picture, including the broader maintainability sweep on the runtime package.
+- Cleared the related Roslyn `CA1068` / `RCS1163` and Sonar `S107` findings on `GridContextSnapshot` (ADR-0011 D11 follow-up). See the repo-level [CHANGELOG.md](../../HoneyDrunk.Kernel/CHANGELOG.md) for the full picture, including the broader maintainability sweep on the runtime package.
 
 ## [0.7.0] - 2026-05-18
 

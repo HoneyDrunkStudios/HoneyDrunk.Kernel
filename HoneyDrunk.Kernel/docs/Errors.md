@@ -29,7 +29,7 @@
 
 The Errors subsystem provides a structured exception hierarchy, error classification, and transport-friendly error mapping for distributed systems. Every exception carries Grid identity primitives (CorrelationId, NodeId, EnvironmentId) for cross-process correlation and debugging.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Errors/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Errors/`
 
 **Key Concepts:**
 - **HoneyDrunkException** - Base exception with Grid identity metadata
@@ -456,7 +456,7 @@ public interface IErrorClassifier
 
 ### Implementation: DefaultErrorClassifier
 
-**Location:** `HoneyDrunk.Kernel/Errors/DefaultErrorClassifier.cs`
+**Location:** `src/HoneyDrunk.Kernel/Errors/DefaultErrorClassifier.cs`
 
 Maps Kernel exceptions to HTTP status codes:
 

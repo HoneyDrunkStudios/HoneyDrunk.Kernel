@@ -37,7 +37,7 @@ Global → Studio → Node → Tenant → Project → Request
 
 **In v0.3, the hierarchical scope types (`ConfigScope`, `ConfigKey`, `ConfigPath`) do not back a custom `IConfigurationProvider` yet. All runtime configuration still comes from standard .NET `IConfiguration` plus `ISecretsSource`.**
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Configuration/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Configuration/`
 
 ### Configuration System Architecture
 
@@ -315,7 +315,7 @@ Root configuration for Grid participation, defining Studio and environment-level
 ### Real-world analogy
 Like your network credentials - defines which organization (Studio) you belong to and which environment you're operating in.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Configuration/HoneyDrunkGridOptions.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Configuration/HoneyDrunkGridOptions.cs`
 
 ### Properties
 
@@ -462,7 +462,7 @@ public interface IStudioConfiguration
 }
 ```
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/IStudioConfiguration.cs` (next to hosting primitives, not under Configuration/)
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/IStudioConfiguration.cs` (next to hosting primitives, not under Configuration/)
 
 [↑ Back to top](#table-of-contents)
 
@@ -476,7 +476,7 @@ Implementation of `IStudioConfiguration` that combines `IConfiguration` and `ISe
 ### Real-world analogy
 Like a configuration manager that checks both a config file and a password vault - regular settings come from config, secrets from the vault.
 
-**Location:** `HoneyDrunk.Kernel/Configuration/StudioConfiguration.cs`
+**Location:** `src/HoneyDrunk.Kernel/Configuration/StudioConfiguration.cs`
 
 ### Features
 - **Unified access** - Single interface for both config and secrets
@@ -605,7 +605,7 @@ Extension methods for registering and binding HoneyDrunk configuration in the DI
 ### Real-world analogy
 Like a helper that reads your config file and automatically sets up all the configuration objects.
 
-**Location:** `HoneyDrunk.Kernel/Configuration/HoneyDrunkConfigurationExtensions.cs`
+**Location:** `src/HoneyDrunk.Kernel/Configuration/HoneyDrunkConfigurationExtensions.cs`
 
 ### Methods
 
@@ -787,7 +787,7 @@ This pattern ensures:
 
 Configuration system supports secure storage and access of secrets.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Configuration/Secrets`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Configuration/ISecretsSource.cs` (contract), `src/HoneyDrunk.Kernel/Configuration/Secrets/` (implementations)
 
 [↑ Back to top](#table-of-contents)
 
@@ -810,7 +810,7 @@ public interface ISecretsSource
 }
 ```
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Configuration/ISecretsSource.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Configuration/ISecretsSource.cs`
 
 ### Usage Example
 
@@ -895,7 +895,7 @@ Implementation that chains multiple secret sources with automatic fallback logic
 ### Real-world analogy
 Like searching for your keys in multiple places - check coat pocket first, then kitchen counter, then car.
 
-**Location:** `HoneyDrunk.Kernel/Configuration/Secrets/CompositeSecretsSource.cs`
+**Location:** `src/HoneyDrunk.Kernel/Configuration/Secrets/CompositeSecretsSource.cs`
 
 ### Features
 - **Fallback logic** - Tries sources in order until one succeeds

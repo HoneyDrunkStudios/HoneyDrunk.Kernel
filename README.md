@@ -1,5 +1,10 @@
 # HoneyDrunk.Kernel
 
+## Repository layout
+
+Open `HoneyDrunk.Kernel.slnx` from the repository root. Production projects live in `src/`, test and canary projects in `tests/`, and examples in `samples/` where present. Shared build configuration stays at the root; project names, namespaces and package identities are unchanged. Existing documentation and release-history locations are retained.
+
+
 [![PR](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/actions/workflows/pr.yml/badge.svg)](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/actions/workflows/pr.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
@@ -97,7 +102,7 @@ app.MapGet("/", (INodeContext nodeContext, IGridContext gridContext) =>
 app.Run();
 ```
 
-**See [samples/MinimalNode](HoneyDrunk.Kernel/samples/MinimalNode/) for a complete working example.**
+**See [samples/MinimalNode](samples/MinimalNode/) for a complete working example.**
 
 ---
 
@@ -183,8 +188,8 @@ jobBinder.Bind(jobMetadata, gridContext);
 ## 📖 Documentation
 
 ### Package Documentation
-- **[HoneyDrunk.Kernel.Abstractions README](HoneyDrunk.Kernel/HoneyDrunk.Kernel.Abstractions/README.md)** - Contracts/abstractions package
-- **[HoneyDrunk.Kernel README](HoneyDrunk.Kernel/HoneyDrunk.Kernel/README.md)** - Runtime implementations package
+- **[HoneyDrunk.Kernel.Abstractions README](src/HoneyDrunk.Kernel.Abstractions/README.md)** - Contracts/abstractions package
+- **[HoneyDrunk.Kernel README](src/HoneyDrunk.Kernel/README.md)** - Runtime implementations package
 
 ### Architecture & Guides
 
@@ -221,7 +226,7 @@ jobBinder.Bind(jobMetadata, gridContext);
 
 ```
 HoneyDrunk.Kernel/
-├── HoneyDrunk.Kernel.Abstractions/    # Contracts (zero dependencies)
+├── src/HoneyDrunk.Kernel.Abstractions/    # Contracts (zero dependencies)
 │   ├── Agents/                         # Agent execution abstractions
 │   ├── Configuration/                  # Studio configuration
 │   ├── Context/                        # Grid/Node/Operation context
@@ -235,7 +240,7 @@ HoneyDrunk.Kernel/
 │   ├── Telemetry/                      # Observability primitives
 │   └── Transport/                      # Transport abstraction
 │
-├── HoneyDrunk.Kernel/                  # Runtime implementations
+├── src/HoneyDrunk.Kernel/                  # Runtime implementations
 │   ├── AgentsInterop/                  # Agent serialization
 │   ├── Configuration/                  # Studio configuration
 │   ├── Context/                        # Context implementations
@@ -250,8 +255,8 @@ HoneyDrunk.Kernel/
 │   ├── Telemetry/                      # Trace enrichment + GridActivitySource
 │   └── Transport/                      # Transport binders
 │
-├── HoneyDrunk.Kernel.Tests/           # Unit & integration tests
-└── docs/                               # Complete documentation
+├── tests/HoneyDrunk.Kernel.Tests/      # Unit & integration tests
+└── HoneyDrunk.Kernel/docs/             # Complete documentation
 ```
 
 ---

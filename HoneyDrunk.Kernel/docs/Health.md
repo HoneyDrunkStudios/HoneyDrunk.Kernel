@@ -23,7 +23,7 @@ Health checks enable monitoring systems (Kubernetes, load balancers) to automati
 
 **What This Is Not:** Node-level health aggregation for liveness/readiness endpoints is handled by **Lifecycle's `IHealthContributor`**, which provides priority ordering, criticality flags, and per-check messages.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Health/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Health/`
 
 **Key Distinction:**
 - **`IHealthCheck`** - Simple service-level health function (database connection, cache ping)
@@ -37,7 +37,7 @@ Health checks enable monitoring systems (Kubernetes, load balancers) to automati
 
 **What it is:** Minimal interface for checking the health of an internal service component.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Health/IHealthCheck.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Health/IHealthCheck.cs`
 
 ```csharp
 public interface IHealthCheck
@@ -88,7 +88,7 @@ public class DatabaseHealthCheck(IDbConnection db) : IHealthCheck
 
 **What it is:** Three-state health status for service components.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Health/HealthStatus.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Health/HealthStatus.cs`
 
 ```csharp
 public enum HealthStatus
@@ -109,7 +109,7 @@ public enum HealthStatus
 
 **What it is:** Aggregates multiple health checks, returning the worst status.
 
-**Location:** `HoneyDrunk.Kernel/Health/CompositeHealthCheck.cs`
+**Location:** `src/HoneyDrunk.Kernel/Health/CompositeHealthCheck.cs`
 
 **Design Note:** `CompositeHealthCheck` only returns a single aggregated `HealthStatus`. It does **not** track per-check messages, criticality, or diagnostics. For advanced health modeling with priority ordering and fail-fast behavior, use Lifecycle's `IHealthContributor`.
 

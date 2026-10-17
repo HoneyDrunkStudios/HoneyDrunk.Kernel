@@ -28,7 +28,7 @@
 
 GridActivitySource provides OpenTelemetry-compatible distributed tracing using .NET's `System.Diagnostics.Activity` API with automatic Grid context enrichment.
 
-**Location:** `HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
+**Location:** `src/HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
 
 **Key Concepts:**
 - **ActivitySource** - OpenTelemetry-compatible source for creating traces

@@ -30,7 +30,7 @@
 
 All identity types in HoneyDrunk.Kernel enforce validation rules at construction time, ensuring identifiers are well-formed throughout the system. They use **readonly record structs** for efficient value semantics.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Identity/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Identity/`
 
 **Key Features:**
 - Compile-time type safety

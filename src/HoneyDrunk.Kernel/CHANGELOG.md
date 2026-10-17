@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Driven the remaining 17 SonarQube Cloud maintainability findings on the runtime package to zero (ADR-0011 D11 follow-up to repo PRs #63 and #64). See the repo-level [CHANGELOG.md](../CHANGELOG.md) for the full list of non-breaking refactors.
+- Driven the remaining 17 SonarQube Cloud maintainability findings on the runtime package to zero (ADR-0011 D11 follow-up to repo PRs #63 and #64). See the repo-level [CHANGELOG.md](../../HoneyDrunk.Kernel/CHANGELOG.md) for the full list of non-breaking refactors.
 
 ## [0.7.0] - 2026-05-18
 

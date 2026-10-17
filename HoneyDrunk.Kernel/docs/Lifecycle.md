@@ -27,7 +27,7 @@
 
 Lifecycle management provides coordinated Node startup, shutdown, health monitoring, and readiness checks. This enables graceful initialization, zero-downtime deployments, and controlled shutdown sequences.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Lifecycle/` (abstractions), `HoneyDrunk.Kernel/Lifecycle/` (implementations)
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Lifecycle/` (abstractions), `src/HoneyDrunk.Kernel/Lifecycle/` (implementations)
 
 **Key Concepts:**
 - **Lifecycle Host** - IHostedService that orchestrates the entire lifecycle
@@ -1102,7 +1102,7 @@ public class Program
 
 ## Testing Patterns
 
-**Note:** Kernel includes additional tests for `NodeLifecycleHost` and `NodeLifecycleManager` integration; these examples focus on exercising the lifecycle primitives in isolation. See `HoneyDrunk.Kernel.Tests/Lifecycle/` for complete test coverage.
+**Note:** Kernel includes additional tests for `NodeLifecycleHost` and `NodeLifecycleManager` integration; these examples focus on exercising the lifecycle primitives in isolation. See `tests/HoneyDrunk.Kernel.Tests/Lifecycle/` for complete test coverage.
 
 ```csharp
 [Fact]

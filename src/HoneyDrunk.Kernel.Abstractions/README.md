@@ -306,18 +306,18 @@ builder.Services.AddSingleton<ITransportEnvelopeBinder, GrpcMetadataBinder>();
 **See the main repository for comprehensive documentation:**
 
 **Core Concepts:**
-- **[Complete File Guide](../docs/FILE_GUIDE.md)** - Architecture reference (START HERE)
-- **[Identity Guide](../docs/Identity.md)** - Strongly-typed identifiers
-- **[Identity Registries](../docs/IdentityRegistries.md)** - Static well-known values *(planned)*
-- **[Context Guide](../docs/Context.md)** - Three-tier context propagation
+- **[Complete File Guide](../../HoneyDrunk.Kernel/docs/FILE_GUIDE.md)** - Architecture reference (START HERE)
+- **[Identity Guide](../../HoneyDrunk.Kernel/docs/Identity.md)** - Strongly-typed identifiers
+- **[Identity Registries](../../HoneyDrunk.Kernel/docs/IdentityRegistries.md)** - Static well-known values *(planned)*
+- **[Context Guide](../../HoneyDrunk.Kernel/docs/Context.md)** - Three-tier context propagation
 
 **Domain Guides:**
-- **[Lifecycle Guide](../docs/Lifecycle.md)** - Lifecycle orchestration contracts
-- **[Telemetry Guide](../docs/Telemetry.md)** - Observability primitives
-- **[Transport Guide](../docs/Transport.md)** - Context propagation across boundaries
-- **[Errors Guide](../docs/Errors.md)** - Exception hierarchy and error handling
-- **[Agents Guide](../docs/AgentInterop.md)** - Agent execution framework
-- **[Health Guide](../docs/Health.md)** - Health monitoring contracts
+- **[Lifecycle Guide](../../HoneyDrunk.Kernel/docs/Lifecycle.md)** - Lifecycle orchestration contracts
+- **[Telemetry Guide](../../HoneyDrunk.Kernel/docs/Telemetry.md)** - Observability primitives
+- **[Transport Guide](../../HoneyDrunk.Kernel/docs/Transport.md)** - Context propagation across boundaries
+- **[Errors Guide](../../HoneyDrunk.Kernel/docs/Errors.md)** - Exception hierarchy and error handling
+- **[Agents Guide](../../HoneyDrunk.Kernel/docs/AgentInterop.md)** - Agent execution framework
+- **[Health Guide](../../HoneyDrunk.Kernel/docs/Health.md)** - Health monitoring contracts
 
 ## 📄 License
 
@@ -327,4 +327,4 @@ This project is licensed under the [MIT License](../../LICENSE).
 
 **Built with 🍯 by HoneyDrunk Studios**
 
-[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](../docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
+[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](../../HoneyDrunk.Kernel/docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)

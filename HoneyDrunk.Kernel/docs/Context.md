@@ -52,7 +52,7 @@ These IDs do not set Activity trace/span IDs or create spans. Use standard
 `traceparent`/`tracestate` propagation independently; see
 [trace propagation](Telemetry.md#trace-propagation-and-business-correlation).
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Context/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Context/`
 
 ---
 

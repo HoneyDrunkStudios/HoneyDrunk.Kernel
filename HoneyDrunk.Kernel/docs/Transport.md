@@ -34,7 +34,7 @@ Transport abstractions enable automatic GridContext propagation across different
 
 See [Implementations.md](Implementations.md) for details on the static mapper pattern.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Transport/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Transport/`
 
 **Key Concepts:**
 - **Transport Envelope Binder** - Binds GridContext to transport-specific envelopes
@@ -96,7 +96,7 @@ public interface ITransportEnvelopeBinder
 
 ### HttpResponseBinder
 
-**Location:** `HoneyDrunk.Kernel/Transport/HttpResponseBinder.cs`
+**Location:** `src/HoneyDrunk.Kernel/Transport/HttpResponseBinder.cs`
 
 Binds GridContext to HTTP response headers for client-side tracing.
 
@@ -175,7 +175,7 @@ X-Baggage-TenantId: 01HQXZ7G5FH4C2B1N0XD5EWARP
 
 ### MessagePropertiesBinder
 
-**Location:** `HoneyDrunk.Kernel/Transport/MessagePropertiesBinder.cs`
+**Location:** `src/HoneyDrunk.Kernel/Transport/MessagePropertiesBinder.cs`
 
 Binds GridContext to message properties for event-driven architectures.
 
@@ -294,7 +294,7 @@ public class OrderEventConsumer(IServiceScopeFactory scopeFactory)
 
 ### JobMetadataBinder
 
-**Location:** `HoneyDrunk.Kernel/Transport/JobMetadataBinder.cs`
+**Location:** `src/HoneyDrunk.Kernel/Transport/JobMetadataBinder.cs`
 
 Binds GridContext to background job metadata for async processing.
 
@@ -396,7 +396,7 @@ public class ReportGenerator(
 
 ## GridHeaderNames (Updated)
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Context/GridHeaderNames.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Context/GridHeaderNames.cs`
 
 Standard header names for Grid context propagation. Updated in v0.3.0 to include baggage and environment headers.
 

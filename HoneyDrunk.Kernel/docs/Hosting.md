@@ -54,7 +54,7 @@ Hosting in HoneyDrunk.Kernel is about **transforming a plain .NET application in
 - ✅ Telemetry integration (OpenTelemetry ActivitySource)
 - 🔮 Service discovery (INodeManifest/Descriptor exist but not yet wired)
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/` (contracts), `HoneyDrunk.Kernel/Hosting/` (implementations)
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/` (contracts), `src/HoneyDrunk.Kernel/Hosting/` (implementations)
 
 ### Identity Alignment
 
@@ -147,7 +147,7 @@ Everything else in this document shows how to evolve from minimal to production-
 
 **Real-world analogy:** Like a passport application - provides identity, credentials, and metadata for Grid participation.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/HoneyDrunkNodeOptions.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/HoneyDrunkNodeOptions.cs`
 
 #### Properties
 
@@ -234,7 +234,7 @@ See [Context.md](Context.md) for details on the dual type system.
 
 **What it is:** Telemetry-related sub-configuration for observability features.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/HoneyDrunkTelemetryOptions.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/HoneyDrunkTelemetryOptions.cs`
 
 #### Properties
 
@@ -275,7 +275,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 **What it is:** Enum defining multi-tenancy execution strategy for a Node.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/MultiTenancyMode.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/MultiTenancyMode.cs`
 
 #### Values
 
@@ -333,7 +333,7 @@ See [Context.md](Context.md) for detailed tenant/project propagation patterns.
 
 **What it is:** Fluent builder interface returned by `AddHoneyDrunkNode()` for chaining additional configuration.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/IHoneyDrunkBuilder.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/IHoneyDrunkBuilder.cs`
 
 #### Properties
 
@@ -365,7 +365,7 @@ builder.Services.AddHoneyDrunkNode(options =>
 
 **What it is:** Main bootstrap extension that registers all Kernel services and transforms an application into a Grid Node.
 
-**Location:** `HoneyDrunk.Kernel/Hosting/HoneyDrunkNodeServiceCollectionExtensions.cs`
+**Location:** `src/HoneyDrunk.Kernel/Hosting/HoneyDrunkNodeServiceCollectionExtensions.cs`
 
 #### Signature
 
@@ -452,7 +452,7 @@ app.Run();
 
 **What it is:** ASP.NET Core middleware that establishes Grid context from HTTP request headers.
 
-**Location:** `HoneyDrunk.Kernel/Hosting/HoneyDrunkApplicationBuilderExtensions.cs`
+**Location:** `src/HoneyDrunk.Kernel/Hosting/HoneyDrunkApplicationBuilderExtensions.cs`
 
 #### What It Does
 
@@ -510,7 +510,7 @@ See [Context.md](Context.md) for detailed GridContext propagation patterns.
 
 **What it is:** Startup validation that ensures all required Kernel services are registered correctly.
 
-**Location:** `HoneyDrunk.Kernel/Hosting/ServiceProviderExtensions.cs`
+**Location:** `src/HoneyDrunk.Kernel/Hosting/ServiceProviderExtensions.cs`
 
 #### What It Validates
 
@@ -573,7 +573,7 @@ The following interfaces participate in Node lifecycle. All are documented in de
 
 **What it is:** IHostedService implementation that coordinates Node lifecycle and executes startup/shutdown hooks.
 
-**Location:** `HoneyDrunk.Kernel/Hosting/NodeLifecycleHost.cs`
+**Location:** `src/HoneyDrunk.Kernel/Hosting/NodeLifecycleHost.cs`
 
 #### Responsibilities
 
@@ -658,7 +658,7 @@ See [Lifecycle.md](Lifecycle.md) for detailed lifecycle hook patterns.
 
 **Name:** `"HoneyDrunk.Grid"`
 
-**Location:** `HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
+**Location:** `src/HoneyDrunk.Kernel/Telemetry/GridActivitySource.cs`
 
 #### Business IDs and trace IDs
 
@@ -742,7 +742,7 @@ The following abstractions exist in v0.3 but are **not yet wired** into the boot
 
 **Status:** ✅ Defined, ❌ Not used in v0.3, 🔮 Future
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/INodeManifest.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/INodeManifest.cs`
 
 **Future Use Case:** Nodes will declare manifests at build-time, and the Grid will use them for:
 - Dependency validation at startup
@@ -760,7 +760,7 @@ See interface definition in the code - similar to `package.json` or `pom.xml` fo
 
 **Status:** ✅ Minimal implementation in v0.3 (no capabilities), 🔮 Extended in future
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/INodeDescriptor.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/INodeDescriptor.cs`
 
 **Current v0.3 Implementation:** Created by `AddHoneyDrunkNode()` with basic identity (NodeId, Version, Sector, Studio, Environment) but no capabilities or manifest binding.
 
@@ -822,7 +822,7 @@ public class MyService(INodeDescriptor descriptor)
 
 **Status:** ✅ Defined, ❌ Not used in v0.3, 🔮 Future
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/INodeCapability.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/INodeCapability.cs`
 
 **Future Use Case:** Nodes will advertise capabilities (e.g., "payment-processing", "email-sending") with:
 - Supported protocols (HTTP, gRPC, message queue)
@@ -838,7 +838,7 @@ public class MyService(INodeDescriptor descriptor)
 
 **Status:** ✅ Defined, ❌ Not implemented in v0.3, 🔮 Future
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/INodeManifestSource.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/INodeManifestSource.cs`
 
 **Future Implementations:**
 - `EmbeddedResourceManifestSource` - Load from assembly resources
@@ -857,7 +857,7 @@ public class MyService(INodeDescriptor descriptor)
 
 **Status:** ✅ Fully implemented and documented in [Configuration.md](Configuration.md)
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Hosting/IStudioConfiguration.cs`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Hosting/IStudioConfiguration.cs`
 
 **Cross-Reference:** See [Configuration.md](Configuration.md#istudioconfiguration) for complete documentation including:
 - Interface definition

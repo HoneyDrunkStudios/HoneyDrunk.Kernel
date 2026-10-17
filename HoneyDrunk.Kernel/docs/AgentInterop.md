@@ -29,7 +29,7 @@
 
 Agent abstractions enable AI assistants, automation scripts, and service accounts to operate within the Grid with scoped permissions, execution tracking, and capability-based security.
 
-**Location:** `HoneyDrunk.Kernel.Abstractions/Agents/`
+**Location:** `src/HoneyDrunk.Kernel.Abstractions/Agents/`
 
 **Key Concepts:**
 - **Agent Descriptor** - Identity, capabilities, and permissions
@@ -163,8 +163,8 @@ Primary entry point for creating scoped agent execution contexts with unified ex
 Like a session factory in database ORM - creates a properly configured execution environment with automatic resource management.
 
 ### Location
-**Interface:** `HoneyDrunk.Kernel.Abstractions/Agents/IAgentExecutionContextFactory.cs`  
-**Implementation:** `HoneyDrunk.Kernel/AgentsInterop/AgentExecutionContextFactory.cs`
+**Interface:** `src/HoneyDrunk.Kernel.Abstractions/Agents/IAgentExecutionContextFactory.cs`  
+**Implementation:** `src/HoneyDrunk.Kernel/AgentsInterop/AgentExecutionContextFactory.cs`
 
 ### Method
 
@@ -702,7 +702,7 @@ public class AgentExecutionService(
 
 ## AgentsInterop - Serialization and Context Marshaling
 
-**Location:** `HoneyDrunk.Kernel/AgentsInterop/`
+**Location:** `src/HoneyDrunk.Kernel/AgentsInterop/`
 
 The AgentsInterop subsystem provides serialization, context marshaling, and result projection for agents executing across process boundaries (LLMs, remote workers, sandboxed scripts).
 
