@@ -175,22 +175,23 @@ public class CompositeHealthCheckTests
     [Fact]
     public async Task CheckAsync_MultipleChecks_RunsConcurrently()
     {
-        var checks = new[]
-        {
-            new DelayedHealthCheck(TimeSpan.FromMilliseconds(50)),
-            new DelayedHealthCheck(TimeSpan.FromMilliseconds(50)),
-            new DelayedHealthCheck(TimeSpan.FromMilliseconds(50))
-        };
+        var checks = new[] { new GatedHealthCheck(), new GatedHealthCheck(), new GatedHealthCheck() };
         var composite = new CompositeHealthCheck(checks);
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var result = composite.CheckAsync();
+        try
+        {
+            await Task.WhenAll(checks.Select(check => check.Started.Task)).WaitAsync(TimeSpan.FromSeconds(10));
+            result.IsCompleted.Should().BeFalse("all checks must start before any is released");
+        }
+        finally
+        {
+            foreach (var check in checks)
+            {
+                check.Release.TrySetResult(true);
+            }
+        }
 
-        await composite.CheckAsync();
-
-        stopwatch.Stop();
-
-        // Should complete in ~50ms if concurrent, would be ~150ms if sequential
-        // Use 200ms threshold to allow for system variability
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(200);
+        (await result).Should().Be(HealthStatus.Healthy);
     }
 
     [Fact]
@@ -413,6 +414,20 @@ public class CompositeHealthCheckTests
         public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
         {
             await Task.Delay(delay, cancellationToken);
+            return HealthStatus.Healthy;
+        }
+    }
+
+    private sealed class GatedHealthCheck : IHealthCheck
+    {
+        public TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<HealthStatus> CheckAsync(CancellationToken cancellationToken = default)
+        {
+            Started.TrySetResult(true);
+            await Release.Task.WaitAsync(cancellationToken);
             return HealthStatus.Healthy;
         }
     }
