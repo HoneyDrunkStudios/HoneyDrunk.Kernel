@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\HoneyDrunk.Kernel\HoneyDrunk.Kernel.csproj" />
+    <ProjectReference Include="..\..\src\HoneyDrunk.Kernel\HoneyDrunk.Kernel.csproj" />
   </ItemGroup>
 
 </Project>

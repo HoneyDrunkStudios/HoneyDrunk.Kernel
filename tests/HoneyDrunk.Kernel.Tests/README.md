@@ -388,10 +388,10 @@ public class TestStartupHook : IStartupHook
 
 ## ?? Related Documentation
 
-- **[Testing.md](../docs/Testing.md)** - Test patterns and best practices
-- **[FILE_GUIDE.md](../docs/FILE_GUIDE.md)** - Architecture documentation
-- **[Context.md](../docs/Context.md)** - Context behavior specifications
-- **[Identity.md](../docs/Identity.md)** - Identity validation rules
+- **[Testing.md](../../HoneyDrunk.Kernel/docs/Testing.md)** - Test patterns and best practices
+- **[FILE_GUIDE.md](../../HoneyDrunk.Kernel/docs/FILE_GUIDE.md)** - Architecture documentation
+- **[Context.md](../../HoneyDrunk.Kernel/docs/Context.md)** - Context behavior specifications
+- **[Identity.md](../../HoneyDrunk.Kernel/docs/Identity.md)** - Identity validation rules
 
 ## ?? Best Practices
 
@@ -465,4 +465,4 @@ This project is licensed under the [MIT License](../../LICENSE).
 
 **Built with ?? by HoneyDrunk Studios**
 
-[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) � [Documentation](../docs/FILE_GUIDE.md) � [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
+[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) � [Documentation](../../HoneyDrunk.Kernel/docs/FILE_GUIDE.md) � [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)

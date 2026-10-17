@@ -4,8 +4,8 @@ This file summarizes notable changes across the HoneyDrunk.Kernel repository at 
 release-level. The authoritative, detailed per-package history lives in the
 per-package changelogs:
 
-- [HoneyDrunk.Kernel.Abstractions CHANGELOG](HoneyDrunk.Kernel/HoneyDrunk.Kernel.Abstractions/CHANGELOG.md)
-- [HoneyDrunk.Kernel CHANGELOG](HoneyDrunk.Kernel/HoneyDrunk.Kernel/CHANGELOG.md)
+- [HoneyDrunk.Kernel.Abstractions CHANGELOG](src/HoneyDrunk.Kernel.Abstractions/CHANGELOG.md)
+- [HoneyDrunk.Kernel CHANGELOG](src/HoneyDrunk.Kernel/CHANGELOG.md)
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

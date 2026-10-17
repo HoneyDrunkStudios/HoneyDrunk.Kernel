@@ -278,17 +278,17 @@ builder.Services.AddHoneyDrunkNode(options =>
 ## 📚 Documentation
 
 **See the main repository for comprehensive documentation:**
-- **[Complete File Guide](../docs/FILE_GUIDE.md)** - Architecture documentation
-- **[Bootstrapping Guide](../docs/Bootstrapping.md)** - Unified Node initialization
-- **[Context Guide](../docs/Context.md)** - Context propagation patterns
-- **[Lifecycle Guide](../docs/Lifecycle.md)** - Lifecycle orchestration
-- **[Implementations Guide](../docs/Implementations.md)** - Runtime implementation details
-- **[Transport Guide](../docs/Transport.md)** - Context propagation across boundaries
-- **[Testing Guide](../docs/Testing.md)** - Test patterns and best practices
+- **[Complete File Guide](../../HoneyDrunk.Kernel/docs/FILE_GUIDE.md)** - Architecture documentation
+- **[Bootstrapping Guide](../../HoneyDrunk.Kernel/docs/Bootstrapping.md)** - Unified Node initialization
+- **[Context Guide](../../HoneyDrunk.Kernel/docs/Context.md)** - Context propagation patterns
+- **[Lifecycle Guide](../../HoneyDrunk.Kernel/docs/Lifecycle.md)** - Lifecycle orchestration
+- **[Implementations Guide](../../HoneyDrunk.Kernel/docs/Implementations.md)** - Runtime implementation details
+- **[Transport Guide](../../HoneyDrunk.Kernel/docs/Transport.md)** - Context propagation across boundaries
+- **[Testing Guide](../../HoneyDrunk.Kernel/docs/Testing.md)** - Test patterns and best practices
 
 ## 🧪 Testing
 
-See **[Testing Guide](../docs/Testing.md)** for patterns on:
+See **[Testing Guide](../../HoneyDrunk.Kernel/docs/Testing.md)** for patterns on:
 - Creating test contexts (GridContext, NodeContext, OperationContext)
 - Testing with real implementations vs mocks
 - Integration testing with DI
@@ -302,4 +302,4 @@ This project is licensed under the [MIT License](../../LICENSE).
 
 **Built with 🍯 by HoneyDrunk Studios**
 
-[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](../docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)
+[GitHub](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel) • [Documentation](../../HoneyDrunk.Kernel/docs/FILE_GUIDE.md) • [Issues](https://github.com/HoneyDrunkStudios/HoneyDrunk.Kernel/issues)

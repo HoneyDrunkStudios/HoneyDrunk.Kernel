@@ -1,0 +1,38 @@
+<Solution>
+  <Folder Name="/Docs/">
+    <File Path="AGENTS.md" />
+    <File Path="README.md" />
+    <File Path="HoneyDrunk.Kernel/CHANGELOG.md" />
+  </Folder>
+  <Folder Name="/Docs/FileGuide/">
+    <File Path="HoneyDrunk.Kernel/docs/AgentInterop.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Bootstrapping.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Configuration.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Context.md" />
+    <File Path="HoneyDrunk.Kernel/docs/DependencyInjection.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Diagnostics.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Errors.md" />
+    <File Path="HoneyDrunk.Kernel/docs/FILE_GUIDE.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Health.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Hosting.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Identity.md" />
+    <File Path="HoneyDrunk.Kernel/docs/IdentityRegistries.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Implementations.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Lifecycle.md" />
+    <File Path="HoneyDrunk.Kernel/docs/OpenTelemetry.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Telemetry.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Testing.md" />
+    <File Path="HoneyDrunk.Kernel/docs/Transport.md" />
+  </Folder>
+  <Folder Name="/Pipelines/">
+    <File Path=".github/workflows/publish.yml" />
+    <File Path=".github/workflows/hive-field-mirror.yml" />
+    <File Path=".github/workflows/nightly-security.yml" />
+    <File Path=".github/workflows/pr.yml" />
+    <File Path=".github/workflows/weekly-deps.yml" />
+  </Folder>
+  <Project Path="src/HoneyDrunk.Kernel.Abstractions/HoneyDrunk.Kernel.Abstractions.csproj" Id="262bb60d-6df6-4639-831d-2fdede62bccc" />
+  <Project Path="tests/HoneyDrunk.Kernel.Tests/HoneyDrunk.Kernel.Tests.csproj" />
+  <Project Path="src/HoneyDrunk.Kernel/HoneyDrunk.Kernel.csproj" />
+  <Project Path="samples/MinimalNode/MinimalNode.csproj" />
+</Solution>
