@@ -8,8 +8,8 @@
 
 | Dependency | Previous | Updated |
 | --- | --- | --- |
-| HoneyDrunk.Standards | 0.3.0 | 0.4.2 |
-| HoneyDrunk.Standards.Tests | 0.3.0 | 0.4.2 |
+| HoneyDrunk.Standards | 0.3.0 | 0.4.3 |
+| HoneyDrunk.Standards.Tests | 0.3.0 | 0.4.3 |
 | Microsoft.CodeAnalysis.NetAnalyzers | 10.0.401 | 10.0.403 |
 | Microsoft.Extensions.Configuration.Abstractions | 10.0.12 | 10.0.14 |
 | Microsoft.Extensions.Configuration.Binder | 10.0.12 | 10.0.14 |
