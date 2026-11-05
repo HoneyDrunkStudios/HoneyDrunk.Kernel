@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Update HoneyDrunk.Standards and HoneyDrunk.Standards.Tests to 0.4.1 to consume the architecture analyzer and TODO issue-link fixes.
+
 ### Fixed
 
 - Validate the HTTP `traceparent` correlation fallback with `ActivityContext.TryParse`; malformed headers fall back to a new ULID.
