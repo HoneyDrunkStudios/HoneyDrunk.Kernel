@@ -43,10 +43,10 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 ```xml
 <ItemGroup>
   <!-- Runtime implementations (recommended) -->
-  <PackageReference Include="HoneyDrunk.Kernel" Version="0.8.1" />
+  <PackageReference Include="HoneyDrunk.Kernel" Version="0.8.2" />
   
   <!-- Abstractions only (for libraries) -->
-  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.8.1" />
+  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.8.2" />
 </ItemGroup>
 ```
 

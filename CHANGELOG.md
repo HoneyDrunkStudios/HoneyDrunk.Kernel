@@ -10,6 +10,22 @@ per-package changelogs:
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-11-05
+
+### Changed
+
+- Refresh NuGet dependencies and adopt upstream package releases in dependency order. Preserve target frameworks and public contracts.
+
+| Dependency | Previous | Updated |
+| --- | --- | --- |
+| HoneyDrunk.Standards | 0.3.0 | 0.4.3 |
+| HoneyDrunk.Standards.Tests | 0.3.0 | 0.4.3 |
+| Microsoft.CodeAnalysis.NetAnalyzers | 10.0.401 | 10.0.403 |
+| Microsoft.Extensions.Configuration.Abstractions | 10.0.12 | 10.0.14 |
+| Microsoft.Extensions.Configuration.Binder | 10.0.12 | 10.0.14 |
+| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.12 | 10.0.14 |
+| Microsoft.Extensions.Hosting.Abstractions | 10.0.12 | 10.0.14 |
+
 ## [0.8.1] - 2026-09-26
 
 ### Changed

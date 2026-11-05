@@ -158,7 +158,7 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.8.1" />
+  <PackageReference Include="HoneyDrunk.Kernel.Abstractions" Version="0.8.2" />
 </ItemGroup>
 ```
 
