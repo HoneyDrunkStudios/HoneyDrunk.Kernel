@@ -54,6 +54,13 @@ public readonly record struct ConfigKey
     public static implicit operator ConfigKey(string value) => new(value);
 
     /// <summary>
+    /// Creates a ConfigKey from a string.
+    /// </summary>
+    /// <param name="value">The string value.</param>
+    /// <returns>A new ConfigKey.</returns>
+    public static ConfigKey FromString(string value) => new(value);
+
+    /// <summary>
     /// Gets the segments of this key (split by colon).
     /// </summary>
     /// <returns>An array of key segments.</returns>
@@ -69,13 +76,6 @@ public readonly record struct ConfigKey
         ArgumentException.ThrowIfNullOrWhiteSpace(segment);
         return new ConfigKey($"{Value}:{segment}");
     }
-
-    /// <summary>
-    /// Creates a ConfigKey from a string.
-    /// </summary>
-    /// <param name="value">The string value.</param>
-    /// <returns>A new ConfigKey.</returns>
-    public static ConfigKey FromString(string value) => new(value);
 
     /// <inheritdoc />
     public override string ToString() => Value;

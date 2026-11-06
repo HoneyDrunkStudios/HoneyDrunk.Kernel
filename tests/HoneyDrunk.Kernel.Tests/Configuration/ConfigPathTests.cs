@@ -134,9 +134,9 @@ public class ConfigPathTests
 
         public string ScopePath { get; } = scopePath ?? $"{scopeType.ToString().ToLowerInvariant()}:{scopeId}";
 
-        public IConfigScope CreateChildScope(ConfigScopeType childScopeType, string childScopeId)
+        public IConfigScope CreateChildScope(ConfigScopeType scopeType, string scopeId)
         {
-            return new TestConfigScope(childScopeType, childScopeId);
+            return new TestConfigScope(scopeType, scopeId);
         }
     }
 }

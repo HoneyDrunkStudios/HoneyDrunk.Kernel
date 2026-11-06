@@ -52,12 +52,6 @@ public readonly record struct CorrelationId
     public static CorrelationId NewId() => new(Ulid.NewUlid());
 
     /// <summary>
-    /// Converts this CorrelationId to a Ulid.
-    /// </summary>
-    /// <returns>The Ulid value.</returns>
-    public Ulid ToUlid() => Value;
-
-    /// <summary>
     /// Creates a CorrelationId from a Ulid.
     /// </summary>
     /// <param name="ulid">The Ulid value.</param>
@@ -81,6 +75,12 @@ public readonly record struct CorrelationId
         correlationId = default;
         return false;
     }
+
+    /// <summary>
+    /// Converts this CorrelationId to a Ulid.
+    /// </summary>
+    /// <returns>The Ulid value.</returns>
+    public Ulid ToUlid() => Value;
 
     /// <inheritdoc />
     public override string ToString() => Value.ToString();

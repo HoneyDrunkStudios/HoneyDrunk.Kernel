@@ -64,12 +64,6 @@ public readonly record struct TenantId
     public static TenantId NewId() => new(Ulid.NewUlid());
 
     /// <summary>
-    /// Converts this TenantId to a Ulid.
-    /// </summary>
-    /// <returns>The Ulid value.</returns>
-    public Ulid ToUlid() => Value;
-
-    /// <summary>
     /// Creates a TenantId from a Ulid.
     /// </summary>
     /// <param name="ulid">The Ulid value.</param>
@@ -93,6 +87,12 @@ public readonly record struct TenantId
         tenantId = default;
         return false;
     }
+
+    /// <summary>
+    /// Converts this TenantId to a Ulid.
+    /// </summary>
+    /// <returns>The Ulid value.</returns>
+    public Ulid ToUlid() => Value;
 
     /// <inheritdoc />
     public override string ToString() => Value.ToString();

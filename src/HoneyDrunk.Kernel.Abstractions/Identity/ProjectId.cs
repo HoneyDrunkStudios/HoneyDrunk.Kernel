@@ -52,12 +52,6 @@ public readonly record struct ProjectId
     public static ProjectId NewId() => new(Ulid.NewUlid());
 
     /// <summary>
-    /// Converts this ProjectId to a Ulid.
-    /// </summary>
-    /// <returns>The Ulid value.</returns>
-    public Ulid ToUlid() => Value;
-
-    /// <summary>
     /// Creates a ProjectId from a Ulid.
     /// </summary>
     /// <param name="ulid">The Ulid value.</param>
@@ -81,6 +75,12 @@ public readonly record struct ProjectId
         projectId = default;
         return false;
     }
+
+    /// <summary>
+    /// Converts this ProjectId to a Ulid.
+    /// </summary>
+    /// <returns>The Ulid value.</returns>
+    public Ulid ToUlid() => Value;
 
     /// <inheritdoc />
     public override string ToString() => Value.ToString();
