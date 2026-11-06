@@ -144,6 +144,6 @@ public class HoneyDrunkCoreExtensionsTests
 
         public string Environment { get; } = "test";
 
-        public bool HasCapability(string name) => false;
+        public bool HasCapability(string capabilityName) => false;
     }
 }

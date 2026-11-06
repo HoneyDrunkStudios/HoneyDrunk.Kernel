@@ -1,0 +1,3 @@
+# Preserve the existing MIT legal headers in the context tests.
+[tests/**/*.cs]
+file_header_template = Copyright (c) HoneyDrunk Studios. All rights reserved.\nLicensed under the MIT License. See LICENSE in the project root for license information.
