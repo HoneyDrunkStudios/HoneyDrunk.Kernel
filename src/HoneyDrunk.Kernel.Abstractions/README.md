@@ -1,7 +1,7 @@
 # HoneyDrunk.Kernel.Abstractions
 
 [![NuGet](https://img.shields.io/nuget/v/HoneyDrunk.Kernel.Abstractions.svg)](https://www.nuget.org/packages/HoneyDrunk.Kernel.Abstractions/)
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![.NET 11](https://img.shields.io/badge/.NET-11.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/11.0)
 
 > **Pure Semantic Contracts for the HoneyDrunk Grid** - Zero-dependency abstractions that define the OS layer for distributed systems.
 
@@ -184,7 +184,7 @@ dotnet add package HoneyDrunk.Kernel.Abstractions
 
 ### Minimal Dependencies
 This package depends only on:
-- ✅ **.NET 10 BCL** - Standard library only
+- ✅ **.NET 11 BCL** - Standard library only
 - ✅ **Microsoft.Extensions.*** - DI, Configuration, Hosting abstractions (contracts only)
 - ✅ **Ulid** - ULID generation for identity types
 - ✅ **HoneyDrunk.Standards** - Build-time analyzers (no runtime dependency)
