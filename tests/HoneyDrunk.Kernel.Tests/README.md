@@ -1,6 +1,6 @@
 # HoneyDrunk.Kernel.Tests
 
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![.NET 11](https://img.shields.io/badge/.NET-11.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/11.0)
 [![xUnit](https://img.shields.io/badge/xUnit-3.0-blue)](https://xunit.net/)
 
 > **Comprehensive test suite for HoneyDrunk.Kernel** - Ensuring reliability, correctness, and behavior validation across all Kernel components.
