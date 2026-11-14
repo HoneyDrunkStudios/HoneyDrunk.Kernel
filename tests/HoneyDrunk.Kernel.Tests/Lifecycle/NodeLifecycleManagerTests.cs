@@ -627,7 +627,7 @@ public class NodeLifecycleManagerTests
         public Task<(HealthStatus status, string? message)> CheckHealthAsync(CancellationToken cancellationToken = default)
         {
             executionOrder.Add(name);
-            return Task.FromResult((status, (string?)null));
+            return Task.FromResult<(HealthStatus, string?)>((status, null));
         }
     }
 
@@ -679,7 +679,7 @@ public class NodeLifecycleManagerTests
         public Task<(HealthStatus status, string? message)> CheckHealthAsync(CancellationToken cancellationToken = default)
         {
             WasCancellationTokenPassed = cancellationToken == _expectedToken;
-            return Task.FromResult((status: HealthStatus.Healthy, message: (string?)null));
+            return Task.FromResult<(HealthStatus status, string? message)>((status: HealthStatus.Healthy, message: null));
         }
     }
 
@@ -698,7 +698,7 @@ public class NodeLifecycleManagerTests
         public Task<(bool isReady, string? reason)> CheckReadinessAsync(CancellationToken cancellationToken = default)
         {
             WasCancellationTokenPassed = cancellationToken == _expectedToken;
-            return Task.FromResult((true, (string?)null));
+            return Task.FromResult<(bool, string?)>((true, null));
         }
     }
 }
